@@ -15,7 +15,7 @@ public class MessageListener {
         this.performanceTracker = performanceTracker;
     }
 
-    @JmsListener(destination = "${app.mq.queue.inbound}")
+    @JmsListener(destination = "${app.mq.queue.inbound}", concurrency = "10")
     public void receiveMessage(String message) {
         String messageId = PerformanceTracker.extractMessageId(message);
         if (messageId != null) {

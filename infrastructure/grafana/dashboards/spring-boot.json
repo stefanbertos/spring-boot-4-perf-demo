@@ -211,15 +211,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.5\"}",
+          "expr": "histogram_quantile(0.50, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.95\"}",
+          "expr": "histogram_quantile(0.95, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.99\"}",
+          "expr": "histogram_quantile(0.99, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))",
           "legendFormat": "p99"
         }
       ],
