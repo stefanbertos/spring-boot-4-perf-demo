@@ -185,6 +185,86 @@
         },
         "overrides": []
       }
+    },
+    {
+      "title": "MQ E2E TPS",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])",
+          "legendFormat": "TPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "MQ E2E Latency Percentiles",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.5\"}",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.95\"}",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "mq_e2e_latency_seconds{job=\"perf-tester\", quantile=\"0.99\"}",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "MQ E2E Avg Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(mq_e2e_latency_seconds_sum{job=\"perf-tester\"}[1m]) / rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])",
+          "legendFormat": "Avg Latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "MQ E2E Max Latency (histogram)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "mq_e2e_latency_seconds_max{job=\"perf-tester\"}",
+          "legendFormat": "Max Latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ],
   "schemaVersion": 39,
