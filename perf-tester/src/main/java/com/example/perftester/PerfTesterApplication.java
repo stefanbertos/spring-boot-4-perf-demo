@@ -1,13 +1,12 @@
-package com.example.perfdemo;
+package com.example.perftester;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class PerfDemoApplication {
+public class PerfTesterApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(PerfDemoApplication.class, args);
+        SpringApplication.run(PerfTesterApplication.class, args);
     }
-
 }

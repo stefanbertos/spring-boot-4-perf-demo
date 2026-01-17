@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: consumer
+  main:
+    web-application-type: none
+  docker:
+    compose:
+      file: ../compose.yaml
+
+server:
+  port: 8081
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
+app:
+  mq:
+    queue:
+      inbound: DEV.QUEUE.2
+      outbound: DEV.QUEUE.1

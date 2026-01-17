@@ -5,20 +5,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# Build the project
+# Build all modules
 ./gradlew build
 
-# Run the application
-./gradlew bootRun
+# Run perf-tester module
+./gradlew :perf-tester:bootRun
+
+# Run consumer module
+./gradlew :consumer:bootRun
 
 # Run all tests
 ./gradlew test
 
-# Run a single test class
-./gradlew test --tests "com.example.perfdemo.PerfDemoApplicationTests"
-
-# Run a single test method
-./gradlew test --tests "com.example.perfdemo.PerfDemoApplicationTests.contextLoads"
+# Run tests for specific module
+./gradlew :perf-tester:test
+./gradlew :consumer:test
 
 # Clean build
 ./gradlew clean build
@@ -26,22 +27,48 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-This is a Spring Boot 4.0 web application with the following characteristics:
+Multi-module Spring Boot 4.0 application for MQ performance testing.
 
-- **Java 25** with Gradle build system
-- **Spring WebMVC** for REST endpoints
-- **Spring Actuator** with Prometheus metrics export (`/actuator` endpoints)
+- **Java 25** with Gradle multi-module build
+- **Spring Actuator** with Prometheus metrics export
 - **Lombok** for boilerplate reduction
-- **Docker Compose** support for dev services (IBM MQ in `compose.yaml`)
-- **IBM MQ** with mq-jms-spring-boot-starter for JMS messaging
+- **Docker Compose** for IBM MQ, Prometheus, Grafana
+- **IBM MQ** with mq-jms-spring-boot-starter:4.0.1
+
+### Modules
+
+- **perf-tester** (port 8080) - REST API to send messages, receives processed responses
+- **consumer** (port 8081) - Processes messages, adds "processed" suffix
+
+### Message Flow
+
+```
+perf-tester -> DEV.QUEUE.2 -> consumer -> DEV.QUEUE.1 -> perf-tester
+```
 
 ### Project Structure
 
-- `src/main/java/com/example/perfdemo/` - Main application code
-  - `PerfDemoApplication.java` - Spring Boot entry point
-  - `rest/` - REST controllers
-  - `messaging/` - JMS messaging components
-    - `MessageListener.java` - Listens on inbound queue (DEV.QUEUE.1)
-    - `MessageSender.java` - Sends to outbound queue (DEV.QUEUE.2)
-- `src/test/java/` - JUnit 5 tests with `@SpringBootTest`
-- `src/main/resources/application.yml` - Configuration including IBM MQ settings
+```
+perf-demo/
+├── build.gradle              # Root build with shared config
+├── settings.gradle           # Module includes
+├── compose.yaml              # Docker Compose orchestration
+├── infrastructure/
+│   ├── grafana/              # Grafana dashboards and provisioning
+│   ├── mq-config/            # IBM MQ MQSC scripts
+│   └── prometheus/           # Prometheus config
+├── perf-tester/
+│   ├── build.gradle
+│   └── src/main/java/com/example/perftester/
+│       ├── PerfTesterApplication.java
+│       ├── rest/PerfController.java
+│       └── messaging/
+│           ├── MessageSender.java    # Sends to DEV.QUEUE.2
+│           └── MessageListener.java  # Listens on DEV.QUEUE.1
+└── consumer/
+    ├── build.gradle
+    └── src/main/java/com/example/consumer/
+        ├── ConsumerApplication.java
+        └── messaging/
+            └── MessageProcessor.java  # DEV.QUEUE.2 -> DEV.QUEUE.1
+```

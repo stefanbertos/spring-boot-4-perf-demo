@@ -1,6 +1,13 @@
 # perf-demo
 
-Spring Boot application with IBM MQ integration for performance testing.
+Multi-module Spring Boot application with IBM MQ integration for performance testing.
+
+## Modules
+
+| Module | Description | Port |
+|--------|-------------|------|
+| perf-tester | REST API to send messages, listens for processed responses | 8080 |
+| consumer | Consumes messages from DEV.QUEUE.2, adds "processed" suffix, sends to DEV.QUEUE.1 | 8081 |
 
 ## Prerequisites
 
@@ -14,10 +21,18 @@ Spring Boot application with IBM MQ integration for performance testing.
    docker compose up -d
    ```
 
-2. Run the application:
+2. Run both modules:
    ```bash
-   ./gradlew bootRun
+   gradlew.bat :perf-tester:bootRun
+   gradlew.bat :consumer:bootRun
    ```
+
+## Message Flow
+
+```
+perf-tester -> DEV.QUEUE.2 -> consumer -> DEV.QUEUE.1 -> perf-tester
+                              (adds "processed" suffix)
+```
 
 ## IBM MQ Web Console
 
@@ -30,7 +45,8 @@ Note: The console uses a self-signed certificate, so you'll need to accept the b
 ## Prometheus
 
 - URL: http://localhost:9090
-- Metrics endpoint: http://localhost:8080/actuator/prometheus
+- Metrics endpoint (perf-tester): http://localhost:8080/actuator/prometheus
+- Metrics endpoint (consumer): http://localhost:8081/actuator/prometheus
 
 ## Grafana
 
@@ -38,9 +54,9 @@ Note: The console uses a self-signed certificate, so you'll need to accept the b
 - Username: `admin`
 - Password: `admin`
 
-To add Prometheus as a data source:
-1. Go to Connections > Data sources
-2. Add Prometheus with URL: `http://prometheus:9090`
+Dashboards are auto-provisioned:
+- Spring Boot - perf-demo
+- IBM MQ
 
 ## Swagger UI
 
@@ -58,5 +74,5 @@ curl -X POST http://localhost:8080/api/perf/send -d "your message"
 
 | Queue | Purpose |
 |-------|---------|
-| DEV.QUEUE.1 | Inbound (listener reads from here) |
-| DEV.QUEUE.2 | Outbound (sender writes here) |
+| DEV.QUEUE.1 | perf-tester inbound / consumer outbound |
+| DEV.QUEUE.2 | perf-tester outbound / consumer inbound |

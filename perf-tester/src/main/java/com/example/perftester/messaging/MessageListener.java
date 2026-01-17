@@ -1,4 +1,4 @@
-package com.example.perfdemo.messaging;
+package com.example.perftester.messaging;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jms.annotation.JmsListener;
@@ -10,6 +10,6 @@ public class MessageListener {
 
     @JmsListener(destination = "${app.mq.queue.inbound}")
     public void receiveMessage(String message) {
-        log.info("Received message: {}", message);
+        log.info("Received processed message: {}", message);
     }
 }

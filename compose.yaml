@@ -12,14 +12,14 @@ services:
       - "9443:9443"
       - "9157:9157"
     volumes:
-      - ./mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
+      - ./infrastructure/mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
 
   prometheus:
     image: prom/prometheus:v3.1.0
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus:/etc/prometheus
+      - ./infrastructure/prometheus:/etc/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -31,8 +31,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
 
 volumes:
   grafana-data:
