@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: perf-demo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        jms: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        jms: 0.5,0.95,0.99
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
+app:
+  mq:
+    queue:
+      inbound: DEV.QUEUE.1
+      outbound: DEV.QUEUE.2

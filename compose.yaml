@@ -1,0 +1,38 @@
+services:
+  ibm-mq:
+    image: icr.io/ibm-messaging/mq:9.4.1.0-r1
+    environment:
+      LICENSE: accept
+      MQ_QMGR_NAME: QM1
+      MQ_APP_PASSWORD: passw0rd
+      MQ_ADMIN_PASSWORD: passw0rd
+      MQ_ENABLE_METRICS: "true"
+    ports:
+      - "1414:1414"
+      - "9443:9443"
+      - "9157:9157"
+    volumes:
+      - ./mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+volumes:
+  grafana-data:
