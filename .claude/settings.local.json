@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir /b \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\")"
+      "Bash(dir /b \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\")",
+      "Bash(curl -s http://localhost:8080/actuator/prometheus)",
+      "Bash(curl:*)",
+      "Bash(cut:*)"
     ]
   }
 }

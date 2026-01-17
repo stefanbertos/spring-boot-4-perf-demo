@@ -15,7 +15,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(http_server_requests_seconds_count{application=\"perf-tester\"}[1m])",
+          "expr": "rate(http_server_requests_seconds_count{job=\"perf-tester\"}[1m])",
           "legendFormat": "{{method}} {{uri}} - {{status}}"
         }
       ],
@@ -27,18 +27,22 @@
       }
     },
     {
-      "title": "HTTP Response Time (p95, p99)",
+      "title": "HTTP Response Time (avg)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "http_server_requests_seconds{application=\"perf-tester\", quantile=\"0.95\"}",
-          "legendFormat": "p95 - {{method}} {{uri}}"
+          "expr": "rate(http_server_requests_seconds_sum{job=\"perf-tester\"}[1m]) / rate(http_server_requests_seconds_count{job=\"perf-tester\"}[1m])",
+          "legendFormat": "avg - {{method}} {{uri}}"
         },
         {
-          "expr": "http_server_requests_seconds{application=\"perf-tester\", quantile=\"0.99\"}",
-          "legendFormat": "p99 - {{method}} {{uri}}"
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"perf-tester\"}[1m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"perf-tester\"}[1m]))",
+          "legendFormat": "p99"
         }
       ],
       "fieldConfig": {
@@ -55,12 +59,16 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "jvm_memory_used_bytes{application=\"perf-tester\", area=\"heap\"}",
-          "legendFormat": "Used - {{id}}"
+          "expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"heap\"})",
+          "legendFormat": "Used"
         },
         {
-          "expr": "jvm_memory_max_bytes{application=\"perf-tester\", area=\"heap\"}",
-          "legendFormat": "Max - {{id}}"
+          "expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"heap\"})",
+          "legendFormat": "Committed"
+        },
+        {
+          "expr": "jvm_gc_max_data_size_bytes{job=\"perf-tester\"}",
+          "legendFormat": "Max"
         }
       ],
       "fieldConfig": {
@@ -77,8 +85,12 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "jvm_memory_used_bytes{application=\"perf-tester\", area=\"nonheap\"}",
-          "legendFormat": "Used - {{id}}"
+          "expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"nonheap\"})",
+          "legendFormat": "Used"
+        },
+        {
+          "expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"nonheap\"})",
+          "legendFormat": "Committed"
         }
       ],
       "fieldConfig": {
@@ -89,37 +101,38 @@
       }
     },
     {
-      "title": "GC Pause Duration",
+      "title": "GC Overhead",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(jvm_gc_pause_seconds_sum{application=\"perf-tester\"}[1m])",
-          "legendFormat": "{{action}} - {{cause}}"
+          "expr": "jvm_gc_overhead{job=\"perf-tester\"}",
+          "legendFormat": "GC Overhead"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "percentunit",
+          "max": 1
         },
         "overrides": []
       }
     },
     {
-      "title": "GC Count Rate",
+      "title": "JVM Classes",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(jvm_gc_pause_seconds_count{application=\"perf-tester\"}[1m])",
-          "legendFormat": "{{action}} - {{cause}}"
+          "expr": "jvm_classes_loaded_classes{job=\"perf-tester\"}",
+          "legendFormat": "Loaded Classes"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops"
+          "unit": "short"
         },
         "overrides": []
       }
@@ -131,11 +144,11 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "process_cpu_usage{application=\"perf-tester\"}",
+          "expr": "process_cpu_usage{job=\"perf-tester\"}",
           "legendFormat": "Process CPU"
         },
         {
-          "expr": "system_cpu_usage{application=\"perf-tester\"}",
+          "expr": "system_cpu_usage{job=\"perf-tester\"}",
           "legendFormat": "System CPU"
         }
       ],
@@ -154,12 +167,16 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "jvm_threads_live_threads{application=\"perf-tester\"}",
+          "expr": "jvm_threads_live_threads{job=\"perf-tester\"}",
           "legendFormat": "Live Threads"
         },
         {
-          "expr": "jvm_threads_daemon_threads{application=\"perf-tester\"}",
+          "expr": "jvm_threads_daemon_threads{job=\"perf-tester\"}",
           "legendFormat": "Daemon Threads"
+        },
+        {
+          "expr": "jvm_threads_peak_threads{job=\"perf-tester\"}",
+          "legendFormat": "Peak Threads"
         }
       ],
       "fieldConfig": {

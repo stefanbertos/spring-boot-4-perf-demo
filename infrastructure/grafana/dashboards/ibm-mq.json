@@ -9,68 +9,90 @@
   "links": [],
   "panels": [
     {
-      "title": "Queue Depth",
+      "title": "Messages Put Rate",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "ibmmq_queue_depth",
-          "legendFormat": "{{queue}}"
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Put - {{qmgr}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       }
     },
     {
-      "title": "Queue Max Depth",
+      "title": "Messages Get Rate",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "ibmmq_queue_max_depth",
-          "legendFormat": "{{queue}}"
+          "expr": "rate(ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Get - {{qmgr}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       }
     },
     {
-      "title": "Messages Put (rate)",
+      "title": "Bytes Put Rate",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_queue_mqput_mqput1_count[1m])",
-          "legendFormat": "{{queue}}"
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Put Bytes - {{qmgr}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops"
+          "unit": "Bps"
         },
         "overrides": []
       }
     },
     {
-      "title": "Messages Get (rate)",
+      "title": "Bytes Get Rate",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_queue_mqget_count[1m])",
-          "legendFormat": "{{queue}}"
+          "expr": "rate(ibmmq_qmgr_destructive_get_bytes_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Get Bytes - {{qmgr}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Commits / Rollbacks Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(ibmmq_qmgr_commit_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Commits - {{qmgr}}"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_rollback_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Rollbacks - {{qmgr}}"
         }
       ],
       "fieldConfig": {
@@ -81,34 +103,80 @@
       }
     },
     {
-      "title": "Queue Manager Status",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "title": "Failed Operations Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "ibmmq_qmgr_status",
-          "legendFormat": "{{qmgr}}"
+          "expr": "rate(ibmmq_qmgr_failed_mqput_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Failed Put"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_failed_mqget_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Failed Get"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_failed_mqconn_mqconnx_total{job=\"ibm-mq\"}[1m])",
+          "legendFormat": "Failed Connect"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "1": { "text": "Running", "color": "green" } } },
-            { "type": "value", "options": { "0": { "text": "Stopped", "color": "red" } } }
-          ]
+          "unit": "ops"
         },
         "overrides": []
       }
     },
     {
-      "title": "Active Connections",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "title": "Queue Manager CPU Load",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "ibmmq_qmgr_connection_count",
+          "expr": "ibmmq_qmgr_cpu_load_one_minute_average_percentage{job=\"ibm-mq\"}",
+          "legendFormat": "1 min avg - {{qmgr}}"
+        },
+        {
+          "expr": "ibmmq_qmgr_cpu_load_five_minute_average_percentage{job=\"ibm-mq\"}",
+          "legendFormat": "5 min avg - {{qmgr}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Log Write Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_log_write_latency_seconds{job=\"ibm-mq\"}",
+          "legendFormat": "Write Latency - {{qmgr}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_mqconn_mqconnx_total{job=\"ibm-mq\"}",
           "legendFormat": "{{qmgr}}"
         }
       ],
@@ -120,37 +188,64 @@
       }
     },
     {
-      "title": "Messages Put Bytes (rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "title": "Total Messages Put",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_queue_mqput_mqput1_bytes[1m])",
-          "legendFormat": "{{queue}}"
+          "expr": "ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}",
+          "legendFormat": "{{qmgr}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "short"
         },
         "overrides": []
       }
     },
     {
-      "title": "Messages Get Bytes (rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "title": "Total Messages Get",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_queue_mqget_bytes[1m])",
-          "legendFormat": "{{queue}}"
+          "expr": "ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}",
+          "legendFormat": "{{qmgr}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Log Space Used %",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_log_primary_space_in_use_percentage{job=\"ibm-mq\"}",
+          "legendFormat": "{{qmgr}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
         },
         "overrides": []
       }
@@ -158,22 +253,7 @@
   ],
   "schemaVersion": 39,
   "templating": {
-    "list": [
-      {
-        "current": {
-          "selected": true,
-          "text": "Prometheus",
-          "value": "prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Datasource",
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "type": "datasource"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-15m",
