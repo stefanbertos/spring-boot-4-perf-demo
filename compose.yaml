@@ -1,4 +1,24 @@
 services:
+  perf-tester:
+    build:
+      context: ./perf-tester
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - ibm-mq
+
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - ibm-mq
+
   ibm-mq:
     image: icr.io/ibm-messaging/mq:9.4.1.0-r1
     environment:
@@ -20,8 +40,6 @@ services:
       - "9090:9090"
     volumes:
       - ./infrastructure/prometheus:/etc/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   grafana:
     image: grafana/grafana:11.4.0

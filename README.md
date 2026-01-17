@@ -46,7 +46,6 @@ Note: The console uses a self-signed certificate, so you'll need to accept the b
 
 - URL: http://localhost:9090
 - Metrics endpoint (perf-tester): http://localhost:8080/actuator/prometheus
-- Metrics endpoint (consumer): http://localhost:8081/actuator/prometheus
 
 ## Grafana
 

@@ -7,9 +7,6 @@ spring:
     compose:
       file: ../compose.yaml
 
-server:
-  port: 8081
-
 ibm:
   mq:
     queue-manager: QM1
