@@ -54,3 +54,12 @@ app:
     queue:
       inbound: DEV.QUEUE.1
       outbound: DEV.QUEUE.2
+  grafana:
+    url: http://localhost:3000
+    export-path: ./grafana-exports
+    api-key:
+  prometheus:
+    url: http://localhost:9090
+    export-path: ./prometheus-exports
+  export:
+    path: ./test-exports
