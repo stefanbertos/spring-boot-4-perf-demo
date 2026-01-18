@@ -18,6 +18,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - ibm-mq
+    deploy:
+      replicas: 10
 
   ibm-mq:
     image: icr.io/ibm-messaging/mq:9.4.1.0-r1

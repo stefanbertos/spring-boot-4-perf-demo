@@ -18,11 +18,11 @@ public class MessageProcessor {
         this.outboundQueue = outboundQueue;
     }
 
-    @JmsListener(destination = "${app.mq.queue.inbound}")
+    @JmsListener(destination = "${app.mq.queue.inbound}", concurrency = "10-50")
     public void processMessage(String message) {
-        log.info("Received message: {}", message);
+        log.debug("Received message: {}", message);
         String processedMessage = message + " processed";
-        log.info("Sending processed message to {}: {}", outboundQueue, processedMessage);
+        log.debug("Sending processed message to {}: {}", outboundQueue, processedMessage);
         jmsTemplate.convertAndSend(outboundQueue, processedMessage);
     }
 }

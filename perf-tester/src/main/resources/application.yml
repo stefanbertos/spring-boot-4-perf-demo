@@ -4,6 +4,18 @@ spring:
   docker:
     compose:
       file: ../compose.yaml
+  jms:
+    cache:
+      enabled: true
+      session-cache-size: 50
+  task:
+    execution:
+      pool:
+        core-size: 100
+        max-size: 200
+        queue-capacity: 50000
+      thread-name-prefix: mq-sender-
+
 
 server:
   port: 8080

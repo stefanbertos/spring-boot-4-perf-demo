@@ -6,6 +6,10 @@ spring:
   docker:
     compose:
       file: ../compose.yaml
+  jms:
+    cache:
+      enabled: true
+      session-cache-size: 50
 
 ibm:
   mq:

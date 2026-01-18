@@ -193,7 +193,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])",
+          "expr": "rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[30s])",
           "legendFormat": "TPS"
         }
       ],
