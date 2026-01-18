@@ -1,0 +1,48 @@
+replicaCount: 1
+
+image:
+  repository: perf-tester
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+mq:
+  queueManager: QM1
+  channel: DEV.ADMIN.SVRCONN
+  connName: ibm-mq(1414)
+  user: admin
+  password: passw0rd
+  queue:
+    inbound: DEV.QUEUE.1
+    outbound: DEV.QUEUE.2
+
+grafana:
+  url: http://grafana:3000
+  exportPath: /tmp/grafana-exports
+
+prometheus:
+  url: http://prometheus:9090
+  exportPath: /tmp/prometheus-exports
+
+export:
+  path: /tmp/test-exports
+
+jms:
+  sessionCacheSize: 50
+
+task:
+  execution:
+    coreSize: 100
+    maxSize: 200
+    queueCapacity: 50000
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"

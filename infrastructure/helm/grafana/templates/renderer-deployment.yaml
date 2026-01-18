@@ -1,0 +1,34 @@
+{{- if .Values.renderer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "grafana.fullname" . }}-renderer
+  labels:
+    {{- include "grafana.labels" . | nindent 4 }}
+    app.kubernetes.io/component: renderer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "grafana.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: renderer
+  template:
+    metadata:
+      labels:
+        {{- include "grafana.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: renderer
+    spec:
+      containers:
+        - name: renderer
+          image: "{{ .Values.renderer.image.repository }}:{{ .Values.renderer.image.tag }}"
+          imagePullPolicy: {{ .Values.renderer.image.pullPolicy }}
+          env:
+            - name: ENABLE_METRICS
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.renderer.resources | nindent 12 }}
+{{- end }}

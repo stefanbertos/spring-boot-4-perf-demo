@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ibm-mq
+description: IBM MQ for performance testing
+type: application
+version: 1.0.0
+appVersion: "9.4.1.0"

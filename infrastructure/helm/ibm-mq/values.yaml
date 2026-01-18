@@ -1,0 +1,37 @@
+replicaCount: 1
+
+image:
+  repository: icr.io/ibm-messaging/mq
+  tag: "9.4.1.0-r1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  mqPort: 1414
+  webPort: 9443
+  metricsPort: 9157
+
+queueManager:
+  name: QM1
+  appPassword: passw0rd
+  adminPassword: passw0rd
+  enableMetrics: true
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClass: ""
+
+queues:
+  - name: DEV.QUEUE.1
+    maxDepth: 10000
+  - name: DEV.QUEUE.2
+    maxDepth: 10000

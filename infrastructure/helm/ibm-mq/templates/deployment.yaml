@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ibm-mq.fullname" . }}
+  labels:
+    {{- include "ibm-mq.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ibm-mq.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ibm-mq.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: LICENSE
+              value: "accept"
+            - name: MQ_QMGR_NAME
+              value: {{ .Values.queueManager.name }}
+            - name: MQ_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ibm-mq.fullname" . }}-secret
+                  key: app-password
+            - name: MQ_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ibm-mq.fullname" . }}-secret
+                  key: admin-password
+            - name: MQ_ENABLE_METRICS
+              value: "{{ .Values.queueManager.enableMetrics }}"
+          ports:
+            - name: mq
+              containerPort: 1414
+              protocol: TCP
+            - name: web
+              containerPort: 9443
+              protocol: TCP
+            - name: metrics
+              containerPort: 9157
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: mqsc-config
+              mountPath: /etc/mqm/20-create-queues.mqsc
+              subPath: 20-create-queues.mqsc
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /mnt/mqm
+            {{- end }}
+      volumes:
+        - name: mqsc-config
+          configMap:
+            name: {{ include "ibm-mq.fullname" . }}-config
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "ibm-mq.fullname" . }}-pvc
+        {{- end }}

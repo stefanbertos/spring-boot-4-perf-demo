@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "perf-tester.fullname" . }}
+  labels:
+    {{- include "perf-tester.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "perf-tester.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "perf-tester.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: perf-tester
+            - name: IBM_MQ_QUEUEMANAGER
+              value: {{ .Values.mq.queueManager }}
+            - name: IBM_MQ_CHANNEL
+              value: {{ .Values.mq.channel }}
+            - name: IBM_MQ_CONNNAME
+              value: {{ .Values.mq.connName }}
+            - name: IBM_MQ_USER
+              value: {{ .Values.mq.user }}
+            - name: IBM_MQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "perf-tester.fullname" . }}-secret
+                  key: mq-password
+            - name: APP_MQ_QUEUE_INBOUND
+              value: {{ .Values.mq.queue.inbound }}
+            - name: APP_MQ_QUEUE_OUTBOUND
+              value: {{ .Values.mq.queue.outbound }}
+            - name: APP_GRAFANA_URL
+              value: {{ .Values.grafana.url }}
+            - name: APP_GRAFANA_EXPORTPATH
+              value: {{ .Values.grafana.exportPath }}
+            - name: APP_PROMETHEUS_URL
+              value: {{ .Values.prometheus.url }}
+            - name: APP_PROMETHEUS_EXPORTPATH
+              value: {{ .Values.prometheus.exportPath }}
+            - name: APP_EXPORT_PATH
+              value: {{ .Values.export.path }}
+            - name: SPRING_JMS_CACHE_SESSIONCACHESIZE
+              value: "{{ .Values.jms.sessionCacheSize }}"
+            - name: SPRING_TASK_EXECUTION_POOL_CORESIZE
+              value: "{{ .Values.task.execution.coreSize }}"
+            - name: SPRING_TASK_EXECUTION_POOL_MAXSIZE
+              value: "{{ .Values.task.execution.maxSize }}"
+            - name: SPRING_TASK_EXECUTION_POOL_QUEUECAPACITY
+              value: "{{ .Values.task.execution.queueCapacity }}"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
