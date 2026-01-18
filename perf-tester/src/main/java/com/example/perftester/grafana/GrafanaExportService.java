@@ -88,7 +88,7 @@ public class GrafanaExportService {
 
     private ExportedDashboard exportDashboard(DashboardInfo dashboard, long fromMs, long toMs,
                                                String timestamp, Path exportDir) throws IOException {
-        String renderUrl = String.format("/render/d/%s/%s?from=%d&to=%d&width=2500&height=900&tz=UTC",
+        String renderUrl = String.format("/render/d/%s/%s?from=%d&to=%d&width=2500&height=2500&tz=UTC",
                 dashboard.uid(), dashboard.uid(), fromMs, toMs);
 
         String fullRenderUrl = grafanaUrl + renderUrl;
