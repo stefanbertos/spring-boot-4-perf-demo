@@ -4,7 +4,17 @@
       "Bash(dir /b \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\")",
       "Bash(curl -s http://localhost:8080/actuator/prometheus)",
       "Bash(curl:*)",
-      "Bash(cut:*)"
+      "Bash(cut:*)",
+      "Bash(kubectl get:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(helm upgrade:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(./gradlew :consumer:build:*)",
+      "Bash(docker build:*)",
+      "Bash(kubectl config:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(kubectl rollout:*)",
+      "Bash(kubectl rollout status:*)"
     ]
   }
 }

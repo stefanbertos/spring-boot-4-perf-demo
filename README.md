@@ -18,10 +18,10 @@ Multi-module Spring Boot application with IBM MQ integration for performance tes
 
 1. Start services (IBM MQ, Prometheus, Grafana):
    ```bash
-   docker compose up -d
+   runLocalDocker.bat
    ```
 
-2. Run both modules:
+2. Run both modules locally:
    ```bash
    gradlew.bat :perf-tester:bootRun
    gradlew.bat :consumer:bootRun
@@ -75,3 +75,9 @@ curl -X POST http://localhost:8080/api/perf/send -d "your message"
 |-------|---------|
 | DEV.QUEUE.1 | perf-tester inbound / consumer outbound |
 | DEV.QUEUE.2 | perf-tester outbound / consumer inbound |
+
+## Production Deployment
+```bash
+cd infrastructure/helm
+deployHelm.bat
+```

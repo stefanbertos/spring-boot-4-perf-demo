@@ -12,7 +12,7 @@ service:
 mq:
   queueManager: QM1
   channel: DEV.ADMIN.SVRCONN
-  connName: ibm-mq(1414)
+  connName: perf-ibm-mq(1414)
   user: admin
   password: passw0rd
   queue:

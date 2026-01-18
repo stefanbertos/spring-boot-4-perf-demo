@@ -9,10 +9,12 @@ spec:
   selector:
     matchLabels:
       {{- include "grafana.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
   template:
     metadata:
       labels:
         {{- include "grafana.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
     spec:
       containers:
         - name: {{ .Chart.Name }}

@@ -19,10 +19,10 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: consumer
-            - name: SPRING_MAIN_WEBAPPLICATIONTYPE
-              value: none
             - name: IBM_MQ_QUEUEMANAGER
               value: {{ .Values.mq.queueManager }}
             - name: IBM_MQ_CHANNEL
@@ -42,5 +42,23 @@ spec:
               value: {{ .Values.mq.queue.outbound }}
             - name: SPRING_JMS_CACHE_SESSIONCACHESIZE
               value: "{{ .Values.jms.sessionCacheSize }}"
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 5
+            failureThreshold: 10

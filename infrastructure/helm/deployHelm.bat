@@ -8,6 +8,13 @@ echo.
 
 set NAMESPACE=perf-demo
 set RELEASE_PREFIX=perf
+set IMAGE_TAG=latest
+set PROJECT_ROOT=%~dp0..\..
+
+:: GCP Configuration (set these for GCP deployment)
+:: GCP_PROJECT - Google Cloud project ID (e.g., my-project-123)
+:: GCP_REGION - Region for Artifact Registry (e.g., us-central1)
+:: GCP_REGISTRY - Full registry path (auto-generated if not set)
 
 :: Check if helm is installed
 where helm >nul 2>nul
@@ -23,8 +30,191 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Create namespace if it doesn't exist
-echo [1/6] Creating namespace %NAMESPACE%...
+:: Check if docker is installed
+where docker >nul 2>nul
+if %errorlevel% neq 0 (
+    echo ERROR: Docker is not installed or not in PATH
+    exit /b 1
+)
+
+:: ============================================
+:: Build Application JARs
+:: ============================================
+echo [1/9] Building application JARs with Gradle...
+pushd %PROJECT_ROOT%
+call gradlew.bat clean build -x test
+if %errorlevel% neq 0 (
+    echo ERROR: Gradle build failed
+    popd
+    exit /b 1
+)
+popd
+echo      JARs built successfully.
+echo.
+
+:: ============================================
+:: Build Docker Images
+:: ============================================
+echo [2/9] Building Docker image for perf-tester...
+docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build perf-tester image
+    exit /b 1
+)
+echo      perf-tester image built.
+echo.
+
+echo [3/9] Building Docker image for consumer...
+docker build -t consumer:%IMAGE_TAG% %PROJECT_ROOT%\consumer
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build consumer image
+    exit /b 1
+)
+echo      consumer image built.
+echo.
+
+:: ============================================
+:: Load images to Kubernetes (for local clusters)
+:: or push to registry (for GCP/remote clusters)
+:: ============================================
+echo [4/9] Loading images to Kubernetes cluster...
+
+:: Detect cluster type and load images accordingly
+kubectl config current-context > temp_context.txt
+set /p CURRENT_CONTEXT=<temp_context.txt
+del temp_context.txt
+
+echo      Current context: %CURRENT_CONTEXT%
+
+:: Initialize image repository variables (will be overridden for GCP)
+set PERF_TESTER_IMAGE=perf-tester:%IMAGE_TAG%
+set CONSUMER_IMAGE=consumer:%IMAGE_TAG%
+set IMAGE_PULL_POLICY=IfNotPresent
+
+:: Check for GKE (Google Kubernetes Engine)
+echo %CURRENT_CONTEXT% | findstr /i "gke_" >nul
+if %errorlevel% equ 0 (
+    echo      Detected GKE cluster - pushing images to Google Artifact Registry...
+
+    :: Validate GCP_PROJECT is set
+    if "%GCP_PROJECT%"=="" (
+        echo ERROR: GCP_PROJECT environment variable is not set
+        echo Please set it: set GCP_PROJECT=your-project-id
+        exit /b 1
+    )
+
+    :: Set default region if not specified
+    if "%GCP_REGION%"=="" (
+        set GCP_REGION=us-central1
+        echo      Using default region: us-central1
+    )
+
+    :: Set registry path (Artifact Registry format)
+    if "%GCP_REGISTRY%"=="" (
+        set GCP_REGISTRY=%GCP_REGION%-docker.pkg.dev/%GCP_PROJECT%/perf-demo
+    )
+
+    echo      Registry: !GCP_REGISTRY!
+
+    :: Check if gcloud is installed
+    where gcloud >nul 2>nul
+    if %errorlevel% neq 0 (
+        echo ERROR: gcloud CLI is not installed or not in PATH
+        exit /b 1
+    )
+
+    :: Configure docker for GCP Artifact Registry
+    echo      Configuring Docker authentication for Artifact Registry...
+    call gcloud auth configure-docker %GCP_REGION%-docker.pkg.dev --quiet
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to configure Docker for Artifact Registry
+        exit /b 1
+    )
+
+    :: Create Artifact Registry repository if it doesn't exist
+    echo      Ensuring Artifact Registry repository exists...
+    call gcloud artifacts repositories describe perf-demo --location=%GCP_REGION% >nul 2>nul
+    if %errorlevel% neq 0 (
+        echo      Creating Artifact Registry repository 'perf-demo'...
+        call gcloud artifacts repositories create perf-demo ^
+            --repository-format=docker ^
+            --location=%GCP_REGION% ^
+            --description="Perf-Demo Docker images"
+        if %errorlevel% neq 0 (
+            echo ERROR: Failed to create Artifact Registry repository
+            exit /b 1
+        )
+    )
+
+    :: Tag and push perf-tester image
+    set PERF_TESTER_IMAGE=!GCP_REGISTRY!/perf-tester:%IMAGE_TAG%
+    echo      Tagging and pushing perf-tester to !PERF_TESTER_IMAGE!...
+    docker tag perf-tester:%IMAGE_TAG% !PERF_TESTER_IMAGE!
+    docker push !PERF_TESTER_IMAGE!
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to push perf-tester image
+        exit /b 1
+    )
+
+    :: Tag and push consumer image
+    set CONSUMER_IMAGE=!GCP_REGISTRY!/consumer:%IMAGE_TAG%
+    echo      Tagging and pushing consumer to !CONSUMER_IMAGE!...
+    docker tag consumer:%IMAGE_TAG% !CONSUMER_IMAGE!
+    docker push !CONSUMER_IMAGE!
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to push consumer image
+        exit /b 1
+    )
+
+    :: For GCP, we need to pull from registry
+    set IMAGE_PULL_POLICY=Always
+
+    goto :images_loaded
+)
+
+:: Check for minikube
+echo %CURRENT_CONTEXT% | findstr /i "minikube" >nul
+if %errorlevel% equ 0 (
+    echo      Detected Minikube - loading images...
+    minikube image load perf-tester:%IMAGE_TAG%
+    minikube image load consumer:%IMAGE_TAG%
+    goto :images_loaded
+)
+
+:: Check for kind
+echo %CURRENT_CONTEXT% | findstr /i "kind" >nul
+if %errorlevel% equ 0 (
+    echo      Detected Kind - loading images...
+    kind load docker-image perf-tester:%IMAGE_TAG%
+    kind load docker-image consumer:%IMAGE_TAG%
+    goto :images_loaded
+)
+
+:: Check for docker-desktop
+echo %CURRENT_CONTEXT% | findstr /i "docker-desktop" >nul
+if %errorlevel% equ 0 (
+    echo      Detected Docker Desktop - images available directly.
+    goto :images_loaded
+)
+
+:: Check for rancher-desktop
+echo %CURRENT_CONTEXT% | findstr /i "rancher" >nul
+if %errorlevel% equ 0 (
+    echo      Detected Rancher Desktop - images available directly.
+    goto :images_loaded
+)
+
+echo      Unknown cluster type. Images may need to be pushed to a registry.
+echo      For GCP, set GCP_PROJECT environment variable before running.
+
+:images_loaded
+echo      Images ready.
+echo.
+
+:: ============================================
+:: Create Namespace
+:: ============================================
+echo [5/9] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -33,8 +223,10 @@ if %errorlevel% neq 0 (
 echo      Namespace ready.
 echo.
 
-:: Deploy IBM MQ
-echo [2/6] Deploying IBM MQ...
+:: ============================================
+:: Deploy Infrastructure
+:: ============================================
+echo [6/9] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -50,8 +242,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-:: Deploy Prometheus
-echo [3/6] Deploying Prometheus...
+echo [7/9] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -62,8 +253,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-:: Deploy Grafana
-echo [4/6] Deploying Grafana...
+echo [8/9] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -74,22 +264,34 @@ if %errorlevel% neq 0 (
 echo      Grafana deployed.
 echo.
 
-:: Deploy Consumer
-echo [5/6] Deploying Consumer...
+:: ============================================
+:: Deploy Applications
+:: ============================================
+echo [9/9] Deploying Applications...
+
+echo      Deploying Consumer...
+:: Extract repository from full image path (remove tag)
+for /f "tokens=1 delims=:" %%a in ("%CONSUMER_IMAGE%") do set CONSUMER_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-consumer ./consumer ^
     --namespace %NAMESPACE% ^
+    --set image.repository=%CONSUMER_REPO% ^
+    --set image.tag=%IMAGE_TAG% ^
+    --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
     --wait --timeout 3m
 if %errorlevel% neq 0 (
     echo ERROR: Failed to deploy Consumer
     exit /b 1
 )
 echo      Consumer deployed.
-echo.
 
-:: Deploy Perf-Tester
-echo [6/6] Deploying Perf-Tester...
+echo      Deploying Perf-Tester...
+:: Extract repository from full image path (remove tag)
+for /f "tokens=1 delims=:" %%a in ("%PERF_TESTER_IMAGE%") do set PERF_TESTER_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-perf-tester ./perf-tester ^
     --namespace %NAMESPACE% ^
+    --set image.repository=%PERF_TESTER_REPO% ^
+    --set image.tag=%IMAGE_TAG% ^
+    --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
     --wait --timeout 3m
 if %errorlevel% neq 0 (
     echo ERROR: Failed to deploy Perf-Tester
@@ -102,14 +304,33 @@ echo ============================================
 echo  Deployment Complete!
 echo ============================================
 echo.
+echo Cluster: %CURRENT_CONTEXT%
+echo Namespace: %NAMESPACE%
+echo.
 echo Services:
 echo   - IBM MQ:      kubectl port-forward svc/%RELEASE_PREFIX%-ibm-mq 1414:1414 -n %NAMESPACE%
 echo   - Prometheus:  kubectl port-forward svc/%RELEASE_PREFIX%-prometheus 9090:9090 -n %NAMESPACE%
 echo   - Grafana:     kubectl port-forward svc/%RELEASE_PREFIX%-grafana 3000:3000 -n %NAMESPACE%
 echo   - Perf-Tester: kubectl port-forward svc/%RELEASE_PREFIX%-perf-tester 8080:8080 -n %NAMESPACE%
 echo.
-echo To run a test:
-echo   curl -X POST "http://localhost:8080/api/perf/send?count=1000" -H "Content-Type: text/plain" -d "test" -o results.zip
+echo Quick start:
+echo   1. Run: portForward.bat
+echo   2. Open Grafana: http://localhost:3000 (admin/admin)
+echo   3. Open http://localhost:8080/swagger-ui.html and start the test
+echo.
+echo ============================================
+echo  Usage Notes
+echo ============================================
+echo.
+echo For GCP/GKE deployment:
+echo   1. Ensure gcloud CLI is installed and authenticated
+echo   2. Set environment variables before running:
+echo      set GCP_PROJECT=your-project-id
+echo      set GCP_REGION=us-central1  (optional, defaults to us-central1)
+echo   3. Run this script while connected to GKE context
+echo.
+echo For local clusters (minikube, kind, docker-desktop, rancher):
+echo   - Images are loaded directly, no registry needed
 echo.
 
 endlocal

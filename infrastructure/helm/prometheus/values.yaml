@@ -28,16 +28,11 @@ scrapeInterval: 15s
 targets:
   perfTester:
     enabled: true
-    serviceName: perf-tester
+    serviceName: perf-perf-tester
     port: 8080
-    metricsPath: /actuator/prometheus
-  consumer:
-    enabled: true
-    serviceName: consumer
-    port: 8081
     metricsPath: /actuator/prometheus
   ibmMq:
     enabled: true
-    serviceName: ibm-mq
+    serviceName: perf-ibm-mq
     port: 9157
     metricsPath: /metrics

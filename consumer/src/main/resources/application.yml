@@ -1,8 +1,6 @@
 spring:
   application:
     name: consumer
-  main:
-    web-application-type: none
   docker:
     compose:
       file: ../compose.yaml

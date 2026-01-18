@@ -9,7 +9,7 @@ data:
     apiVersion: 1
     datasources:
       {{- if .Values.datasources.prometheus.enabled }}
-      - name: Prometheus
+      - name: prometheus
         type: prometheus
         access: proxy
         url: {{ .Values.datasources.prometheus.url }}

@@ -23,9 +23,83 @@ data:
           "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}
         },
         {
-          "title": "MQ E2E TPS",
+          "title": "HTTP Response Time (avg)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(http_server_requests_seconds_sum{job=\"perf-tester\"}[1m]) / rate(http_server_requests_seconds_count{job=\"perf-tester\"}[1m])", "legendFormat": "avg - {{ "{{method}}" }} {{ "{{uri}}" }}"},
+            {"expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"perf-tester\"}[1m]))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"perf-tester\"}[1m]))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "JVM Heap Memory",
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"heap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"heap\"})", "legendFormat": "Committed"},
+            {"expr": "jvm_gc_max_data_size_bytes{job=\"perf-tester\"}", "legendFormat": "Max"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "JVM Non-Heap Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"nonheap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"nonheap\"})", "legendFormat": "Committed"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "GC Overhead",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_gc_overhead{job=\"perf-tester\"}", "legendFormat": "GC Overhead"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Classes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_classes_loaded_classes{job=\"perf-tester\"}", "legendFormat": "Loaded Classes"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "process_cpu_usage{job=\"perf-tester\"}", "legendFormat": "Process CPU"},
+            {"expr": "system_cpu_usage{job=\"perf-tester\"}", "legendFormat": "System CPU"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Threads",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "jvm_threads_live_threads{job=\"perf-tester\"}", "legendFormat": "Live Threads"},
+            {"expr": "jvm_threads_daemon_threads{job=\"perf-tester\"}", "legendFormat": "Daemon Threads"},
+            {"expr": "jvm_threads_peak_threads{job=\"perf-tester\"}", "legendFormat": "Peak Threads"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "MQ E2E TPS",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [{"expr": "rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[30s])", "legendFormat": "TPS"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
@@ -33,13 +107,29 @@ data:
         {
           "title": "MQ E2E Latency Percentiles",
           "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
             {"expr": "histogram_quantile(0.50, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))", "legendFormat": "p50"},
             {"expr": "histogram_quantile(0.95, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))", "legendFormat": "p95"},
             {"expr": "histogram_quantile(0.99, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))", "legendFormat": "p99"}
           ],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "MQ E2E Avg Latency",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(mq_e2e_latency_seconds_sum{job=\"perf-tester\"}[1m]) / rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])", "legendFormat": "Avg Latency"}],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "MQ E2E Max Latency (histogram)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "mq_e2e_latency_seconds_max{job=\"perf-tester\"}", "legendFormat": "Max Latency"}],
           "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
         }
       ],
@@ -74,6 +164,96 @@ data:
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [{"expr": "rate(ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Get - {{ "{{qmgr}}" }}"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Bytes Put Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Put Bytes - {{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        },
+        {
+          "title": "Bytes Get Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(ibmmq_qmgr_destructive_get_bytes_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Get Bytes - {{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        },
+        {
+          "title": "Commits / Rollbacks Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(ibmmq_qmgr_commit_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Commits - {{ "{{qmgr}}" }}"},
+            {"expr": "rate(ibmmq_qmgr_rollback_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Rollbacks - {{ "{{qmgr}}" }}"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Failed Operations Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(ibmmq_qmgr_failed_mqput_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Failed Put"},
+            {"expr": "rate(ibmmq_qmgr_failed_mqget_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Failed Get"},
+            {"expr": "rate(ibmmq_qmgr_failed_mqconn_mqconnx_total{job=\"ibm-mq\"}[1m])", "legendFormat": "Failed Connect"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Queue Manager CPU Load",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "ibmmq_qmgr_cpu_load_one_minute_average_percentage{job=\"ibm-mq\"}", "legendFormat": "1 min avg - {{ "{{qmgr}}" }}"},
+            {"expr": "ibmmq_qmgr_cpu_load_five_minute_average_percentage{job=\"ibm-mq\"}", "legendFormat": "5 min avg - {{ "{{qmgr}}" }}"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100}, "overrides": []}
+        },
+        {
+          "title": "Log Write Latency",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "ibmmq_qmgr_log_write_latency_seconds{job=\"ibm-mq\"}", "legendFormat": "Write Latency - {{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "Connections",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 32},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "ibmmq_qmgr_mqconn_mqconnx_total{job=\"ibm-mq\"}", "legendFormat": "{{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Total Messages Put",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 32},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}", "legendFormat": "{{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Total Messages Get",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 32},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}", "legendFormat": "{{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Log Space Used %",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 32},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "ibmmq_qmgr_log_primary_space_in_use_percentage{job=\"ibm-mq\"}", "legendFormat": "{{ "{{qmgr}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 90}]}}, "overrides": []}
         }
       ],
       "schemaVersion": 39,

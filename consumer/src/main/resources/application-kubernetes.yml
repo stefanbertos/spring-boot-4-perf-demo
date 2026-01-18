@@ -1,0 +1,12 @@
+# Kubernetes profile - enables web server for actuator health probes
+spring:
+  docker:
+    compose:
+      enabled: false
+
+server:
+  port: 8081
+
+ibm:
+  mq:
+    conn-name: perf-ibm-mq(1414)

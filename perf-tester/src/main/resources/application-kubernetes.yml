@@ -1,0 +1,19 @@
+# Kubernetes profile
+spring:
+  docker:
+    compose:
+      enabled: false
+
+ibm:
+  mq:
+    conn-name: perf-ibm-mq(1414)
+
+app:
+  grafana:
+    url: http://grafana:3000
+    export-path: /tmp/grafana-exports
+  prometheus:
+    url: http://prometheus:9090
+    export-path: /tmp/prometheus-exports
+  export:
+    path: /tmp/test-exports

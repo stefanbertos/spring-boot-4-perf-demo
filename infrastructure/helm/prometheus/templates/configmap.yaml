@@ -17,13 +17,6 @@ data:
           - targets: ['{{ .Values.targets.perfTester.serviceName }}:{{ .Values.targets.perfTester.port }}']
       {{- end }}
 
-      {{- if .Values.targets.consumer.enabled }}
-      - job_name: 'consumer'
-        metrics_path: '{{ .Values.targets.consumer.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.consumer.serviceName }}:{{ .Values.targets.consumer.port }}']
-      {{- end }}
-
       {{- if .Values.targets.ibmMq.enabled }}
       - job_name: 'ibm-mq'
         metrics_path: '{{ .Values.targets.ibmMq.metricsPath }}'
