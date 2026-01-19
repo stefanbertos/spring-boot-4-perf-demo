@@ -1,6 +1,7 @@
 package com.example.perftester.messaging;
 
 import com.example.perftester.perf.PerformanceTracker;
+import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
@@ -15,14 +16,26 @@ public class MessageSender {
 
     private final JmsTemplate jmsTemplate;
     private final String outboundQueue;
+    private final Queue replyToQueue;
     private final PerformanceTracker performanceTracker;
 
     public MessageSender(JmsTemplate jmsTemplate,
                          @Value("${app.mq.queue.outbound}") String outboundQueue,
+                         @Value("${app.mq.queue.inbound}") String inboundQueue,
                          PerformanceTracker performanceTracker) {
         this.jmsTemplate = jmsTemplate;
         this.outboundQueue = outboundQueue;
+        this.replyToQueue = createQueue(inboundQueue);
         this.performanceTracker = performanceTracker;
+    }
+
+    private Queue createQueue(String queueName) {
+        return new Queue() {
+            @Override
+            public String getQueueName() {
+                return queueName;
+            }
+        };
     }
 
     public void sendMessage(String payload) {
@@ -30,8 +43,11 @@ public class MessageSender {
         String message = PerformanceTracker.createMessage(messageId, payload);
 
         performanceTracker.recordSend(messageId);
-        jmsTemplate.convertAndSend(outboundQueue, message);
+        jmsTemplate.convertAndSend(outboundQueue, message, m -> {
+            m.setJMSReplyTo(replyToQueue);
+            return m;
+        });
 
-        log.debug("Sent message [{}] to {}", messageId, outboundQueue);
+        log.debug("Sent message [{}] to {} with replyTo {}", messageId, outboundQueue, replyToQueue);
     }
 }

@@ -1,6 +1,9 @@
 spring:
   application:
     name: perf-tester
+  threads:
+    virtual:
+      enabled: true
   docker:
     compose:
       file: ../compose.yaml

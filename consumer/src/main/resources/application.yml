@@ -1,6 +1,9 @@
 spring:
   application:
     name: consumer
+  threads:
+    virtual:
+      enabled: true
   docker:
     compose:
       file: ../compose.yaml
