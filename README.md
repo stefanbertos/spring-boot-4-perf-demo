@@ -76,6 +76,25 @@ curl -X POST http://localhost:8080/api/perf/send -d "your message"
 | DEV.QUEUE.1 | perf-tester inbound / consumer outbound |
 | DEV.QUEUE.2 | perf-tester outbound / consumer inbound |
 
+## Debugging MQ Messages
+
+To enable detailed JMS/MQ logging, uncomment the debug levels in `application.yml`:
+
+```yaml
+logging:
+  level:
+    org.springframework.jms: DEBUG
+    com.ibm.mq: DEBUG
+    com.ibm.msg: DEBUG
+```
+
+Or pass as command-line arguments:
+```bash
+gradlew.bat :perf-tester:bootRun --args='--logging.level.org.springframework.jms=DEBUG --logging.level.com.ibm.mq=DEBUG'
+```
+
+This will log message headers, properties, and routing information.
+
 ## Production Deployment
 ```bash
 cd infrastructure/helm

@@ -20,6 +20,18 @@ ibm:
     user: admin
     password: passw0rd
 
+server:
+  port: 8081
+  address: 0.0.0.0
+
+logging:
+  level:
+    # Enable for JMS/MQ message debugging
+    # org.springframework.jms: DEBUG
+    # com.ibm.mq: DEBUG
+    # com.ibm.msg: DEBUG
+    com.example.consumer: INFO
+
 app:
   mq:
     queue:

@@ -24,6 +24,14 @@ server:
   port: 8080
   address: 0.0.0.0
 
+logging:
+  level:
+    # Enable for JMS/MQ message debugging
+    org.springframework.jms: DEBUG
+    com.ibm.mq: DEBUG
+    com.ibm.msg: DEBUG
+    com.example.perftester: INFO
+
 management:
   endpoints:
     web:
