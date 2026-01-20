@@ -1,6 +1,8 @@
 package com.example.perftester.messaging;
 
 import com.example.perftester.perf.PerformanceTracker;
+import com.ibm.mq.jakarta.jms.MQQueue;
+import jakarta.jms.JMSException;
 import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,20 +24,15 @@ public class MessageSender {
     public MessageSender(JmsTemplate jmsTemplate,
                          @Value("${app.mq.queue.outbound}") String outboundQueue,
                          @Value("${app.mq.queue.inbound}") String inboundQueue,
-                         PerformanceTracker performanceTracker) {
+                         PerformanceTracker performanceTracker) throws JMSException {
         this.jmsTemplate = jmsTemplate;
         this.outboundQueue = outboundQueue;
         this.replyToQueue = createQueue(inboundQueue);
         this.performanceTracker = performanceTracker;
     }
 
-    private Queue createQueue(String queueName) {
-        return new Queue() {
-            @Override
-            public String getQueueName() {
-                return queueName;
-            }
-        };
+    private MQQueue createQueue(String queueName) throws JMSException {
+        return new MQQueue(queueName);
     }
 
     public void sendMessage(String payload) {
