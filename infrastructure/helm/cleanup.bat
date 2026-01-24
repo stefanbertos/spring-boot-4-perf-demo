@@ -20,7 +20,7 @@ echo Uninstalling all Helm releases in namespace: %NAMESPACE%
 echo.
 
 :: Uninstall Ingress
-echo [1/8] Uninstalling Ingress...
+echo [1/11] Uninstalling Ingress...
 helm uninstall %RELEASE_PREFIX%-ingress --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Ingress uninstalled.
@@ -29,8 +29,38 @@ if %errorlevel% equ 0 (
 )
 echo.
 
+:: Uninstall Kafka Exporter
+echo [2/11] Uninstalling Kafka Exporter...
+helm uninstall %RELEASE_PREFIX%-kafka-exporter --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Kafka Exporter uninstalled.
+) else (
+    echo      Kafka Exporter not found or already removed.
+)
+echo.
+
+:: Uninstall Kafdrop
+echo [3/11] Uninstalling Kafdrop...
+helm uninstall %RELEASE_PREFIX%-kafdrop --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Kafdrop uninstalled.
+) else (
+    echo      Kafdrop not found or already removed.
+)
+echo.
+
+:: Uninstall Kafka
+echo [4/11] Uninstalling Kafka...
+helm uninstall %RELEASE_PREFIX%-kafka --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Kafka uninstalled.
+) else (
+    echo      Kafka not found or already removed.
+)
+echo.
+
 :: Uninstall Perf-Tester
-echo [2/8] Uninstalling Perf-Tester...
+echo [5/11] Uninstalling Perf-Tester...
 helm uninstall %RELEASE_PREFIX%-perf-tester --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Perf-Tester uninstalled.
@@ -40,7 +70,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Consumer
-echo [3/8] Uninstalling Consumer...
+echo [6/11] Uninstalling Consumer...
 helm uninstall %RELEASE_PREFIX%-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Consumer uninstalled.
@@ -50,7 +80,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Grafana
-echo [4/8] Uninstalling Grafana...
+echo [7/11] Uninstalling Grafana...
 helm uninstall %RELEASE_PREFIX%-grafana --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Grafana uninstalled.
@@ -60,7 +90,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Prometheus
-echo [5/8] Uninstalling Prometheus...
+echo [8/11] Uninstalling Prometheus...
 helm uninstall %RELEASE_PREFIX%-prometheus --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Prometheus uninstalled.
@@ -70,7 +100,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall IBM MQ
-echo [6/8] Uninstalling IBM MQ...
+echo [9/11] Uninstalling IBM MQ...
 helm uninstall %RELEASE_PREFIX%-ibm-mq --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      IBM MQ uninstalled.
@@ -80,13 +110,13 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Delete PVCs
-echo [7/8] Deleting Persistent Volume Claims...
+echo [10/11] Deleting Persistent Volume Claims...
 kubectl delete pvc --all -n %NAMESPACE% 2>nul
 echo      PVCs deleted.
 echo.
 
 :: Delete namespace
-echo [8/8] Deleting namespace %NAMESPACE%...
+echo [11/11] Deleting namespace %NAMESPACE%...
 kubectl delete namespace %NAMESPACE% 2>nul
 echo      Namespace deleted.
 echo.

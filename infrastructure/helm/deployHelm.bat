@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/10] Building application JARs with Gradle...
+echo [1/14] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -55,7 +55,7 @@ echo.
 :: ============================================
 :: Build Docker Images
 :: ============================================
-echo [2/10] Building Docker image for perf-tester...
+echo [2/14] Building Docker image for perf-tester...
 docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build perf-tester image
@@ -64,7 +64,7 @@ if %errorlevel% neq 0 (
 echo      perf-tester image built.
 echo.
 
-echo [3/10] Building Docker image for consumer...
+echo [3/14] Building Docker image for consumer...
 docker build -t consumer:%IMAGE_TAG% %PROJECT_ROOT%\consumer
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build consumer image
@@ -77,7 +77,7 @@ echo.
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [4/10] Loading images to Kubernetes cluster...
+echo [4/14] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -214,7 +214,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [5/10] Creating namespace %NAMESPACE%...
+echo [5/14] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -226,7 +226,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [6/10] Deploying IBM MQ...
+echo [6/14] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -242,7 +242,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [7/10] Deploying Prometheus...
+echo [7/14] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -253,7 +253,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [8/10] Deploying Grafana...
+echo [8/14] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -267,7 +267,7 @@ echo.
 :: ============================================
 :: Deploy Applications
 :: ============================================
-echo [9/10] Deploying Applications...
+echo [9/14] Deploying Applications...
 
 echo      Deploying Consumer...
 :: Extract repository from full image path (remove tag)
@@ -301,9 +301,56 @@ echo      Perf-Tester deployed.
 echo.
 
 :: ============================================
+:: Deploy Kafka
+:: ============================================
+echo [10/14] Deploying Kafka...
+helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 5m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Kafka
+    exit /b 1
+)
+echo      Kafka deployed.
+echo.
+
+:: Wait for Kafka to be ready
+echo      Waiting for Kafka to be ready...
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n %NAMESPACE% --timeout=300s
+echo.
+
+:: ============================================
+:: Deploy Kafdrop
+:: ============================================
+echo [11/14] Deploying Kafdrop...
+helm upgrade --install %RELEASE_PREFIX%-kafdrop ./kafdrop ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Kafdrop
+    exit /b 1
+)
+echo      Kafdrop deployed.
+echo.
+
+:: ============================================
+:: Deploy Kafka Exporter
+:: ============================================
+echo [12/14] Deploying Kafka Exporter...
+helm upgrade --install %RELEASE_PREFIX%-kafka-exporter ./kafka-exporter ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 2m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Kafka Exporter
+    exit /b 1
+)
+echo      Kafka Exporter deployed.
+echo.
+
+:: ============================================
 :: Deploy Ingress
 :: ============================================
-echo [10/10] Deploying Ingress...
+echo [13/14] Deploying Ingress...
 helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -314,6 +361,8 @@ if %errorlevel% neq 0 (
 echo      Ingress deployed.
 echo.
 
+echo [14/14] Printing deployment summary...
+echo.
 echo ============================================
 echo  Deployment Complete!
 echo ============================================
@@ -325,17 +374,11 @@ echo ============================================
 echo  Ingress URLs
 echo ============================================
 echo.
-echo All services available at: http://localhost
-echo.
-echo   Grafana:     http://localhost/grafana
-echo   Prometheus:  http://localhost/prometheus
-echo   Perf-Tester: http://localhost/api
-echo   IBM MQ Web:  http://localhost/mq
-echo.
 echo Access the services:
 echo   - Grafana:     http://localhost/grafana (admin/admin)
-echo   - Swagger UI:  http://localhost/api/swagger-ui.html
+echo   - Swagger UI:  http://localhost/api/swagger-ui/index.html
 echo   - Prometheus:  http://localhost/prometheus
+echo   - Kafdrop:     http://localhost/kafdrop
 echo   - MQ Console:  http://localhost/mq (admin/passw0rd)
 echo.
 echo ============================================

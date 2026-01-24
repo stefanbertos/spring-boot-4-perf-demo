@@ -29,7 +29,7 @@ admin:
 datasources:
   prometheus:
     enabled: true
-    url: http://perf-prometheus:9090
+    url: http://perf-prometheus:9090/prometheus
 
 resources:
   requests:

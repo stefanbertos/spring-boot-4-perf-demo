@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-exporter
+description: Kafka Exporter for Prometheus metrics
+type: application
+version: 1.0.0
+appVersion: "1.7.0"

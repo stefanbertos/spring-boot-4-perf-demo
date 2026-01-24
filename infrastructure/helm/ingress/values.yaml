@@ -27,3 +27,7 @@ services:
     name: perf-ibm-mq
     port: 9443
     path: /mq
+  kafdrop:
+    name: perf-kafdrop
+    port: 9000
+    path: /kafdrop

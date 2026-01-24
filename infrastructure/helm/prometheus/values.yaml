@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: prom/prometheus
-  tag: "v3.1.0"
+  tag: "v3.9.1"
   pullPolicy: IfNotPresent
 
 service:
@@ -30,9 +30,14 @@ targets:
     enabled: true
     serviceName: perf-perf-tester
     port: 8080
-    metricsPath: /actuator/prometheus
+    metricsPath: /api/actuator/prometheus
   ibmMq:
     enabled: true
     serviceName: perf-ibm-mq
     port: 9157
+    metricsPath: /metrics
+  kafkaExporter:
+    enabled: true
+    serviceName: perf-kafka-exporter
+    port: 9308
     metricsPath: /metrics

@@ -23,6 +23,8 @@ spec:
               value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: perf-tester
+            - name: SERVER_SERVLET_CONTEXTPATH
+              value: /api
             - name: IBM_MQ_QUEUEMANAGER
               value: {{ .Values.mq.queueManager }}
             - name: IBM_MQ_CHANNEL
@@ -66,13 +68,13 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /api/actuator/health/liveness
               port: http
             initialDelaySeconds: 60
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /api/actuator/health/readiness
               port: http
             initialDelaySeconds: 10
             periodSeconds: 5

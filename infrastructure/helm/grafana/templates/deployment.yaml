@@ -26,6 +26,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "grafana.fullname" . }}-secret
                   key: admin-password
+            - name: GF_SERVER_ROOT_URL
+              value: "http://localhost/grafana"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
             {{- if .Values.renderer.enabled }}
             - name: GF_RENDERING_SERVER_URL
               value: "http://{{ include "grafana.fullname" . }}-renderer:8081/render"

@@ -263,3 +263,100 @@ data:
       "uid": "ibm-mq",
       "version": 1
     }
+  kafka.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Brokers Online",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "count(kafka_brokers)", "legendFormat": "Brokers"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Topics",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "count(kafka_topic_partitions)", "legendFormat": "Topics"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Partitions",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_topic_partitions)", "legendFormat": "Partitions"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Under Replicated Partitions",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_topic_partition_under_replicated_partition)", "legendFormat": "Under Replicated"}],
+          "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []}
+        },
+        {
+          "title": "Messages In Rate (per topic)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(kafka_topic_partition_current_offset{job=\"kafka\"}[1m])) by (topic)", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Consumer Lag (per group)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_consumergroup_lag{job=\"kafka\"}) by (consumergroup)", "legendFormat": "{{ "{{consumergroup}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Partition Offset (per topic)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_topic_partition_current_offset{job=\"kafka\"}) by (topic)", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Consumer Group Offset (per group)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_consumergroup_current_offset{job=\"kafka\"}) by (consumergroup)", "legendFormat": "{{ "{{consumergroup}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Partitions per Topic",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "kafka_topic_partitions{job=\"kafka\"}", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Consumer Lag per Partition",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "kafka_consumergroup_lag{job=\"kafka\"}", "legendFormat": "{{ "{{consumergroup}}" }} - {{ "{{topic}}" }} [{{ "{{partition}}" }}]"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "templating": {"list": []},
+      "time": {"from": "now-15m", "to": "now"},
+      "title": "Kafka",
+      "uid": "kafka",
+      "version": 1
+    }

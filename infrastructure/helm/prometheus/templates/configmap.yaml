@@ -23,3 +23,10 @@ data:
         static_configs:
           - targets: ['{{ .Values.targets.ibmMq.serviceName }}:{{ .Values.targets.ibmMq.port }}']
       {{- end }}
+
+      {{- if .Values.targets.kafkaExporter.enabled }}
+      - job_name: 'kafka'
+        metrics_path: '{{ .Values.targets.kafkaExporter.metricsPath }}'
+        static_configs:
+          - targets: ['{{ .Values.targets.kafkaExporter.serviceName }}:{{ .Values.targets.kafkaExporter.port }}']
+      {{- end }}

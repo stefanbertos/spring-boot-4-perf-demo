@@ -6,9 +6,68 @@ metadata:
   labels:
     app.kubernetes.io/name: perf-demo-ingress
     app.kubernetes.io/instance: {{ .Release.Name }}
+  {{- with .Values.annotations }}
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.className }}
+  ingressClassName: {{ .Values.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          # Grafana
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.services.grafana.name }}
+                port:
+                  number: {{ .Values.services.grafana.port }}
+          # Prometheus
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.services.prometheus.name }}
+                port:
+                  number: {{ .Values.services.prometheus.port }}
+          # Perf-Tester API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.services.perfTester.name }}
+                port:
+                  number: {{ .Values.services.perfTester.port }}
+          # Kafdrop
+          - path: /kafdrop
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.services.kafdrop.name }}
+                port:
+                  number: {{ .Values.services.kafdrop.port }}
+  {{- if .Values.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.host }}
+      secretName: {{ .Values.tls.secretName | default "perf-demo-tls" }}
+  {{- end }}
+---
+# Separate ingress for MQ (requires HTTPS backend)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: perf-demo-ingress-mq
+  labels:
+    app.kubernetes.io/name: perf-demo-ingress-mq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
     {{- with .Values.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -20,33 +79,8 @@ spec:
     - host: {{ .Values.host }}
       http:
         paths:
-          # Grafana
-          - path: /grafana(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ .Values.services.grafana.name }}
-                port:
-                  number: {{ .Values.services.grafana.port }}
-          # Prometheus
-          - path: /prometheus(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ .Values.services.prometheus.name }}
-                port:
-                  number: {{ .Values.services.prometheus.port }}
-          # Perf-Tester API
-          - path: /api(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ .Values.services.perfTester.name }}
-                port:
-                  number: {{ .Values.services.perfTester.port }}
-          # IBM MQ Web Console
-          - path: /mq(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /mq
+            pathType: Prefix
             backend:
               service:
                 name: {{ .Values.services.mqWeb.name }}
