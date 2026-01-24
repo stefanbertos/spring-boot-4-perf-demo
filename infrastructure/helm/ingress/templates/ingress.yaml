@@ -1,0 +1,61 @@
+{{- if .Values.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: perf-demo-ingress
+  labels:
+    app.kubernetes.io/name: perf-demo-ingress
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    {{- with .Values.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.className }}
+  ingressClassName: {{ .Values.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          # Grafana
+          - path: /grafana(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.services.grafana.name }}
+                port:
+                  number: {{ .Values.services.grafana.port }}
+          # Prometheus
+          - path: /prometheus(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.services.prometheus.name }}
+                port:
+                  number: {{ .Values.services.prometheus.port }}
+          # Perf-Tester API
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.services.perfTester.name }}
+                port:
+                  number: {{ .Values.services.perfTester.port }}
+          # IBM MQ Web Console
+          - path: /mq(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.services.mqWeb.name }}
+                port:
+                  number: {{ .Values.services.mqWeb.port }}
+  {{- if .Values.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.host }}
+      secretName: {{ .Values.tls.secretName | default "perf-demo-tls" }}
+  {{- end }}
+{{- end }}

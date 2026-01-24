@@ -19,8 +19,18 @@ if %errorlevel% neq 0 (
 echo Uninstalling all Helm releases in namespace: %NAMESPACE%
 echo.
 
+:: Uninstall Ingress
+echo [1/8] Uninstalling Ingress...
+helm uninstall %RELEASE_PREFIX%-ingress --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Ingress uninstalled.
+) else (
+    echo      Ingress not found or already removed.
+)
+echo.
+
 :: Uninstall Perf-Tester
-echo [1/7] Uninstalling Perf-Tester...
+echo [2/8] Uninstalling Perf-Tester...
 helm uninstall %RELEASE_PREFIX%-perf-tester --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Perf-Tester uninstalled.
@@ -30,7 +40,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Consumer
-echo [2/7] Uninstalling Consumer...
+echo [3/8] Uninstalling Consumer...
 helm uninstall %RELEASE_PREFIX%-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Consumer uninstalled.
@@ -40,7 +50,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Grafana
-echo [3/7] Uninstalling Grafana...
+echo [4/8] Uninstalling Grafana...
 helm uninstall %RELEASE_PREFIX%-grafana --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Grafana uninstalled.
@@ -50,7 +60,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Prometheus
-echo [4/7] Uninstalling Prometheus...
+echo [5/8] Uninstalling Prometheus...
 helm uninstall %RELEASE_PREFIX%-prometheus --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Prometheus uninstalled.
@@ -60,7 +70,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall IBM MQ
-echo [5/7] Uninstalling IBM MQ...
+echo [6/8] Uninstalling IBM MQ...
 helm uninstall %RELEASE_PREFIX%-ibm-mq --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      IBM MQ uninstalled.
@@ -70,13 +80,13 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Delete PVCs
-echo [6/7] Deleting Persistent Volume Claims...
+echo [7/8] Deleting Persistent Volume Claims...
 kubectl delete pvc --all -n %NAMESPACE% 2>nul
 echo      PVCs deleted.
 echo.
 
 :: Delete namespace
-echo [7/7] Deleting namespace %NAMESPACE%...
+echo [8/8] Deleting namespace %NAMESPACE%...
 kubectl delete namespace %NAMESPACE% 2>nul
 echo      Namespace deleted.
 echo.

@@ -27,9 +27,9 @@ server:
 logging:
   level:
     # Enable for JMS/MQ message debugging
-    org.springframework.jms: DEBUG
-    com.ibm.mq: DEBUG
-    com.ibm.msg: DEBUG
+    org.springframework.jms: INFO
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO
     com.example.perftester: INFO
 
 management:

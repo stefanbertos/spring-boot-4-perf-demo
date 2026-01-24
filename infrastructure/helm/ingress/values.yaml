@@ -1,0 +1,29 @@
+enabled: true
+
+className: ""
+
+host: localhost
+
+annotations: {}
+
+tls:
+  enabled: false
+  secretName: ""
+
+services:
+  grafana:
+    name: perf-grafana
+    port: 3000
+    path: /grafana
+  prometheus:
+    name: perf-prometheus
+    port: 9090
+    path: /prometheus
+  perfTester:
+    name: perf-perf-tester
+    port: 8080
+    path: /api
+  mqWeb:
+    name: perf-ibm-mq
+    port: 9443
+    path: /mq

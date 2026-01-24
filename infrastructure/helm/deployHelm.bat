@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/9] Building application JARs with Gradle...
+echo [1/10] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -55,7 +55,7 @@ echo.
 :: ============================================
 :: Build Docker Images
 :: ============================================
-echo [2/9] Building Docker image for perf-tester...
+echo [2/10] Building Docker image for perf-tester...
 docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build perf-tester image
@@ -64,7 +64,7 @@ if %errorlevel% neq 0 (
 echo      perf-tester image built.
 echo.
 
-echo [3/9] Building Docker image for consumer...
+echo [3/10] Building Docker image for consumer...
 docker build -t consumer:%IMAGE_TAG% %PROJECT_ROOT%\consumer
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build consumer image
@@ -77,7 +77,7 @@ echo.
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [4/9] Loading images to Kubernetes cluster...
+echo [4/10] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -214,7 +214,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [5/9] Creating namespace %NAMESPACE%...
+echo [5/10] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -226,7 +226,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [6/9] Deploying IBM MQ...
+echo [6/10] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -242,7 +242,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [7/9] Deploying Prometheus...
+echo [7/10] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -253,7 +253,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [8/9] Deploying Grafana...
+echo [8/10] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -267,7 +267,7 @@ echo.
 :: ============================================
 :: Deploy Applications
 :: ============================================
-echo [9/9] Deploying Applications...
+echo [9/10] Deploying Applications...
 
 echo      Deploying Consumer...
 :: Extract repository from full image path (remove tag)
@@ -300,6 +300,20 @@ if %errorlevel% neq 0 (
 echo      Perf-Tester deployed.
 echo.
 
+:: ============================================
+:: Deploy Ingress
+:: ============================================
+echo [10/10] Deploying Ingress...
+helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 2m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Ingress
+    exit /b 1
+)
+echo      Ingress deployed.
+echo.
+
 echo ============================================
 echo  Deployment Complete!
 echo ============================================
@@ -307,16 +321,22 @@ echo.
 echo Cluster: %CURRENT_CONTEXT%
 echo Namespace: %NAMESPACE%
 echo.
-echo Services:
-echo   - IBM MQ:      kubectl port-forward svc/%RELEASE_PREFIX%-ibm-mq 1414:1414 -n %NAMESPACE%
-echo   - Prometheus:  kubectl port-forward svc/%RELEASE_PREFIX%-prometheus 9090:9090 -n %NAMESPACE%
-echo   - Grafana:     kubectl port-forward svc/%RELEASE_PREFIX%-grafana 3000:3000 -n %NAMESPACE%
-echo   - Perf-Tester: kubectl port-forward svc/%RELEASE_PREFIX%-perf-tester 8080:8080 -n %NAMESPACE%
+echo ============================================
+echo  Ingress URLs
+echo ============================================
 echo.
-echo Quick start:
-echo   1. Run: portForward.bat
-echo   2. Open Grafana: http://localhost:3000 (admin/admin)
-echo   3. Open http://localhost:8080/swagger-ui.html and start the test
+echo All services available at: http://localhost
+echo.
+echo   Grafana:     http://localhost/grafana
+echo   Prometheus:  http://localhost/prometheus
+echo   Perf-Tester: http://localhost/api
+echo   IBM MQ Web:  http://localhost/mq
+echo.
+echo Access the services:
+echo   - Grafana:     http://localhost/grafana (admin/admin)
+echo   - Swagger UI:  http://localhost/api/swagger-ui.html
+echo   - Prometheus:  http://localhost/prometheus
+echo   - MQ Console:  http://localhost/mq (admin/passw0rd)
 echo.
 echo ============================================
 echo  Usage Notes
