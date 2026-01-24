@@ -3,6 +3,7 @@ enabled: true
 className: ""
 
 host: localhost
+mqHost: mq.localhost
 
 annotations: {}
 
@@ -23,11 +24,10 @@ services:
     name: perf-perf-tester
     port: 8080
     path: /api
-  mqWeb:
-    name: perf-ibm-mq
-    port: 9443
-    path: /mq
   kafdrop:
     name: perf-kafdrop
     port: 9000
     path: /kafdrop
+  mqWeb:
+    name: perf-ibm-mq
+    port: 9443

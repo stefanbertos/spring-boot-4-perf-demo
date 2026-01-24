@@ -34,7 +34,7 @@ spec:
             - name: GF_RENDERING_SERVER_URL
               value: "http://{{ include "grafana.fullname" . }}-renderer:8081/render"
             - name: GF_RENDERING_CALLBACK_URL
-              value: "http://{{ include "grafana.fullname" . }}:3000/"
+              value: "http://{{ include "grafana.fullname" . }}:3000/grafana/"
             - name: GF_LOG_FILTERS
               value: "rendering:debug"
             {{- end }}
@@ -63,12 +63,12 @@ spec:
             {{- end }}
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /grafana/api/health
               port: http
             initialDelaySeconds: 60
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /grafana/api/health
               port: http
             initialDelaySeconds: 5
       volumes:

@@ -379,7 +379,9 @@ echo   - Grafana:     http://localhost/grafana (admin/admin)
 echo   - Swagger UI:  http://localhost/api/swagger-ui/index.html
 echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
-echo   - MQ Console:  http://localhost/mq (admin/passw0rd)
+echo   - MQ Console:  http://mq.localhost (admin/passw0rd)
+echo.
+echo NOTE: Add "127.0.0.1 mq.localhost" to your hosts file for MQ access.
 echo.
 echo ============================================
 echo  Usage Notes

@@ -88,14 +88,15 @@ public class GrafanaExportService {
 
     private ExportedDashboard exportDashboard(DashboardInfo dashboard, long fromMs, long toMs,
                                                String timestamp, Path exportDir) throws IOException {
-        String renderUrl = String.format("/render/d/%s/%s?from=%d&to=%d&width=2500&height=2500&tz=UTC",
+        // Use relative path (no leading slash) so it appends to baseUrl path
+        String renderPath = String.format("render/d/%s/%s?from=%d&to=%d&width=2500&height=2500&tz=UTC",
                 dashboard.uid(), dashboard.uid(), fromMs, toMs);
 
-        String fullRenderUrl = grafanaUrl + renderUrl;
+        String fullRenderUrl = grafanaUrl + "/" + renderPath;
         log.info("Fetching dashboard image from: {}", fullRenderUrl);
 
         byte[] imageBytes = restClient.get()
-                .uri(renderUrl)
+                .uri(renderPath)
                 .retrieve()
                 .body(byte[].class);
 

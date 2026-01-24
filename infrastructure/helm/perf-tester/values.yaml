@@ -20,11 +20,11 @@ mq:
     outbound: DEV.QUEUE.2
 
 grafana:
-  url: http://perf-grafana:3000
+  url: http://perf-grafana:3000/grafana
   exportPath: /tmp/grafana-exports
 
 prometheus:
-  url: http://perf-prometheus:9090
+  url: http://perf-prometheus:9090/prometheus
   exportPath: /tmp/prometheus-exports
 
 export:
