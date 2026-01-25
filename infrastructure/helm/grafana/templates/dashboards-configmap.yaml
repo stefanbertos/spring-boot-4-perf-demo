@@ -374,7 +374,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))", "legendFormat": "Total TPS"}],
+          "targets": [{"expr": "sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))", "legendFormat": "Total TPS"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
@@ -406,7 +406,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "targets": [{"expr": "rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
@@ -430,7 +430,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))", "legendFormat": "Total TPS"}],
+          "targets": [{"expr": "sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))", "legendFormat": "Total TPS"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
@@ -462,7 +462,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 24},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "targets": [{"expr": "rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
@@ -535,7 +535,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "sum(rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[30s]))", "legendFormat": "Total TPS"}],
+          "targets": [{"expr": "sum(rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[1m]))", "legendFormat": "Total TPS"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
@@ -566,7 +566,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[30s])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "targets": [{"expr": "rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
         },
         {
