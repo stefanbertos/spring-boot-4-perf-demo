@@ -1,6 +1,6 @@
 @echo off
 echo === Building Gradle projects ===
-call gradlew.bat :perf-tester:bootJar :consumer:bootJar
+call gradlew.bat build
 
 if %ERRORLEVEL% NEQ 0 (
     echo Gradle build failed!
@@ -13,7 +13,7 @@ docker compose down
 
 echo.
 echo === Rebuilding Docker images ===
-docker compose build perf-tester consumer
+docker compose build perf-tester ibm-mq-consumer kafka-consumer
 
 echo.
 echo === Starting all services ===

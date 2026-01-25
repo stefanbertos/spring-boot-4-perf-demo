@@ -53,148 +53,14 @@
       }
     },
     {
-      "title": "JVM Heap Memory",
+      "title": "MQ E2E TPS",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"heap\"})",
-          "legendFormat": "Used"
-        },
-        {
-          "expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"heap\"})",
-          "legendFormat": "Committed"
-        },
-        {
-          "expr": "jvm_gc_max_data_size_bytes{job=\"perf-tester\"}",
-          "legendFormat": "Max"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "JVM Non-Heap Memory",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"nonheap\"})",
-          "legendFormat": "Used"
-        },
-        {
-          "expr": "sum(jvm_memory_committed_bytes{job=\"perf-tester\", area=\"nonheap\"})",
-          "legendFormat": "Committed"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "GC Overhead",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "jvm_gc_overhead{job=\"perf-tester\"}",
-          "legendFormat": "GC Overhead"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "max": 1
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "JVM Classes",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "jvm_classes_loaded_classes{job=\"perf-tester\"}",
-          "legendFormat": "Loaded Classes"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "CPU Usage",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "process_cpu_usage{job=\"perf-tester\"}",
-          "legendFormat": "Process CPU"
-        },
-        {
-          "expr": "system_cpu_usage{job=\"perf-tester\"}",
-          "legendFormat": "System CPU"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "max": 1
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "JVM Threads",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "jvm_threads_live_threads{job=\"perf-tester\"}",
-          "legendFormat": "Live Threads"
-        },
-        {
-          "expr": "jvm_threads_daemon_threads{job=\"perf-tester\"}",
-          "legendFormat": "Daemon Threads"
-        },
-        {
-          "expr": "jvm_threads_peak_threads{job=\"perf-tester\"}",
-          "legendFormat": "Peak Threads"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "MQ E2E TPS",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
           "expr": "rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[30s])",
-          "legendFormat": "TPS"
+          "legendFormat": "E2E TPS"
         }
       ],
       "fieldConfig": {
@@ -207,7 +73,7 @@
     {
       "title": "MQ E2E Latency Percentiles",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
@@ -221,6 +87,10 @@
         {
           "expr": "histogram_quantile(0.99, sum(rate(mq_e2e_latency_seconds_bucket{job=\"perf-tester\"}[1m])) by (le))",
           "legendFormat": "p99"
+        },
+        {
+          "expr": "rate(mq_e2e_latency_seconds_sum{job=\"perf-tester\"}[1m]) / rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])",
+          "legendFormat": "avg"
         }
       ],
       "fieldConfig": {
@@ -231,37 +101,313 @@
       }
     },
     {
-      "title": "MQ E2E Avg Latency",
+      "title": "MQ Listener TPS (MQ → Kafka)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))",
+          "legendFormat": "TPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "MQ Listener Latency (MQ → Kafka)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "legendFormat": "p99"
+        },
+        {
+          "expr": "sum(rate(mq_listener_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[1m])) / sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "avg"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "MQ Listener Messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(mq_listener_messages_received_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "received/s"
+        },
+        {
+          "expr": "sum(rate(mq_listener_messages_forwarded_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "forwarded/s"
+        },
+        {
+          "expr": "sum(rate(mq_listener_messages_dropped_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "dropped/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Request TPS (Processing)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[30s]))",
+          "legendFormat": "TPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Request Latency (Processing)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(kafka_request_process_time_seconds_bucket{job=\"kafka-consumer\"}[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(kafka_request_process_time_seconds_bucket{job=\"kafka-consumer\"}[1m])) by (le))",
+          "legendFormat": "p99"
+        },
+        {
+          "expr": "sum(rate(kafka_request_process_time_seconds_sum{job=\"kafka-consumer\"}[1m])) / sum(rate(kafka_request_process_time_seconds_count{job=\"kafka-consumer\"}[1m]))",
+          "legendFormat": "avg"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Request Messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_request_messages_received_total{job=\"kafka-consumer\"}[1m]))",
+          "legendFormat": "received/s"
+        },
+        {
+          "expr": "sum(rate(kafka_request_messages_processed_total{job=\"kafka-consumer\"}[1m]))",
+          "legendFormat": "processed/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Response TPS (Kafka → MQ)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))",
+          "legendFormat": "TPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Response Latency (Kafka → MQ)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "legendFormat": "p99"
+        },
+        {
+          "expr": "sum(rate(kafka_response_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[1m])) / sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "avg"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Kafka Response Messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_response_messages_received_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "received/s"
+        },
+        {
+          "expr": "sum(rate(kafka_response_messages_sent_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "sent to MQ/s"
+        },
+        {
+          "expr": "sum(rate(kafka_response_messages_dropped_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "legendFormat": "dropped/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "JVM Heap Memory",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(mq_e2e_latency_seconds_sum{job=\"perf-tester\"}[1m]) / rate(mq_e2e_latency_seconds_count{job=\"perf-tester\"}[1m])",
-          "legendFormat": "Avg Latency"
+          "expr": "sum(jvm_memory_used_bytes{job=\"perf-tester\", area=\"heap\"})",
+          "legendFormat": "perf-tester"
+        },
+        {
+          "expr": "sum(jvm_memory_used_bytes{job=\"ibm-mq-consumer\", area=\"heap\"})",
+          "legendFormat": "ibm-mq-consumer"
+        },
+        {
+          "expr": "sum(jvm_memory_used_bytes{job=\"kafka-consumer\", area=\"heap\"})",
+          "legendFormat": "kafka-consumer"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "bytes"
         },
         "overrides": []
       }
     },
     {
-      "title": "MQ E2E Max Latency (histogram)",
+      "title": "CPU Usage",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "mq_e2e_latency_seconds_max{job=\"perf-tester\"}",
-          "legendFormat": "Max Latency"
+          "expr": "process_cpu_usage{job=\"perf-tester\"}",
+          "legendFormat": "perf-tester"
+        },
+        {
+          "expr": "avg(process_cpu_usage{job=\"ibm-mq-consumer\"})",
+          "legendFormat": "ibm-mq-consumer (avg)"
+        },
+        {
+          "expr": "avg(process_cpu_usage{job=\"kafka-consumer\"})",
+          "legendFormat": "kafka-consumer (avg)"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "percentunit",
+          "max": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "GC Overhead",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "jvm_gc_overhead{job=\"perf-tester\"}",
+          "legendFormat": "perf-tester"
+        },
+        {
+          "expr": "avg(jvm_gc_overhead{job=\"ibm-mq-consumer\"})",
+          "legendFormat": "ibm-mq-consumer (avg)"
+        },
+        {
+          "expr": "avg(jvm_gc_overhead{job=\"kafka-consumer\"})",
+          "legendFormat": "kafka-consumer (avg)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "JVM Threads",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{job=\"perf-tester\"}",
+          "legendFormat": "perf-tester"
+        },
+        {
+          "expr": "sum(jvm_threads_live_threads{job=\"ibm-mq-consumer\"})",
+          "legendFormat": "ibm-mq-consumer (total)"
+        },
+        {
+          "expr": "sum(jvm_threads_live_threads{job=\"kafka-consumer\"})",
+          "legendFormat": "kafka-consumer (total)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
         },
         "overrides": []
       }
@@ -275,7 +421,7 @@
     "from": "now-15m",
     "to": "now"
   },
-  "title": "Spring Boot - perf-tester",
+  "title": "Spring Boot - perf-demo",
   "uid": "spring-boot-perf-demo",
   "version": 1
 }

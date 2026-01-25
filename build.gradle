@@ -29,6 +29,8 @@ subprojects {
 
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework:spring-aop'
+        implementation 'org.aspectj:aspectjweaver'
 
         compileOnly 'org.projectlombok:lombok'
         developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
