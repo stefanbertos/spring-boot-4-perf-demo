@@ -82,3 +82,17 @@ Local SD (best, but with trade-offs)
 Physically attached to the node
 Insanely fast
 Very stable latency
+
+dev
+20–30 GB
+prod 100–200 GB
+disk size
+
+Red flags to watch in Prometheus 📉
+These metrics will scream first:
+kafka_log_log_size
+kafka_server_replica_manager_under_replicated_partitions
+kafka_server_broker_topic_metrics_bytes_in_total
+disk usage %
+If disk hits ~85%:
+👉 Kafka starts protecting itself (throttling)
