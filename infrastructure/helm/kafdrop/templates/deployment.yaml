@@ -35,11 +35,11 @@ spec:
             httpGet:
               path: {{ .Values.server.contextPath }}/actuator/health
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: {{ .Values.server.contextPath }}/actuator/health
               port: http
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: 60
+            periodSeconds: 10

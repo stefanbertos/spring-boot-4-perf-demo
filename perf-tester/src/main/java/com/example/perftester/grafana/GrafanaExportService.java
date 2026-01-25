@@ -22,8 +22,10 @@ public class GrafanaExportService {
     private final String exportPath;
 
     private static final List<DashboardInfo> DASHBOARDS = List.of(
-            new DashboardInfo("spring-boot-perf-demo", "Spring Boot - perf-tester"),
-            new DashboardInfo("ibm-mq", "IBM MQ")
+            new DashboardInfo("perf-tester", "Perf-tester"),
+            new DashboardInfo("ibm-mq", "IBM MQ"),
+            new DashboardInfo("kafka", "Kafka"),
+            new DashboardInfo("consumer", "Consumer")
     );
 
     public GrafanaExportService(

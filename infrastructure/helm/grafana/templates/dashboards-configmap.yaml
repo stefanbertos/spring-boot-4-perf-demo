@@ -137,7 +137,7 @@ data:
       "templating": {"list": []},
       "time": {"from": "now-5m", "to": "now"},
       "title": "perf-tester",
-      "uid": "spring-boot-perf-demo",
+      "uid": "perf-tester",
       "version": 1
     }
   ibm-mq.json: |
@@ -455,7 +455,7 @@ data:
       "schemaVersion": 39,
       "templating": {"list": []},
       "time": {"from": "now-5m", "to": "now"},
-      "title": "consumer",
-      "uid": "spring-boot-consumer",
+      "title": "Consumer",
+      "uid": "consumer",
       "version": 1
     }
