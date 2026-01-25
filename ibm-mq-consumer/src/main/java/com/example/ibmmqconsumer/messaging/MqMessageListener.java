@@ -46,7 +46,7 @@ public class MqMessageListener {
     @Timed(value = "mq.listener.process.time",
            description = "Time to process MQ message and forward to Kafka",
            histogram = true,
-           percentiles = {0.5, 0.75, 0.9, 0.95, 0.99})
+           percentiles = {0.95, 0.99})
     @JmsListener(destination = "${app.mq.queue.inbound}", concurrency = "10-50")
     public void onMessage(Message message) throws JMSException {
         messagesReceived.increment();

@@ -28,5 +28,5 @@ persistence:
 config:
   autoCreateTopicsEnable: true
   deleteTopicEnable: true
-  numPartitions: 3
+  numPartitions: 20
   defaultReplicationFactor: 1

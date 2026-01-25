@@ -64,5 +64,5 @@ management:
         http.server.requests: true
         kafka: true
       percentiles:
-        http.server.requests: 0.5,0.95,0.99
-        kafka: 0.5,0.95,0.99
+        http.server.requests: 0.95,0.99
+        kafka: 0.95,0.99
