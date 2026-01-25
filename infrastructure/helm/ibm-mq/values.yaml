@@ -32,6 +32,6 @@ persistence:
 
 queues:
   - name: DEV.QUEUE.1
-    maxDepth: 10000
+    maxDepth: 50000
   - name: DEV.QUEUE.2
-    maxDepth: 10000
+    maxDepth: 50000
