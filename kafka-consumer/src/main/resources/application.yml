@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: kafka-consumer
+  threads:
+    virtual:
+      enabled: true
+  docker:
+    compose:
+      file: ../compose.yaml
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: kafka-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  task:
+    execution:
+      pool:
+        core-size: 100
+        max-size: 200
+        queue-capacity: 50000
+      thread-name-prefix: kafka-consumer-
+
+server:
+  port: 8082
+  address: 0.0.0.0
+
+logging:
+  level:
+    com.example.kafkaconsumer: INFO
+
+app:
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        kafka: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        kafka: 0.5,0.95,0.99

@@ -1,13 +1,14 @@
 # perf-demo
 
-Multi-module Spring Boot application with IBM MQ integration for performance testing.
+Multi-module Spring Boot application with IBM MQ and Kafka integration for performance testing.
 
 ## Modules
 
 | Module | Description | Port |
 |--------|-------------|------|
 | perf-tester | REST API to send messages, listens for processed responses | 8080 |
-| consumer | Consumes messages from DEV.QUEUE.2, adds "processed" suffix, sends to DEV.QUEUE.1 | 8081 |
+| ibm-mq-consumer | Consumes MQ messages, publishes to Kafka, receives Kafka responses, sends to MQ | 8081 |
+| kafka-consumer | Consumes Kafka requests, processes (adds "processed" suffix), sends Kafka responses | 8082 |
 
 ## Prerequisites
 
@@ -16,22 +17,26 @@ Multi-module Spring Boot application with IBM MQ integration for performance tes
 
 ## Running the Application
 
-1. Start services (IBM MQ, Prometheus, Grafana):
+1. Start services (IBM MQ, Kafka, Prometheus, Grafana):
    ```bash
    runLocalDocker.bat
    ```
 
-2. Run both modules locally:
+2. Run all modules locally:
    ```bash
    gradlew.bat :perf-tester:bootRun
-   gradlew.bat :consumer:bootRun
+   gradlew.bat :ibm-mq-consumer:bootRun
+   gradlew.bat :kafka-consumer:bootRun
    ```
 
 ## Message Flow
 
 ```
-perf-tester -> DEV.QUEUE.2 -> consumer -> DEV.QUEUE.1 -> perf-tester
-                              (adds "processed" suffix)
+perf-tester -> DEV.QUEUE.2 -> ibm-mq-consumer -> Kafka (mq-requests) -> kafka-consumer
+                                                                              |
+                                                                    (adds "processed" suffix)
+                                                                              |
+perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 ```
 
 ## IBM MQ Web Console
@@ -46,6 +51,8 @@ Note: The console uses a self-signed certificate, so you'll need to accept the b
 
 - URL: http://localhost:9090
 - Metrics endpoint (perf-tester): http://localhost:8080/actuator/prometheus
+- Metrics endpoint (ibm-mq-consumer): http://localhost:8081/actuator/prometheus
+- Metrics endpoint (kafka-consumer): http://localhost:8082/actuator/prometheus
 
 ## Grafana
 
@@ -73,8 +80,15 @@ curl -X POST http://localhost:8080/api/perf/send -d "your message"
 
 | Queue | Purpose |
 |-------|---------|
-| DEV.QUEUE.1 | perf-tester inbound / consumer outbound |
-| DEV.QUEUE.2 | perf-tester outbound / consumer inbound |
+| DEV.QUEUE.1 | perf-tester inbound / ibm-mq-consumer outbound |
+| DEV.QUEUE.2 | perf-tester outbound / ibm-mq-consumer inbound |
+
+## Kafka Topics
+
+| Topic | Purpose |
+|-------|---------|
+| mq-requests | ibm-mq-consumer outbound / kafka-consumer inbound |
+| mq-responses | kafka-consumer outbound / ibm-mq-consumer inbound |
 
 ## Debugging MQ Messages
 

@@ -1,0 +1,26 @@
+replicaCount: 3
+
+image:
+  repository: kafka-consumer
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8082
+
+kafka:
+  bootstrapServers: perf-kafka:9092
+  topic:
+    request: mq-requests
+    response: mq-responses
+  consumer:
+    groupId: kafka-consumer-group
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"

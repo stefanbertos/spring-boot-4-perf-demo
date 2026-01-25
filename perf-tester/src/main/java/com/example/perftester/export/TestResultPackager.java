@@ -50,10 +50,6 @@ public class TestResultPackager {
                 String summaryContent = generateSummary(result, testId, testStartTimeMs, testEndTimeMs);
                 addTextEntry(zos, "summary.txt", summaryContent);
 
-                // Add JSON result
-                String jsonResult = objectMapper.writeValueAsString(result);
-                addTextEntry(zos, "result.json", jsonResult);
-
                 // Add dashboard images
                 for (String imageFile : dashboardImageFiles) {
                     if (imageFile != null) {

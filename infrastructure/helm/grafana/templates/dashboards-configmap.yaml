@@ -360,7 +360,7 @@ data:
       "uid": "kafka",
       "version": 1
     }
-  consumer.json: |
+  ibm-mq-consumer.json: |
     {
       "annotations": {"list": []},
       "editable": true,
@@ -374,7 +374,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "rate(http_server_requests_seconds_count{job=\"consumer\"}[1m])", "legendFormat": "{{ "{{method}}" }} {{ "{{uri}}" }} - {{ "{{status}}" }}"}],
+          "targets": [{"expr": "rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[1m])", "legendFormat": "{{ "{{method}}" }} {{ "{{uri}}" }} - {{ "{{status}}" }}"}],
           "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}
         },
         {
@@ -383,9 +383,9 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
-            {"expr": "rate(http_server_requests_seconds_sum{job=\"consumer\"}[1m]) / rate(http_server_requests_seconds_count{job=\"consumer\"}[1m])", "legendFormat": "avg - {{ "{{method}}" }} {{ "{{uri}}" }}"},
-            {"expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"consumer\"}[1m]))", "legendFormat": "p95"},
-            {"expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"consumer\"}[1m]))", "legendFormat": "p99"}
+            {"expr": "rate(http_server_requests_seconds_sum{job=\"ibm-mq-consumer\"}[1m]) / rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[1m])", "legendFormat": "avg - {{ "{{method}}" }} {{ "{{uri}}" }}"},
+            {"expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"ibm-mq-consumer\"}[1m]))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"ibm-mq-consumer\"}[1m]))", "legendFormat": "p99"}
           ],
           "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
         },
@@ -395,9 +395,9 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
-            {"expr": "sum(jvm_memory_used_bytes{job=\"consumer\", area=\"heap\"})", "legendFormat": "Used"},
-            {"expr": "sum(jvm_memory_committed_bytes{job=\"consumer\", area=\"heap\"})", "legendFormat": "Committed"},
-            {"expr": "jvm_gc_max_data_size_bytes{job=\"consumer\"}", "legendFormat": "Max"}
+            {"expr": "sum(jvm_memory_used_bytes{job=\"ibm-mq-consumer\", area=\"heap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"ibm-mq-consumer\", area=\"heap\"})", "legendFormat": "Committed"},
+            {"expr": "jvm_gc_max_data_size_bytes{job=\"ibm-mq-consumer\"}", "legendFormat": "Max"}
           ],
           "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
         },
@@ -407,8 +407,8 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
-            {"expr": "sum(jvm_memory_used_bytes{job=\"consumer\", area=\"nonheap\"})", "legendFormat": "Used"},
-            {"expr": "sum(jvm_memory_committed_bytes{job=\"consumer\", area=\"nonheap\"})", "legendFormat": "Committed"}
+            {"expr": "sum(jvm_memory_used_bytes{job=\"ibm-mq-consumer\", area=\"nonheap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"ibm-mq-consumer\", area=\"nonheap\"})", "legendFormat": "Committed"}
           ],
           "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
         },
@@ -417,7 +417,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "jvm_gc_overhead{job=\"consumer\"}", "legendFormat": "GC Overhead"}],
+          "targets": [{"expr": "jvm_gc_overhead{job=\"ibm-mq-consumer\"}", "legendFormat": "GC Overhead"}],
           "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
         },
         {
@@ -425,7 +425,7 @@ data:
           "type": "timeseries",
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "targets": [{"expr": "jvm_classes_loaded_classes{job=\"consumer\"}", "legendFormat": "Loaded Classes"}],
+          "targets": [{"expr": "jvm_classes_loaded_classes{job=\"ibm-mq-consumer\"}", "legendFormat": "Loaded Classes"}],
           "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
         },
         {
@@ -434,8 +434,8 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
-            {"expr": "process_cpu_usage{job=\"consumer\"}", "legendFormat": "Process CPU"},
-            {"expr": "system_cpu_usage{job=\"consumer\"}", "legendFormat": "System CPU"}
+            {"expr": "process_cpu_usage{job=\"ibm-mq-consumer\"}", "legendFormat": "Process CPU"},
+            {"expr": "system_cpu_usage{job=\"ibm-mq-consumer\"}", "legendFormat": "System CPU"}
           ],
           "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
         },
@@ -445,17 +445,116 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [
-            {"expr": "jvm_threads_live_threads{job=\"consumer\"}", "legendFormat": "Live Threads"},
-            {"expr": "jvm_threads_daemon_threads{job=\"consumer\"}", "legendFormat": "Daemon Threads"},
-            {"expr": "jvm_threads_peak_threads{job=\"consumer\"}", "legendFormat": "Peak Threads"}
+            {"expr": "jvm_threads_live_threads{job=\"ibm-mq-consumer\"}", "legendFormat": "Live Threads"},
+            {"expr": "jvm_threads_daemon_threads{job=\"ibm-mq-consumer\"}", "legendFormat": "Daemon Threads"},
+            {"expr": "jvm_threads_peak_threads{job=\"ibm-mq-consumer\"}", "legendFormat": "Peak Threads"}
           ],
           "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
-        },
+        }
       ],
       "schemaVersion": 39,
       "templating": {"list": []},
       "time": {"from": "now-5m", "to": "now"},
-      "title": "Consumer",
-      "uid": "consumer",
+      "title": "ibm-mq-consumer",
+      "uid": "ibm-mq-consumer",
+      "version": 1
+    }
+  kafka-consumer.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "HTTP Request Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(http_server_requests_seconds_count{job=\"kafka-consumer\"}[1m])", "legendFormat": "{{ "{{method}}" }} {{ "{{uri}}" }} - {{ "{{status}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}
+        },
+        {
+          "title": "HTTP Response Time (avg)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(http_server_requests_seconds_sum{job=\"kafka-consumer\"}[1m]) / rate(http_server_requests_seconds_count{job=\"kafka-consumer\"}[1m])", "legendFormat": "avg - {{ "{{method}}" }} {{ "{{uri}}" }}"},
+            {"expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"kafka-consumer\"}[1m]))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"kafka-consumer\"}[1m]))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "JVM Heap Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"kafka-consumer\", area=\"heap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"kafka-consumer\", area=\"heap\"})", "legendFormat": "Committed"},
+            {"expr": "jvm_gc_max_data_size_bytes{job=\"kafka-consumer\"}", "legendFormat": "Max"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "JVM Non-Heap Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"kafka-consumer\", area=\"nonheap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"kafka-consumer\", area=\"nonheap\"})", "legendFormat": "Committed"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "GC Overhead",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_gc_overhead{job=\"kafka-consumer\"}", "legendFormat": "GC Overhead"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Classes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_classes_loaded_classes{job=\"kafka-consumer\"}", "legendFormat": "Loaded Classes"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "process_cpu_usage{job=\"kafka-consumer\"}", "legendFormat": "Process CPU"},
+            {"expr": "system_cpu_usage{job=\"kafka-consumer\"}", "legendFormat": "System CPU"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Threads",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "jvm_threads_live_threads{job=\"kafka-consumer\"}", "legendFormat": "Live Threads"},
+            {"expr": "jvm_threads_daemon_threads{job=\"kafka-consumer\"}", "legendFormat": "Daemon Threads"},
+            {"expr": "jvm_threads_peak_threads{job=\"kafka-consumer\"}", "legendFormat": "Peak Threads"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "templating": {"list": []},
+      "time": {"from": "now-5m", "to": "now"},
+      "title": "kafka consumer",
+      "uid": "kafka-consumer",
       "version": 1
     }

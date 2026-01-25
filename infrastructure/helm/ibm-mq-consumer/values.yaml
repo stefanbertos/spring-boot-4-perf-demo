@@ -1,0 +1,39 @@
+replicaCount: 3
+
+image:
+  repository: ibm-mq-consumer
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8081
+
+mq:
+  queueManager: QM1
+  channel: DEV.ADMIN.SVRCONN
+  connName: perf-ibm-mq(1414)
+  user: admin
+  password: passw0rd
+  queue:
+    inbound: DEV.QUEUE.2
+    outbound: DEV.QUEUE.1
+
+kafka:
+  bootstrapServers: perf-kafka:9092
+  topic:
+    request: mq-requests
+    response: mq-responses
+  consumer:
+    groupId: ibm-mq-consumer-group
+
+jms:
+  sessionCacheSize: 50
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"

@@ -74,6 +74,8 @@ public class PerfController {
             log.warn("Test timed out: {}/{} messages completed", result.completedMessages(), count);
         }
 
+        Thread.sleep(16000); // sleep 2 minutes to propagate metrics
+
         // Export Grafana dashboards
         List<String> dashboardFiles = new ArrayList<>();
         log.info("Exporting Grafana dashboards...");

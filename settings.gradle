@@ -1,4 +1,5 @@
 rootProject.name = 'perf-demo'
 
 include 'perf-tester'
-include 'consumer'
+include 'ibm-mq-consumer'
+include 'kafka-consumer'

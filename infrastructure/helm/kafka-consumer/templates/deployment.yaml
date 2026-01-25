@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-consumer.fullname" . }}
+  labels:
+    {{- include "kafka-consumer.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kafka-consumer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kafka-consumer.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: kubernetes
+            - name: SPRING_APPLICATION_NAME
+              value: kafka-consumer
+            - name: SPRING_KAFKA_BOOTSTRAPSERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+            - name: SPRING_KAFKA_CONSUMER_GROUPID
+              value: {{ .Values.kafka.consumer.groupId }}
+            - name: APP_KAFKA_TOPIC_REQUEST
+              value: {{ .Values.kafka.topic.request }}
+            - name: APP_KAFKA_TOPIC_RESPONSE
+              value: {{ .Values.kafka.topic.response }}
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            failureThreshold: 10

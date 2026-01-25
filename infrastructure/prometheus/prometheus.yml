@@ -7,7 +7,22 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8080']
 
+  - job_name: 'ibm-mq-consumer'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8081']
+
+  - job_name: 'kafka-consumer'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+
   - job_name: 'ibm-mq'
     metrics_path: '/metrics'
     static_configs:
       - targets: ['ibm-mq:9157']
+
+  - job_name: 'kafka-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['kafka-exporter:9308']

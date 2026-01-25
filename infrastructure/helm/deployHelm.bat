@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/14] Building application JARs with Gradle...
+echo [1/16] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -55,7 +55,7 @@ echo.
 :: ============================================
 :: Build Docker Images
 :: ============================================
-echo [2/14] Building Docker image for perf-tester...
+echo [2/16] Building Docker image for perf-tester...
 docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build perf-tester image
@@ -64,20 +64,29 @@ if %errorlevel% neq 0 (
 echo      perf-tester image built.
 echo.
 
-echo [3/14] Building Docker image for consumer...
-docker build -t consumer:%IMAGE_TAG% %PROJECT_ROOT%\consumer
+echo [3/16] Building Docker image for ibm-mq-consumer...
+docker build -t ibm-mq-consumer:%IMAGE_TAG% %PROJECT_ROOT%\ibm-mq-consumer
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to build consumer image
+    echo ERROR: Failed to build ibm-mq-consumer image
     exit /b 1
 )
-echo      consumer image built.
+echo      ibm-mq-consumer image built.
+echo.
+
+echo [4/16] Building Docker image for kafka-consumer...
+docker build -t kafka-consumer:%IMAGE_TAG% %PROJECT_ROOT%\kafka-consumer
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build kafka-consumer image
+    exit /b 1
+)
+echo      kafka-consumer image built.
 echo.
 
 :: ============================================
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [4/14] Loading images to Kubernetes cluster...
+echo [5/16] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -88,7 +97,8 @@ echo      Current context: %CURRENT_CONTEXT%
 
 :: Initialize image repository variables (will be overridden for GCP)
 set PERF_TESTER_IMAGE=perf-tester:%IMAGE_TAG%
-set CONSUMER_IMAGE=consumer:%IMAGE_TAG%
+set IBM_MQ_CONSUMER_IMAGE=ibm-mq-consumer:%IMAGE_TAG%
+set KAFKA_CONSUMER_IMAGE=kafka-consumer:%IMAGE_TAG%
 set IMAGE_PULL_POLICY=IfNotPresent
 
 :: Check for GKE (Google Kubernetes Engine)
@@ -156,13 +166,23 @@ if %errorlevel% equ 0 (
         exit /b 1
     )
 
-    :: Tag and push consumer image
-    set CONSUMER_IMAGE=!GCP_REGISTRY!/consumer:%IMAGE_TAG%
-    echo      Tagging and pushing consumer to !CONSUMER_IMAGE!...
-    docker tag consumer:%IMAGE_TAG% !CONSUMER_IMAGE!
-    docker push !CONSUMER_IMAGE!
+    :: Tag and push ibm-mq-consumer image
+    set IBM_MQ_CONSUMER_IMAGE=!GCP_REGISTRY!/ibm-mq-consumer:%IMAGE_TAG%
+    echo      Tagging and pushing ibm-mq-consumer to !IBM_MQ_CONSUMER_IMAGE!...
+    docker tag ibm-mq-consumer:%IMAGE_TAG% !IBM_MQ_CONSUMER_IMAGE!
+    docker push !IBM_MQ_CONSUMER_IMAGE!
     if %errorlevel% neq 0 (
-        echo ERROR: Failed to push consumer image
+        echo ERROR: Failed to push ibm-mq-consumer image
+        exit /b 1
+    )
+
+    :: Tag and push kafka-consumer image
+    set KAFKA_CONSUMER_IMAGE=!GCP_REGISTRY!/kafka-consumer:%IMAGE_TAG%
+    echo      Tagging and pushing kafka-consumer to !KAFKA_CONSUMER_IMAGE!...
+    docker tag kafka-consumer:%IMAGE_TAG% !KAFKA_CONSUMER_IMAGE!
+    docker push !KAFKA_CONSUMER_IMAGE!
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to push kafka-consumer image
         exit /b 1
     )
 
@@ -177,7 +197,8 @@ echo %CURRENT_CONTEXT% | findstr /i "minikube" >nul
 if %errorlevel% equ 0 (
     echo      Detected Minikube - loading images...
     minikube image load perf-tester:%IMAGE_TAG%
-    minikube image load consumer:%IMAGE_TAG%
+    minikube image load ibm-mq-consumer:%IMAGE_TAG%
+    minikube image load kafka-consumer:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -186,7 +207,8 @@ echo %CURRENT_CONTEXT% | findstr /i "kind" >nul
 if %errorlevel% equ 0 (
     echo      Detected Kind - loading images...
     kind load docker-image perf-tester:%IMAGE_TAG%
-    kind load docker-image consumer:%IMAGE_TAG%
+    kind load docker-image ibm-mq-consumer:%IMAGE_TAG%
+    kind load docker-image kafka-consumer:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -214,7 +236,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [5/14] Creating namespace %NAMESPACE%...
+echo [6/16] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -226,7 +248,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [6/14] Deploying IBM MQ...
+echo [7/16] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -242,7 +264,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [7/14] Deploying Prometheus...
+echo [8/16] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -253,7 +275,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [8/14] Deploying Grafana...
+echo [9/16] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -265,24 +287,58 @@ echo      Grafana deployed.
 echo.
 
 :: ============================================
+:: Deploy Kafka
+:: ============================================
+echo [10/16] Deploying Kafka...
+helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 5m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Kafka
+    exit /b 1
+)
+echo      Kafka deployed.
+echo.
+
+:: Wait for Kafka to be ready
+echo      Waiting for Kafka to be ready...
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n %NAMESPACE% --timeout=300s
+echo.
+
+:: ============================================
 :: Deploy Applications
 :: ============================================
-echo [9/14] Deploying Applications...
+echo [11/16] Deploying Applications...
 
-echo      Deploying Consumer...
+echo      Deploying IBM MQ Consumer...
 :: Extract repository from full image path (remove tag)
-for /f "tokens=1 delims=:" %%a in ("%CONSUMER_IMAGE%") do set CONSUMER_REPO=%%a
-helm upgrade --install %RELEASE_PREFIX%-consumer ./consumer ^
+for /f "tokens=1 delims=:" %%a in ("%IBM_MQ_CONSUMER_IMAGE%") do set IBM_MQ_CONSUMER_REPO=%%a
+helm upgrade --install %RELEASE_PREFIX%-ibm-mq-consumer ./ibm-mq-consumer ^
     --namespace %NAMESPACE% ^
-    --set image.repository=%CONSUMER_REPO% ^
+    --set image.repository=%IBM_MQ_CONSUMER_REPO% ^
     --set image.tag=%IMAGE_TAG% ^
     --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
     --wait --timeout 3m
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to deploy Consumer
+    echo ERROR: Failed to deploy IBM MQ Consumer
     exit /b 1
 )
-echo      Consumer deployed.
+echo      IBM MQ Consumer deployed.
+
+echo      Deploying Kafka Consumer...
+:: Extract repository from full image path (remove tag)
+for /f "tokens=1 delims=:" %%a in ("%KAFKA_CONSUMER_IMAGE%") do set KAFKA_CONSUMER_REPO=%%a
+helm upgrade --install %RELEASE_PREFIX%-kafka-consumer ./kafka-consumer ^
+    --namespace %NAMESPACE% ^
+    --set image.repository=%KAFKA_CONSUMER_REPO% ^
+    --set image.tag=%IMAGE_TAG% ^
+    --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Kafka Consumer
+    exit /b 1
+)
+echo      Kafka Consumer deployed.
 
 echo      Deploying Perf-Tester...
 :: Extract repository from full image path (remove tag)
@@ -301,28 +357,9 @@ echo      Perf-Tester deployed.
 echo.
 
 :: ============================================
-:: Deploy Kafka
-:: ============================================
-echo [10/14] Deploying Kafka...
-helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
-    --namespace %NAMESPACE% ^
-    --wait --timeout 5m
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to deploy Kafka
-    exit /b 1
-)
-echo      Kafka deployed.
-echo.
-
-:: Wait for Kafka to be ready
-echo      Waiting for Kafka to be ready...
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n %NAMESPACE% --timeout=300s
-echo.
-
-:: ============================================
 :: Deploy Kafdrop
 :: ============================================
-echo [11/14] Deploying Kafdrop...
+echo [12/16] Deploying Kafdrop...
 helm upgrade --install %RELEASE_PREFIX%-kafdrop ./kafdrop ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -336,7 +373,7 @@ echo.
 :: ============================================
 :: Deploy Kafka Exporter
 :: ============================================
-echo [12/14] Deploying Kafka Exporter...
+echo [13/16] Deploying Kafka Exporter...
 helm upgrade --install %RELEASE_PREFIX%-kafka-exporter ./kafka-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -350,7 +387,7 @@ echo.
 :: ============================================
 :: Deploy Ingress
 :: ============================================
-echo [13/14] Deploying Ingress...
+echo [14/16] Deploying Ingress...
 helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -361,7 +398,7 @@ if %errorlevel% neq 0 (
 echo      Ingress deployed.
 echo.
 
-echo [14/14] Printing deployment summary...
+echo [15/16] Printing deployment summary...
 echo.
 echo ============================================
 echo  Deployment Complete!

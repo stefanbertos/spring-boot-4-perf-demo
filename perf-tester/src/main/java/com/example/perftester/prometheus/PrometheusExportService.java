@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -24,24 +25,6 @@ public class PrometheusExportService {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String exportPath;
-
-    private static final List<String> METRICS_TO_EXPORT = List.of(
-            // MQ E2E metrics
-            "mq_e2e_latency_seconds_count",
-            "mq_e2e_latency_seconds_sum",
-            "mq_e2e_latency_seconds_max",
-            "mq_e2e_latency_seconds_bucket",
-            // IBM MQ metrics
-            "ibmmq_qmgr_mqput_mqput1_total",
-            "ibmmq_qmgr_destructive_get_total",
-            "ibmmq_qmgr_commit_total",
-            "ibmmq_qmgr_cpu_load_one_minute_average_percentage",
-            // JVM metrics
-            "jvm_memory_used_bytes",
-            "process_cpu_usage",
-            "jvm_gc_pause_seconds_count",
-            "jvm_gc_pause_seconds_sum"
-    );
 
     public PrometheusExportService(
             @Value("${app.prometheus.url:http://localhost:9090}") String prometheusUrl,
@@ -82,20 +65,29 @@ public class PrometheusExportService {
 
         ArrayNode metricsArray = exportData.putArray("metrics");
 
-        for (String metric : METRICS_TO_EXPORT) {
+        List<String> allMetrics = getAllMetricNames();
+        log.info("Found {} metrics to export", allMetrics.size());
+
+        int exported = 0;
+        for (String metric : allMetrics) {
             try {
                 JsonNode metricData = queryMetricRange(metric, fromSec, toSec, step);
                 if (metricData != null && metricData.has("data") && metricData.get("data").has("result")) {
-                    ObjectNode metricNode = objectMapper.createObjectNode();
-                    metricNode.put("name", metric);
-                    metricNode.set("data", metricData.get("data").get("result"));
-                    metricsArray.add(metricNode);
-                    log.debug("Exported metric: {}", metric);
+                    JsonNode result = metricData.get("data").get("result");
+                    if (result.isArray() && !result.isEmpty()) {
+                        ObjectNode metricNode = objectMapper.createObjectNode();
+                        metricNode.put("name", metric);
+                        metricNode.set("data", result);
+                        metricsArray.add(metricNode);
+                        exported++;
+                        log.debug("Exported metric: {}", metric);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Failed to export metric {}: {}", metric, e.getMessage());
             }
         }
+        log.info("Exported {} metrics with data", exported);
 
         String filename = String.format("prometheus_export_%s.json", timestamp);
         Path filePath = exportDir.resolve(filename);
@@ -116,6 +108,27 @@ public class PrometheusExportService {
             log.error("Failed to write export file: {}", e.getMessage());
             return new PrometheusExportResult(null, null, "Failed to write export file: " + e.getMessage());
         }
+    }
+
+    private List<String> getAllMetricNames() {
+        try {
+            String response = restClient.get()
+                    .uri("/api/v1/label/__name__/values")
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(response);
+            if (root.has("status") && "success".equals(root.get("status").asText()) && root.has("data")) {
+                List<String> metrics = new ArrayList<>();
+                for (JsonNode metricName : root.get("data")) {
+                    metrics.add(metricName.asText());
+                }
+                return metrics;
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch metric names from Prometheus: {}", e.getMessage());
+        }
+        return List.of();
     }
 
     private JsonNode queryMetricRange(String metric, long fromSec, long toSec, int step) {

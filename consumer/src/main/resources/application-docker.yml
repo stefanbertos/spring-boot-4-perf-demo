@@ -1,8 +1,0 @@
-spring:
-  docker:
-    compose:
-      enabled: false
-
-ibm:
-  mq:
-    conn-name: ibm-mq(1414)

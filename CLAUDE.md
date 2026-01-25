@@ -11,15 +11,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run perf-tester module
 ./gradlew :perf-tester:bootRun
 
-# Run consumer module
-./gradlew :consumer:bootRun
+# Run ibm-mq-consumer module
+./gradlew :ibm-mq-consumer:bootRun
+
+# Run kafka-consumer module
+./gradlew :kafka-consumer:bootRun
 
 # Run all tests
 ./gradlew test
 
 # Run tests for specific module
 ./gradlew :perf-tester:test
-./gradlew :consumer:test
+./gradlew :ibm-mq-consumer:test
+./gradlew :kafka-consumer:test
 
 # Clean build
 ./gradlew clean build
@@ -27,23 +31,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Multi-module Spring Boot 4.0 application for MQ performance testing.
+Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing.
 
 - **Java 25** with Gradle multi-module build
 - **Spring Actuator** with Prometheus metrics export
 - **Lombok** for boilerplate reduction
-- **Docker Compose** for IBM MQ, Prometheus, Grafana
+- **Docker Compose** for IBM MQ, Kafka, Prometheus, Grafana
 - **IBM MQ** with mq-jms-spring-boot-starter:4.0.1
+- **Kafka** with spring-boot-starter-kafka
 
 ### Modules
 
 - **perf-tester** (port 8080) - REST API to send messages, receives processed responses
-- **consumer** (port 8081) - Processes messages, adds "processed" suffix
+- **ibm-mq-consumer** (port 8081) - Bridges MQ to Kafka and back
+- **kafka-consumer** (port 8082) - Processes Kafka messages, adds "processed" suffix
 
 ### Message Flow
 
 ```
-perf-tester -> DEV.QUEUE.2 -> consumer -> DEV.QUEUE.1 -> perf-tester
+perf-tester -> DEV.QUEUE.2 -> ibm-mq-consumer -> Kafka (mq-requests) -> kafka-consumer
+                                                                              |
+perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 ```
 
 ### Project Structure
@@ -65,10 +73,17 @@ perf-demo/
 │       └── messaging/
 │           ├── MessageSender.java    # Sends to DEV.QUEUE.2
 │           └── MessageListener.java  # Listens on DEV.QUEUE.1
-└── consumer/
+├── ibm-mq-consumer/
+│   ├── build.gradle
+│   └── src/main/java/com/example/ibmmqconsumer/
+│       ├── IbmMqConsumerApplication.java
+│       └── messaging/
+│           ├── MqMessageListener.java      # DEV.QUEUE.2 -> Kafka
+│           └── KafkaResponseListener.java  # Kafka -> DEV.QUEUE.1
+└── kafka-consumer/
     ├── build.gradle
-    └── src/main/java/com/example/consumer/
-        ├── ConsumerApplication.java
+    └── src/main/java/com/example/kafkaconsumer/
+        ├── KafkaConsumerApplication.java
         └── messaging/
-            └── MessageProcessor.java  # DEV.QUEUE.2 -> DEV.QUEUE.1
+            └── KafkaRequestListener.java  # Kafka request -> Kafka response
 ```

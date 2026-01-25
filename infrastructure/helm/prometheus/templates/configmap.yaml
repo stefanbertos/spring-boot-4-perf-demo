@@ -17,6 +17,20 @@ data:
           - targets: ['{{ .Values.targets.perfTester.serviceName }}:{{ .Values.targets.perfTester.port }}']
       {{- end }}
 
+      {{- if .Values.targets.ibmMqConsumer.enabled }}
+      - job_name: 'ibm-mq-consumer'
+        metrics_path: '{{ .Values.targets.ibmMqConsumer.metricsPath }}'
+        static_configs:
+          - targets: ['{{ .Values.targets.ibmMqConsumer.serviceName }}:{{ .Values.targets.ibmMqConsumer.port }}']
+      {{- end }}
+
+      {{- if .Values.targets.kafkaConsumer.enabled }}
+      - job_name: 'kafka-consumer'
+        metrics_path: '{{ .Values.targets.kafkaConsumer.metricsPath }}'
+        static_configs:
+          - targets: ['{{ .Values.targets.kafkaConsumer.serviceName }}:{{ .Values.targets.kafkaConsumer.port }}']
+      {{- end }}
+
       {{- if .Values.targets.ibmMq.enabled }}
       - job_name: 'ibm-mq'
         metrics_path: '{{ .Values.targets.ibmMq.metricsPath }}'

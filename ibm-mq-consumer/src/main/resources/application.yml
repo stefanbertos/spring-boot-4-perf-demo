@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: ibm-mq-consumer
+  threads:
+    virtual:
+      enabled: true
+  docker:
+    compose:
+      file: ../compose.yaml
+  jms:
+    cache:
+      enabled: true
+      session-cache-size: 50
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ibm-mq-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  task:
+    execution:
+      pool:
+        core-size: 100
+        max-size: 200
+        queue-capacity: 50000
+      thread-name-prefix: mq-consumer-
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
+server:
+  port: 8081
+  address: 0.0.0.0
+
+logging:
+  level:
+    com.example.ibmmqconsumer: INFO
+
+app:
+  mq:
+    queue:
+      inbound: DEV.QUEUE.2
+      outbound: DEV.QUEUE.1
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        jms: true
+        mq.e2e.latency: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        jms: 0.5,0.95,0.99
+        mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99

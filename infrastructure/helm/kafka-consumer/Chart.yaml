@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-consumer
+description: Kafka consumer - processes messages and sends responses
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

@@ -1,6 +1,0 @@
-// Consumer module - web dependency needed for Kubernetes health probes
-// Local development uses web-application-type: none (in application.yml)
-// Kubernetes uses web-application-type: servlet (in application-kubernetes.yml)
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-}

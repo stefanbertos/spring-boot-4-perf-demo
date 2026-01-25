@@ -1,0 +1,10 @@
+# Kubernetes profile - enables web server for actuator health probes
+spring:
+  docker:
+    compose:
+      enabled: false
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+
+server:
+  port: 8082

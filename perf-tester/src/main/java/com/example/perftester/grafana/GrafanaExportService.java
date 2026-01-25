@@ -25,7 +25,8 @@ public class GrafanaExportService {
             new DashboardInfo("perf-tester", "Perf-tester"),
             new DashboardInfo("ibm-mq", "IBM MQ"),
             new DashboardInfo("kafka", "Kafka"),
-            new DashboardInfo("consumer", "Consumer")
+            new DashboardInfo("ibm-mq-consumer", "IBM Mq Consumer"),
+            new DashboardInfo("kafka-consumer", "Kafka Consumer")
     );
 
     public GrafanaExportService(

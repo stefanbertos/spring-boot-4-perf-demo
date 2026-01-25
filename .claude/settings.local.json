@@ -14,7 +14,9 @@
       "Bash(kubectl config:*)",
       "Bash(kubectl delete:*)",
       "Bash(kubectl rollout:*)",
-      "Bash(kubectl rollout status:*)"
+      "Bash(kubectl rollout status:*)",
+      "Bash(./gradlew:*)",
+      "Bash(git mv:*)"
     ]
   }
 }

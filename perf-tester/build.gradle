@@ -1,4 +1,5 @@
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.4'
+    implementation 'com.ibm.mq:mq-jms-spring-boot-starter:4.0.1'
 }

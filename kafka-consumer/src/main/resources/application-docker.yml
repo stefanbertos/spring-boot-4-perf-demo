@@ -1,0 +1,6 @@
+spring:
+  docker:
+    compose:
+      enabled: false
+  kafka:
+    bootstrap-servers: kafka:9092

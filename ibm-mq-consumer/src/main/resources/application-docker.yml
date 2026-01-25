@@ -1,0 +1,10 @@
+spring:
+  docker:
+    compose:
+      enabled: false
+  kafka:
+    bootstrap-servers: kafka:9092
+
+ibm:
+  mq:
+    conn-name: ibm-mq(1414)
