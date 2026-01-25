@@ -14,6 +14,7 @@ spec:
       labels:
         {{- include "prometheus.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "prometheus.fullname" . }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

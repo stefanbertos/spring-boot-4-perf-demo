@@ -13,22 +13,61 @@ data:
       {{- if .Values.targets.perfTester.enabled }}
       - job_name: 'perf-tester'
         metrics_path: '{{ .Values.targets.perfTester.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.perfTester.serviceName }}:{{ .Values.targets.perfTester.port }}']
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names: ['{{ .Release.Namespace }}']
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: '{{ .Values.targets.perfTester.serviceName }}'
+          - source_labels: [__meta_kubernetes_endpoint_port_number]
+            action: keep
+            regex: '{{ .Values.targets.perfTester.port }}'
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
       {{- end }}
 
       {{- if .Values.targets.ibmMqConsumer.enabled }}
       - job_name: 'ibm-mq-consumer'
         metrics_path: '{{ .Values.targets.ibmMqConsumer.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.ibmMqConsumer.serviceName }}:{{ .Values.targets.ibmMqConsumer.port }}']
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names: ['{{ .Release.Namespace }}']
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: '{{ .Values.targets.ibmMqConsumer.serviceName }}'
+          - source_labels: [__meta_kubernetes_endpoint_port_number]
+            action: keep
+            regex: '{{ .Values.targets.ibmMqConsumer.port }}'
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
       {{- end }}
 
       {{- if .Values.targets.kafkaConsumer.enabled }}
       - job_name: 'kafka-consumer'
         metrics_path: '{{ .Values.targets.kafkaConsumer.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.kafkaConsumer.serviceName }}:{{ .Values.targets.kafkaConsumer.port }}']
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names: ['{{ .Release.Namespace }}']
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: '{{ .Values.targets.kafkaConsumer.serviceName }}'
+          - source_labels: [__meta_kubernetes_endpoint_port_number]
+            action: keep
+            regex: '{{ .Values.targets.kafkaConsumer.port }}'
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
       {{- end }}
 
       {{- if .Values.targets.ibmMq.enabled }}
