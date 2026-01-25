@@ -4,8 +4,6 @@ import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.grafana.GrafanaExportService.DashboardExportResult;
-import com.example.perftester.messaging.LLZZMessageBuilder;
-import com.example.perftester.messaging.LLZZMessageBuilder.ApplicationHeader;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
@@ -39,7 +37,6 @@ public class PerfController {
     private final GrafanaExportService grafanaExportService;
     private final PrometheusExportService prometheusExportService;
     private final TestResultPackager testResultPackager;
-    private final LLZZMessageBuilder llzzMessageBuilder = new LLZZMessageBuilder();
 
     @PostMapping("/send")
     public ResponseEntity<Resource> sendMessages(
@@ -129,69 +126,4 @@ public class PerfController {
                 .contentLength(packageResult.zipBytes().length)
                 .body(resource);
     }
-
-    @PostMapping("/send/llzz")
-    public ResponseEntity<LLZZResponse> sendLLZZMessage(
-            @RequestParam(defaultValue = "MT103") String messageType,
-            @RequestParam(defaultValue = "BANKBEBB") String sourceBic,
-            @RequestParam(defaultValue = "BANKDEFF") String targetBic,
-            @RequestParam(defaultValue = "50000,00") String amount,
-            @RequestParam(defaultValue = "EUR") String currency,
-            @RequestParam(defaultValue = "false") boolean hexDump) {
-
-        byte[] llzzMessage = llzzMessageBuilder.buildSampleMT103(sourceBic, targetBic, amount, currency);
-
-        messageSender.sendBytesMessage(llzzMessage);
-
-        String hexOutput = hexDump ? llzzMessageBuilder.toHexDump(llzzMessage) : null;
-
-        log.info("Sent LLZZ {} message ({} bytes) from {} to {}",
-                messageType, llzzMessage.length, sourceBic, targetBic);
-
-        return ResponseEntity.ok(new LLZZResponse(
-                llzzMessage.length,
-                messageType,
-                sourceBic,
-                targetBic,
-                hexOutput
-        ));
-    }
-
-    @PostMapping("/llzz/parse")
-    public ResponseEntity<LLZZParseResponse> parseLLZZMessage(@RequestBody byte[] message) {
-        var parsed = llzzMessageBuilder.parse(message);
-
-        return ResponseEntity.ok(new LLZZParseResponse(
-                parsed.length(),
-                parsed.segment().name(),
-                parsed.header(),
-                new String(parsed.payload())
-        ));
-    }
-
-    @PostMapping("/llzz/sample")
-    public ResponseEntity<String> getSampleLLZZ(
-            @RequestParam(defaultValue = "BANKBEBB") String sourceBic,
-            @RequestParam(defaultValue = "BANKDEFF") String targetBic,
-            @RequestParam(defaultValue = "50000,00") String amount,
-            @RequestParam(defaultValue = "EUR") String currency) {
-
-        byte[] llzzMessage = llzzMessageBuilder.buildSampleMT103(sourceBic, targetBic, amount, currency);
-        return ResponseEntity.ok(llzzMessageBuilder.toHexDump(llzzMessage));
-    }
-
-    public record LLZZResponse(
-            int length,
-            String messageType,
-            String sourceBic,
-            String targetBic,
-            String hexDump
-    ) {}
-
-    public record LLZZParseResponse(
-            int length,
-            String segment,
-            ApplicationHeader header,
-            String payload
-    ) {}
 }

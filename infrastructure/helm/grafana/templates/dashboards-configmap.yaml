@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "grafana.labels" . | nindent 4 }}
 data:
-  spring-boot.json: |
+  perf-tester.json: |
     {
       "annotations": {"list": []},
       "editable": true,
@@ -135,8 +135,8 @@ data:
       ],
       "schemaVersion": 39,
       "templating": {"list": []},
-      "time": {"from": "now-15m", "to": "now"},
-      "title": "Spring Boot - perf-tester",
+      "time": {"from": "now-5m", "to": "now"},
+      "title": "perf-tester",
       "uid": "spring-boot-perf-demo",
       "version": 1
     }
@@ -258,7 +258,7 @@ data:
       ],
       "schemaVersion": 39,
       "templating": {"list": []},
-      "time": {"from": "now-15m", "to": "now"},
+      "time": {"from": "now-5m", "to": "now"},
       "title": "IBM MQ",
       "uid": "ibm-mq",
       "version": 1
@@ -355,8 +355,107 @@ data:
       ],
       "schemaVersion": 39,
       "templating": {"list": []},
-      "time": {"from": "now-15m", "to": "now"},
+      "time": {"from": "now-5m", "to": "now"},
       "title": "Kafka",
       "uid": "kafka",
+      "version": 1
+    }
+  consumer.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "HTTP Request Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(http_server_requests_seconds_count{job=\"consumer\"}[1m])", "legendFormat": "{{ "{{method}}" }} {{ "{{uri}}" }} - {{ "{{status}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}
+        },
+        {
+          "title": "HTTP Response Time (avg)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(http_server_requests_seconds_sum{job=\"consumer\"}[1m]) / rate(http_server_requests_seconds_count{job=\"consumer\"}[1m])", "legendFormat": "avg - {{ "{{method}}" }} {{ "{{uri}}" }}"},
+            {"expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"consumer\"}[1m]))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"consumer\"}[1m]))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "JVM Heap Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"consumer\", area=\"heap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"consumer\", area=\"heap\"})", "legendFormat": "Committed"},
+            {"expr": "jvm_gc_max_data_size_bytes{job=\"consumer\"}", "legendFormat": "Max"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "JVM Non-Heap Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(jvm_memory_used_bytes{job=\"consumer\", area=\"nonheap\"})", "legendFormat": "Used"},
+            {"expr": "sum(jvm_memory_committed_bytes{job=\"consumer\", area=\"nonheap\"})", "legendFormat": "Committed"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "GC Overhead",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_gc_overhead{job=\"consumer\"}", "legendFormat": "GC Overhead"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Classes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "jvm_classes_loaded_classes{job=\"consumer\"}", "legendFormat": "Loaded Classes"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "process_cpu_usage{job=\"consumer\"}", "legendFormat": "Process CPU"},
+            {"expr": "system_cpu_usage{job=\"consumer\"}", "legendFormat": "System CPU"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1}, "overrides": []}
+        },
+        {
+          "title": "JVM Threads",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "jvm_threads_live_threads{job=\"consumer\"}", "legendFormat": "Live Threads"},
+            {"expr": "jvm_threads_daemon_threads{job=\"consumer\"}", "legendFormat": "Daemon Threads"},
+            {"expr": "jvm_threads_peak_threads{job=\"consumer\"}", "legendFormat": "Peak Threads"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+      ],
+      "schemaVersion": 39,
+      "templating": {"list": []},
+      "time": {"from": "now-5m", "to": "now"},
+      "title": "consumer",
+      "uid": "spring-boot-consumer",
       "version": 1
     }

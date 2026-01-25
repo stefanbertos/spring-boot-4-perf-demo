@@ -7,7 +7,6 @@ import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -46,17 +45,5 @@ public class MessageSender {
         });
 
         log.debug("Sent message [{}] to {} with replyTo {}", messageId, outboundQueue, replyToQueue);
-    }
-
-    public void sendBytesMessage(byte[] payload) {
-        jmsTemplate.send(outboundQueue, session -> {
-            var bytesMessage = session.createBytesMessage();
-            bytesMessage.writeBytes(payload);
-            bytesMessage.setJMSReplyTo(replyToQueue);
-            bytesMessage.setStringProperty("JMS_IBM_Format", "MQHRF2");
-            return bytesMessage;
-        });
-
-        log.debug("Sent LLZZ bytes message ({} bytes) to {}", payload.length, outboundQueue);
     }
 }

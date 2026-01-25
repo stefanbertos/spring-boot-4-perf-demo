@@ -41,3 +41,8 @@ targets:
     serviceName: perf-kafka-exporter
     port: 9308
     metricsPath: /metrics
+  consumer:
+    enabled: true
+    serviceName: perf-consumer
+    port: 8080
+    metricsPath: /api/actuator/prometheus
