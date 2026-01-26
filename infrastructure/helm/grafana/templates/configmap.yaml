@@ -16,6 +16,24 @@ data:
         isDefault: true
         editable: false
       {{- end }}
+      {{- if .Values.datasources.tempo.enabled }}
+      - name: tempo
+        type: tempo
+        access: proxy
+        url: {{ .Values.datasources.tempo.url }}
+        uid: tempo
+        editable: false
+        jsonData:
+          tracesToMetrics:
+            datasourceUid: prometheus
+            tags:
+              - key: service.name
+                value: service
+          nodeGraph:
+            enabled: true
+          serviceMap:
+            datasourceUid: prometheus
+      {{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

@@ -60,6 +60,8 @@ spec:
               value: "{{ .Values.task.execution.maxSize }}"
             - name: SPRING_TASK_EXECUTION_POOL_QUEUECAPACITY
               value: "{{ .Values.task.execution.queueCapacity }}"
+            - name: TRACING_URL
+              value: {{ .Values.tracing.url }}
           ports:
             - name: http
               containerPort: 8080

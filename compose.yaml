@@ -85,6 +85,17 @@ services:
     volumes:
       - ./infrastructure/prometheus:/etc/prometheus
 
+  tempo:
+    image: grafana/tempo:2.6.1
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "3200:3200"
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./infrastructure/tempo:/etc/tempo
+      - tempo-data:/var/tempo
+
   grafana:
     image: grafana/grafana:11.4.0
     ports:
@@ -113,3 +124,4 @@ services:
 
 volumes:
   grafana-data:
+  tempo-data:

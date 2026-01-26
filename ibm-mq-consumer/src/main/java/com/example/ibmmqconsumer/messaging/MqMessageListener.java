@@ -3,6 +3,10 @@ package com.example.ibmmqconsumer.messaging;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
@@ -23,12 +27,16 @@ public class MqMessageListener {
     private final Counter messagesReceived;
     private final Counter messagesForwarded;
     private final Counter messagesDropped;
+    private final Tracer tracer;
 
     @Value("${app.kafka.topic.request}")
     private String kafkaRequestTopic;
 
-    public MqMessageListener(KafkaTemplate<String, String> kafkaTemplate, MeterRegistry meterRegistry) {
+    public MqMessageListener(KafkaTemplate<String, String> kafkaTemplate,
+                            MeterRegistry meterRegistry,
+                            Tracer tracer) {
         this.kafkaTemplate = kafkaTemplate;
+        this.tracer = tracer;
         this.messagesReceived = Counter.builder("mq.listener.messages.received")
                 .description("Total MQ messages received")
                 .tag("listener", "mq-to-kafka")
@@ -53,24 +61,50 @@ public class MqMessageListener {
 
         String body = ((TextMessage) message).getText();
         Destination replyTo = message.getJMSReplyTo();
+        String correlationId = message.getJMSCorrelationID();
+        String traceId = message.getStringProperty("traceId");
+        String spanId = message.getStringProperty("spanId");
 
-        log.debug("Received MQ message: {}", body);
+        Span span = tracer.spanBuilder("mq-receive-forward-kafka")
+                .setSpanKind(SpanKind.CONSUMER)
+                .setAttribute("messaging.system", "ibm-mq")
+                .setAttribute("messaging.destination", kafkaRequestTopic)
+                .setAttribute("messaging.correlation_id", correlationId != null ? correlationId : "")
+                .setAttribute("traceId.parent", traceId != null ? traceId : "")
+                .startSpan();
 
-        if (replyTo != null) {
-            String replyToString = replyTo.toString();
-            log.debug("Publishing to Kafka topic {}, replyTo: {}", kafkaRequestTopic, replyToString);
+        try (Scope scope = span.makeCurrent()) {
+            log.debug("Received MQ message: {} traceId=[{}] correlationId=[{}]", body, traceId, correlationId);
 
-            org.springframework.messaging.Message<String> kafkaMessage = MessageBuilder
-                    .withPayload(body)
-                    .setHeader(KafkaHeaders.TOPIC, kafkaRequestTopic)
-                    .setHeader("mq-reply-to", replyToString)
-                    .build();
+            if (replyTo != null) {
+                String replyToString = replyTo.toString();
+                String newTraceId = span.getSpanContext().getTraceId();
+                String newSpanId = span.getSpanContext().getSpanId();
 
-            kafkaTemplate.send(kafkaMessage);
-            messagesForwarded.increment();
-        } else {
-            log.warn("No replyTo destination set, dropping message: {}", body);
-            messagesDropped.increment();
+                log.debug("Publishing to Kafka topic {}, replyTo: {}, traceId: {}",
+                        kafkaRequestTopic, replyToString, newTraceId);
+
+                org.springframework.messaging.Message<String> kafkaMessage = MessageBuilder
+                        .withPayload(body)
+                        .setHeader(KafkaHeaders.TOPIC, kafkaRequestTopic)
+                        .setHeader("mq-reply-to", replyToString)
+                        .setHeader("traceId", newTraceId)
+                        .setHeader("spanId", newSpanId)
+                        .setHeader("correlationId", correlationId)
+                        .setHeader("parentTraceId", traceId)
+                        .build();
+
+                kafkaTemplate.send(kafkaMessage);
+                messagesForwarded.increment();
+            } else {
+                log.warn("No replyTo destination set, dropping message: {}", body);
+                messagesDropped.increment();
+            }
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
         }
     }
 }

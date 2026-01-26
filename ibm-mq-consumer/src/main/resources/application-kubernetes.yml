@@ -12,3 +12,6 @@ server:
 ibm:
   mq:
     conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+
+tracing:
+  url: ${TRACING_URL:http://perf-tempo:4318/v1/traces}

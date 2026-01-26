@@ -30,6 +30,9 @@ datasources:
   prometheus:
     enabled: true
     url: http://perf-prometheus:9090/prometheus
+  tempo:
+    enabled: true
+    url: http://perf-tempo:3200
 
 resources:
   requests:

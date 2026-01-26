@@ -31,6 +31,8 @@ spec:
               value: {{ .Values.kafka.topic.request }}
             - name: APP_KAFKA_TOPIC_RESPONSE
               value: {{ .Values.kafka.topic.response }}
+            - name: TRACING_URL
+              value: {{ .Values.tracing.url }}
           ports:
             - name: http
               containerPort: 8082

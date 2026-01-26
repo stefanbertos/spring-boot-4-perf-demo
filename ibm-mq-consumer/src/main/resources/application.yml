@@ -84,3 +84,12 @@ management:
         http.server.requests: 0.95,0.99
         jms: 0.95,0.99
         mq.e2e.latency: 0.95,0.99
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: b3,w3c
+
+# Tracing configuration
+tracing:
+  url: http://localhost:4318/v1/traces

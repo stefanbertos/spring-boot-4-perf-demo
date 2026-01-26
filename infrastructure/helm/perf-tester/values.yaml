@@ -27,6 +27,9 @@ prometheus:
   url: http://perf-prometheus:9090/prometheus
   exportPath: /tmp/prometheus-exports
 
+tracing:
+  url: http://perf-tempo:4318/v1/traces
+
 export:
   path: /tmp/test-exports
 

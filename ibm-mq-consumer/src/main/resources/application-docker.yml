@@ -8,3 +8,6 @@ spring:
 ibm:
   mq:
     conn-name: ibm-mq(1414)
+
+tracing:
+  url: http://tempo:4318/v1/traces

@@ -27,6 +27,9 @@ kafka:
   consumer:
     groupId: ibm-mq-consumer-group
 
+tracing:
+  url: http://perf-tempo:4318/v1/traces
+
 jms:
   sessionCacheSize: 50
 

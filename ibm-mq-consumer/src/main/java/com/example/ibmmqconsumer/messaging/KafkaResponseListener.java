@@ -3,6 +3,10 @@ package com.example.ibmmqconsumer.messaging;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.jms.core.JmsTemplate;
@@ -17,9 +21,13 @@ public class KafkaResponseListener {
     private final Counter messagesReceived;
     private final Counter messagesSentToMq;
     private final Counter messagesDropped;
+    private final Tracer tracer;
 
-    public KafkaResponseListener(JmsTemplate jmsTemplate, MeterRegistry meterRegistry) {
+    public KafkaResponseListener(JmsTemplate jmsTemplate,
+                                MeterRegistry meterRegistry,
+                                Tracer tracer) {
         this.jmsTemplate = jmsTemplate;
+        this.tracer = tracer;
         this.messagesReceived = Counter.builder("kafka.response.messages.received")
                 .description("Total Kafka response messages received")
                 .tag("listener", "kafka-to-mq")
@@ -44,17 +52,47 @@ public class KafkaResponseListener {
 
         String message = record.value();
         String replyTo = getHeader(record, "mq-reply-to");
+        String correlationId = getHeader(record, "correlationId");
+        String parentTraceId = getHeader(record, "traceId");
+        String parentSpanId = getHeader(record, "spanId");
 
-        log.debug("Received Kafka response: {}, replyTo: {}", message, replyTo);
+        Span span = tracer.spanBuilder("kafka-receive-forward-mq")
+                .setSpanKind(SpanKind.PRODUCER)
+                .setAttribute("messaging.system", "ibm-mq")
+                .setAttribute("messaging.correlation_id", correlationId != null ? correlationId : "")
+                .setAttribute("traceId.parent", parentTraceId != null ? parentTraceId : "")
+                .startSpan();
 
-        if (replyTo != null) {
-            String queueName = extractQueueName(replyTo);
-            log.debug("Sending to MQ queue {}: {}", queueName, message);
-            jmsTemplate.convertAndSend(queueName, message);
-            messagesSentToMq.increment();
-        } else {
-            log.warn("No mq-reply-to header, dropping message: {}", message);
-            messagesDropped.increment();
+        try (Scope scope = span.makeCurrent()) {
+            log.debug("Received Kafka response: {}, replyTo: {}, traceId=[{}], correlationId=[{}]",
+                    message, replyTo, parentTraceId, correlationId);
+
+            if (replyTo != null) {
+                String queueName = extractQueueName(replyTo);
+                String newTraceId = span.getSpanContext().getTraceId();
+                String newSpanId = span.getSpanContext().getSpanId();
+
+                span.setAttribute("messaging.destination", queueName);
+
+                log.debug("Sending to MQ queue {}: {} traceId=[{}]", queueName, message, newTraceId);
+                jmsTemplate.convertAndSend(queueName, message, m -> {
+                    m.setStringProperty("traceId", newTraceId);
+                    m.setStringProperty("spanId", newSpanId);
+                    if (correlationId != null) {
+                        m.setJMSCorrelationID(correlationId);
+                    }
+                    return m;
+                });
+                messagesSentToMq.increment();
+            } else {
+                log.warn("No mq-reply-to header, dropping message: {}", message);
+                messagesDropped.increment();
+            }
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
         }
     }
 

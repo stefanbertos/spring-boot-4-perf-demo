@@ -8,6 +8,9 @@ ibm:
   mq:
     conn-name: perf-ibm-mq(1414)
 
+tracing:
+  url: ${TRACING_URL:http://perf-tempo:4318/v1/traces}
+
 app:
   grafana:
     url: http://perf-grafana:3000

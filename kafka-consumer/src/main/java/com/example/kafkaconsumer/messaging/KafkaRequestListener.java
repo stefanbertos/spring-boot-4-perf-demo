@@ -3,6 +3,10 @@ package com.example.kafkaconsumer.messaging;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
@@ -21,12 +25,16 @@ public class KafkaRequestListener {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final Counter messagesReceived;
     private final Counter messagesProcessed;
+    private final Tracer tracer;
 
     @Value("${app.kafka.topic.response}")
     private String kafkaResponseTopic;
 
-    public KafkaRequestListener(KafkaTemplate<String, String> kafkaTemplate, MeterRegistry meterRegistry) {
+    public KafkaRequestListener(KafkaTemplate<String, String> kafkaTemplate,
+                                MeterRegistry meterRegistry,
+                                Tracer tracer) {
         this.kafkaTemplate = kafkaTemplate;
+        this.tracer = tracer;
         this.messagesReceived = Counter.builder("kafka.request.messages.received")
                 .description("Total Kafka request messages received")
                 .tag("listener", "kafka-processor")
@@ -47,23 +55,50 @@ public class KafkaRequestListener {
 
         String body = record.value();
         String replyTo = getHeader(record, "mq-reply-to");
+        String correlationId = getHeader(record, "correlationId");
+        String parentTraceId = getHeader(record, "traceId");
+        String parentSpanId = getHeader(record, "spanId");
 
-        log.debug("Received Kafka request: {}", body);
-        String processedMessage = body + " processed";
+        Span span = tracer.spanBuilder("kafka-process-request")
+                .setSpanKind(SpanKind.CONSUMER)
+                .setAttribute("messaging.system", "kafka")
+                .setAttribute("messaging.destination", kafkaResponseTopic)
+                .setAttribute("messaging.correlation_id", correlationId != null ? correlationId : "")
+                .setAttribute("traceId.parent", parentTraceId != null ? parentTraceId : "")
+                .startSpan();
 
-        log.debug("Publishing response to Kafka topic {}: {}", kafkaResponseTopic, processedMessage);
+        try (Scope scope = span.makeCurrent()) {
+            log.debug("Received Kafka request: {} traceId=[{}] correlationId=[{}]",
+                    body, parentTraceId, correlationId);
 
-        MessageBuilder<String> builder = MessageBuilder
-                .withPayload(processedMessage)
-                .setHeader(KafkaHeaders.TOPIC, kafkaResponseTopic);
+            String processedMessage = body + " processed";
+            String newTraceId = span.getSpanContext().getTraceId();
+            String newSpanId = span.getSpanContext().getSpanId();
 
-        if (replyTo != null) {
-            builder.setHeader("mq-reply-to", replyTo);
+            log.debug("Publishing response to Kafka topic {}: {} traceId=[{}]",
+                    kafkaResponseTopic, processedMessage, newTraceId);
+
+            MessageBuilder<String> builder = MessageBuilder
+                    .withPayload(processedMessage)
+                    .setHeader(KafkaHeaders.TOPIC, kafkaResponseTopic)
+                    .setHeader("traceId", newTraceId)
+                    .setHeader("spanId", newSpanId)
+                    .setHeader("correlationId", correlationId)
+                    .setHeader("parentTraceId", parentTraceId);
+
+            if (replyTo != null) {
+                builder.setHeader("mq-reply-to", replyTo);
+            }
+
+            Message<String> responseMessage = builder.build();
+            kafkaTemplate.send(responseMessage);
+            messagesProcessed.increment();
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
         }
-
-        Message<String> responseMessage = builder.build();
-        kafkaTemplate.send(responseMessage);
-        messagesProcessed.increment();
     }
 
     private String getHeader(ConsumerRecord<String, String> record, String headerName) {

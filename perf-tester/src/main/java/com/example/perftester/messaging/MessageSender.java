@@ -2,6 +2,10 @@ package com.example.perftester.messaging;
 
 import com.example.perftester.perf.PerformanceTracker;
 import com.ibm.mq.jakarta.jms.MQQueue;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import jakarta.jms.JMSException;
 import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
@@ -19,15 +23,18 @@ public class MessageSender {
     private final String outboundQueue;
     private final Queue replyToQueue;
     private final PerformanceTracker performanceTracker;
+    private final Tracer tracer;
 
     public MessageSender(JmsTemplate jmsTemplate,
                          @Value("${app.mq.queue.outbound}") String outboundQueue,
                          @Value("${app.mq.queue.inbound}") String inboundQueue,
-                         PerformanceTracker performanceTracker) throws JMSException {
+                         PerformanceTracker performanceTracker,
+                         Tracer tracer) throws JMSException {
         this.jmsTemplate = jmsTemplate;
         this.outboundQueue = outboundQueue;
         this.replyToQueue = createQueue(inboundQueue);
         this.performanceTracker = performanceTracker;
+        this.tracer = tracer;
     }
 
     private MQQueue createQueue(String queueName) throws JMSException {
@@ -38,12 +45,33 @@ public class MessageSender {
         String messageId = UUID.randomUUID().toString();
         String message = PerformanceTracker.createMessage(messageId, payload);
 
-        performanceTracker.recordSend(messageId);
-        jmsTemplate.convertAndSend(outboundQueue, message, m -> {
-            m.setJMSReplyTo(replyToQueue);
-            return m;
-        });
+        Span span = tracer.spanBuilder("mq-send")
+                .setSpanKind(SpanKind.PRODUCER)
+                .setAttribute("messaging.system", "ibm-mq")
+                .setAttribute("messaging.destination", outboundQueue)
+                .setAttribute("messaging.message_id", messageId)
+                .startSpan();
 
-        log.debug("Sent message [{}] to {} with replyTo {}", messageId, outboundQueue, replyToQueue);
+        try (Scope scope = span.makeCurrent()) {
+            String traceId = span.getSpanContext().getTraceId();
+            String spanId = span.getSpanContext().getSpanId();
+
+            performanceTracker.recordSend(messageId);
+            jmsTemplate.convertAndSend(outboundQueue, message, m -> {
+                m.setJMSReplyTo(replyToQueue);
+                m.setStringProperty("traceId", traceId);
+                m.setStringProperty("spanId", spanId);
+                m.setJMSCorrelationID(messageId);
+                return m;
+            });
+
+            log.debug("Sent message [{}] traceId=[{}] to {} with replyTo {}",
+                    messageId, traceId, outboundQueue, replyToQueue);
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 }

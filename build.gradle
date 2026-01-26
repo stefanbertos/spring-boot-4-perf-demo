@@ -32,6 +32,10 @@ subprojects {
         implementation 'org.springframework:spring-aop'
         implementation 'org.aspectj:aspectjweaver'
 
+        // Distributed tracing with OpenTelemetry and Micrometer
+        implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+        implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+
         compileOnly 'org.projectlombok:lombok'
         developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
         runtimeOnly 'io.micrometer:micrometer-registry-prometheus'

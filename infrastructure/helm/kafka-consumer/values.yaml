@@ -17,6 +17,9 @@ kafka:
   consumer:
     groupId: kafka-consumer-group
 
+tracing:
+  url: http://perf-tempo:4318/v1/traces
+
 resources:
   requests:
     memory: "256Mi"
