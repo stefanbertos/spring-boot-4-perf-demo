@@ -7,6 +7,8 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'checkstyle'
+    apply plugin: 'pmd'
 
     group = 'com.example'
     version = '0.0.1-SNAPSHOT'
@@ -15,6 +17,51 @@ subprojects {
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
         }
+    }
+
+    // ==================== Checkstyle Configuration ====================
+    checkstyle {
+        toolVersion = '10.21.4'
+        configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+        configProperties = ['suppressionFile': rootProject.file('config/checkstyle/suppressions.xml')]
+        ignoreFailures = false
+        maxWarnings = 0
+        maxErrors = 0
+    }
+
+    tasks.withType(Checkstyle).configureEach {
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+
+    // ==================== PMD Configuration ====================
+    pmd {
+        toolVersion = '7.10.0'
+        consoleOutput = true
+        ruleSetFiles = rootProject.files('config/pmd/ruleset.xml')
+        ignoreFailures = false
+        rulesMinimumPriority = 5
+    }
+
+    tasks.withType(Pmd).configureEach {
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+
+    // ==================== Build Order ====================
+    // Make static analysis run before JAR packaging - no artifacts until checks pass
+    tasks.named('jar') {
+        dependsOn tasks.named('checkstyleMain')
+        dependsOn tasks.named('pmdMain')
+    }
+
+    tasks.named('bootJar') {
+        dependsOn tasks.named('checkstyleMain')
+        dependsOn tasks.named('pmdMain')
     }
 
     configurations {

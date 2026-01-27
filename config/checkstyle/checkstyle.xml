@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- Suppress warnings for generated files -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- ==================== Java 25 / Modern Java Rules ==================== -->
+
+        <!-- Enforce var usage is allowed (no restriction on explicit types) -->
+
+        <!-- ==================== Spring Boot 4 / DI Rules ==================== -->
+
+        <!-- Disallow field injection (@Autowired on fields) -->
+        <module name="Regexp">
+            <property name="format" value="@Autowired\s*\n\s*(private|protected)"/>
+            <property name="message" value="Field injection is not allowed. Use constructor injection instead."/>
+            <property name="illegalPattern" value="true"/>
+        </module>
+
+        <!-- ==================== Import Rules ==================== -->
+
+        <!-- No wildcard imports -->
+        <module name="AvoidStarImport">
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- No unused imports -->
+        <module name="UnusedImports"/>
+
+        <!-- Import order: standard Java first, then third-party, then project -->
+        <!-- Disabled due to complexity with many third-party libs; rely on IDE formatting -->
+        <!--
+        <module name="ImportOrder">
+            <property name="groups" value="java,javax,jakarta,*,com.example"/>
+            <property name="ordered" value="true"/>
+            <property name="separated" value="true"/>
+        </module>
+        -->
+
+        <!-- ==================== Naming Conventions ==================== -->
+
+        <!-- Class names: UpperCamelCase -->
+        <module name="TypeName">
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
+        </module>
+
+        <!-- Method names: lowerCamelCase -->
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+
+        <!-- Constants: UPPER_SNAKE_CASE -->
+        <module name="ConstantName">
+            <property name="format" value="^log(ger)?|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
+        </module>
+
+        <!-- Local variables: lowerCamelCase -->
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+
+        <!-- Parameters: lowerCamelCase -->
+        <module name="ParameterName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+
+        <!-- Member variables: lowerCamelCase -->
+        <module name="MemberName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+        </module>
+
+        <!-- ==================== Code Style ==================== -->
+
+        <!-- No multiple statements per line -->
+        <module name="OneStatementPerLine"/>
+
+        <!-- One top-level class per file -->
+        <module name="OneTopLevelClass"/>
+
+        <!-- Braces required for all blocks -->
+        <module name="NeedBraces"/>
+
+        <!-- Left curly brace at end of line -->
+        <module name="LeftCurly"/>
+
+        <!-- Right curly brace handling -->
+        <module name="RightCurly"/>
+
+        <!-- No empty blocks -->
+        <module name="EmptyBlock">
+            <property name="option" value="TEXT"/>
+        </module>
+
+        <!-- Whitespace after comma, semicolon -->
+        <module name="WhitespaceAfter"/>
+
+        <!-- Whitespace around operators -->
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+        </module>
+
+        <!-- ==================== Best Practices ==================== -->
+
+        <!-- Require @Override annotation -->
+        <module name="MissingOverride"/>
+
+        <!-- No finalizer methods -->
+        <module name="NoFinalizer"/>
+
+        <!-- Equals and hashCode must be overridden together -->
+        <module name="EqualsHashCode"/>
+
+        <!-- No assignment in sub-expressions -->
+        <module name="InnerAssignment"/>
+
+        <!-- Default case required in switch (unless exhaustive) -->
+        <module name="MissingSwitchDefault"/>
+
+        <!-- Fall through in switch must be commented -->
+        <module name="FallThrough"/>
+
+        <!-- Modifier order -->
+        <module name="ModifierOrder"/>
+
+        <!-- Redundant modifiers -->
+        <module name="RedundantModifier"/>
+
+        <!-- ==================== Complexity ==================== -->
+
+        <!-- Maximum method length -->
+        <module name="MethodLength">
+            <property name="max" value="100"/>
+        </module>
+
+        <!-- Maximum parameters -->
+        <module name="ParameterNumber">
+            <property name="max" value="7"/>
+        </module>
+
+        <!-- ==================== Javadoc (relaxed for this project) ==================== -->
+
+        <!-- Public API should have Javadoc (warning only) -->
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="public"/>
+            <property name="severity" value="ignore"/>
+            <property name="allowMissingPropertyJavadoc" value="true"/>
+        </module>
+    </module>
+
+    <!-- ==================== File Level Checks ==================== -->
+
+    <!-- No trailing whitespace -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing whitespace."/>
+    </module>
+
+    <!-- File must end with newline -->
+    <module name="NewlineAtEndOfFile">
+        <property name="lineSeparator" value="lf_cr_crlf"/>
+    </module>
+
+    <!-- Maximum file length -->
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
+</module>

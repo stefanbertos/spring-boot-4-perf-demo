@@ -74,7 +74,9 @@ public class PerformanceTracker {
         long current;
         do {
             current = minLatencyNanos.get();
-            if (value >= current) return;
+            if (value >= current) {
+                return;
+            }
         } while (!minLatencyNanos.compareAndSet(current, value));
     }
 
@@ -82,7 +84,9 @@ public class PerformanceTracker {
         long current;
         do {
             current = maxLatencyNanos.get();
-            if (value <= current) return;
+            if (value <= current) {
+                return;
+            }
         } while (!maxLatencyNanos.compareAndSet(current, value));
     }
 
