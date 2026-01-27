@@ -1,8 +1,6 @@
-add grafana loki for logs and support stuff
+ollama launch claude
+https://docs.ollama.com/integrations/claude-code
 
-
-use https://grafana.com/grafana/dashboards/15661-k8s-dashboard-en-20250125/
-https://grafana.com/grafana/dashboards/1860-node-exporter-full/
 
 
 setup - partition 3

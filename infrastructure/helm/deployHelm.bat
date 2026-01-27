@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/16] Building application JARs with Gradle...
+echo [1/19] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -55,7 +55,7 @@ echo.
 :: ============================================
 :: Build Docker Images
 :: ============================================
-echo [2/16] Building Docker image for perf-tester...
+echo [2/19] Building Docker image for perf-tester...
 docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build perf-tester image
@@ -64,7 +64,7 @@ if %errorlevel% neq 0 (
 echo      perf-tester image built.
 echo.
 
-echo [3/16] Building Docker image for ibm-mq-consumer...
+echo [3/19] Building Docker image for ibm-mq-consumer...
 docker build -t ibm-mq-consumer:%IMAGE_TAG% %PROJECT_ROOT%\ibm-mq-consumer
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build ibm-mq-consumer image
@@ -73,7 +73,7 @@ if %errorlevel% neq 0 (
 echo      ibm-mq-consumer image built.
 echo.
 
-echo [4/16] Building Docker image for kafka-consumer...
+echo [4/19] Building Docker image for kafka-consumer...
 docker build -t kafka-consumer:%IMAGE_TAG% %PROJECT_ROOT%\kafka-consumer
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build kafka-consumer image
@@ -86,7 +86,7 @@ echo.
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [5/16] Loading images to Kubernetes cluster...
+echo [5/19] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -236,7 +236,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [6/16] Creating namespace %NAMESPACE%...
+echo [6/19] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -248,7 +248,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [7/16] Deploying IBM MQ...
+echo [7/19] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -264,7 +264,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [8/16] Deploying Prometheus...
+echo [8/19] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -275,7 +275,29 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [9/16] Deploying Grafana...
+echo [9/19] Deploying Tempo...
+helm upgrade --install %RELEASE_PREFIX%-tempo ./tempo ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Tempo
+    exit /b 1
+)
+echo      Tempo deployed.
+echo.
+
+echo [10/19] Deploying Loki...
+helm upgrade --install %RELEASE_PREFIX%-loki ./loki ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Loki
+    exit /b 1
+)
+echo      Loki deployed.
+echo.
+
+echo [11/19] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -289,7 +311,7 @@ echo.
 :: ============================================
 :: Deploy Kafka
 :: ============================================
-echo [10/16] Deploying Kafka...
+echo [12/19] Deploying Kafka...
 helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -308,7 +330,7 @@ echo.
 :: ============================================
 :: Deploy Applications
 :: ============================================
-echo [11/16] Deploying Applications...
+echo [13/19] Deploying Applications...
 
 echo      Deploying IBM MQ Consumer...
 :: Extract repository from full image path (remove tag)
@@ -359,7 +381,7 @@ echo.
 :: ============================================
 :: Deploy Kafdrop
 :: ============================================
-echo [12/16] Deploying Kafdrop...
+echo [14/19] Deploying Kafdrop...
 helm upgrade --install %RELEASE_PREFIX%-kafdrop ./kafdrop ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -373,7 +395,7 @@ echo.
 :: ============================================
 :: Deploy Kafka Exporter
 :: ============================================
-echo [13/16] Deploying Kafka Exporter...
+echo [15/19] Deploying Kafka Exporter...
 helm upgrade --install %RELEASE_PREFIX%-kafka-exporter ./kafka-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -387,7 +409,7 @@ echo.
 :: ============================================
 :: Deploy Ingress
 :: ============================================
-echo [14/16] Deploying Ingress...
+echo [16/19] Deploying Ingress...
 helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -398,7 +420,7 @@ if %errorlevel% neq 0 (
 echo      Ingress deployed.
 echo.
 
-echo [15/16] Printing deployment summary...
+echo [17/19] Printing deployment summary...
 echo.
 echo ============================================
 echo  Deployment Complete!

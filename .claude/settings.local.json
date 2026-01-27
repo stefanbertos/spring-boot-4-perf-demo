@@ -16,7 +16,8 @@
       "Bash(kubectl rollout:*)",
       "Bash(kubectl rollout status:*)",
       "Bash(./gradlew:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(helm lint:*)"
     ]
   }
 }

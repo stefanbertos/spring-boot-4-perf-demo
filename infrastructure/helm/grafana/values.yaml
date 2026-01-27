@@ -33,6 +33,9 @@ datasources:
   tempo:
     enabled: true
     url: http://perf-tempo:3200
+  loki:
+    enabled: true
+    url: http://perf-loki:3100
 
 resources:
   requests:
