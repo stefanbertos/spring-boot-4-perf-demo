@@ -17,7 +17,8 @@
       "Bash(kubectl rollout status:*)",
       "Bash(./gradlew:*)",
       "Bash(git mv:*)",
-      "Bash(helm lint:*)"
+      "Bash(helm lint:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

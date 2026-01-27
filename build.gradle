@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '4.0.1' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'jacoco'
 }
 
 subprojects {
@@ -9,6 +10,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'checkstyle'
     apply plugin: 'pmd'
+    apply plugin: 'jacoco'
 
     group = 'com.example'
     version = '0.0.1-SNAPSHOT'
@@ -52,8 +54,48 @@ subprojects {
         }
     }
 
+    // ==================== JaCoCo Configuration ====================
+    jacoco {
+        toolVersion = '0.8.14'
+    }
+
+    tasks.named('test') {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+
+    jacocoTestCoverageVerification {
+        dependsOn jacocoTestReport
+        violationRules {
+            rule {
+                limit {
+                    minimum = 1.0  // 100% coverage required
+                }
+            }
+            rule {
+                element = 'CLASS'
+                excludes = [
+                    '*.Application',
+                    '*.*Application',
+                    '*.*Config',
+                    '*.config.*'
+                ]
+                limit {
+                    minimum = 1.0
+                }
+            }
+        }
+    }
+
     // ==================== Build Order ====================
-    // Make static analysis run before JAR packaging - no artifacts until checks pass
     tasks.named('jar') {
         dependsOn tasks.named('checkstyleMain')
         dependsOn tasks.named('pmdMain')
@@ -62,6 +104,10 @@ subprojects {
     tasks.named('bootJar') {
         dependsOn tasks.named('checkstyleMain')
         dependsOn tasks.named('pmdMain')
+    }
+
+    tasks.named('check') {
+        dependsOn jacocoTestCoverageVerification
     }
 
     configurations {
@@ -91,10 +137,10 @@ subprojects {
 
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    }
 
-    tasks.named('test') {
-        useJUnitPlatform()
+        // Mockito for mocking
+        testImplementation 'org.mockito:mockito-core'
+        testImplementation 'org.mockito:mockito-junit-jupiter'
     }
 
     tasks.named('bootRun') {
