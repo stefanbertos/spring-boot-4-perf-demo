@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -43,7 +44,7 @@ public class GrafanaExportService {
             builder.defaultHeader("Authorization", "Bearer " + apiKey);
         } else {
             builder.defaultHeader("Authorization", "Basic " +
-                    java.util.Base64.getEncoder().encodeToString("admin:admin".getBytes()));
+                    java.util.Base64.getEncoder().encodeToString("admin:admin".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         }
 
         this.restClient = builder.build();
@@ -83,7 +84,7 @@ public class GrafanaExportService {
         List<String> urls = exported.stream().map(ExportedDashboard::url).toList();
         List<String> files = exported.stream()
                 .map(ExportedDashboard::filePath)
-                .filter(f -> f != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         return new DashboardExportResult(urls, files);

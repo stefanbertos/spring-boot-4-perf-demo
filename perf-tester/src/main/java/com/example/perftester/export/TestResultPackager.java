@@ -143,7 +143,7 @@ public class TestResultPackager {
     private void addTextEntry(ZipOutputStream zos, String entryName, String content) throws IOException {
         ZipEntry entry = new ZipEntry(entryName);
         zos.putNextEntry(entry);
-        zos.write(content.getBytes());
+        zos.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         zos.closeEntry();
     }
 

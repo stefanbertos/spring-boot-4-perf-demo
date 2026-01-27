@@ -38,7 +38,7 @@ subprojects {
 
     // ==================== PMD Configuration ====================
     pmd {
-        toolVersion = '7.10.0'
+        toolVersion = '7.20.0'
         consoleOutput = true
         ruleSetFiles = rootProject.files('config/pmd/ruleset.xml')
         ignoreFailures = false

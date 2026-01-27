@@ -98,7 +98,7 @@ public class KafkaResponseListener {
 
     private String getHeader(ConsumerRecord<String, String> record, String headerName) {
         var header = record.headers().lastHeader(headerName);
-        return header != null ? new String(header.value()) : null;
+        return header != null ? new String(header.value(), java.nio.charset.StandardCharsets.UTF_8) : null;
     }
 
     private String extractQueueName(String replyTo) {

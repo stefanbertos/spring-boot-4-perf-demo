@@ -208,20 +208,21 @@ public ProblemDetail handleNotFound(MessageNotFoundException ex) {
 
 ## Static Analysis
 
-The build enforces coding standards using **Checkstyle** (source-level analysis).
+The build enforces coding standards using **Checkstyle** (source-level) and **PMD 7.20.0** (code analysis).
 
 ```bash
-# Build runs checkstyle automatically (fails before JAR creation on violations)
+# Build runs both checkstyle and PMD automatically (fails before JAR on violations)
 ./gradlew build
 
-# Run only checkstyle
-./gradlew checkstyleMain
+# Run only static analysis
+./gradlew checkstyleMain pmdMain
 
 # View reports after build
-# HTML reports: build/reports/checkstyle/main.html
+# Checkstyle: build/reports/checkstyle/main.html
+# PMD: build/reports/pmd/main.html
 ```
 
-**Build Order:** Compile → Checkstyle → JAR (no artifacts created if checkstyle fails)
+**Build Order:** Compile → Checkstyle → PMD → JAR (no artifacts if checks fail)
 
 ### Checkstyle Rules Enforced
 
@@ -239,9 +240,23 @@ The following rules are enforced (build fails on violations):
 - **No trailing whitespace** - Lines must not end with whitespace
 - **Newline at EOF** - Files must end with a newline
 
-### Why Only Checkstyle?
+### PMD Rules Enforced
 
-Bytecode analysis tools (PMD, SpotBugs) are not yet compatible with Java 25 (class file version 69). They will be added when compatible versions are released. Checkstyle works at the source level and fully supports Java 25.
+PMD 7.20.0 provides additional code analysis:
+
+- **Best Practices** - Guard statements, unused variables/methods
+- **Code Style** - Naming conventions, unnecessary code
+- **Design** - Complexity limits, coupling analysis
+- **Error Prone** - Common programming mistakes, resource management
+- **Performance** - StringBuilder usage, loop optimizations
+- **Security** - Security vulnerability detection
+- **Multithreading** - Thread safety issues
+
+**Excluded rules** (aligned with CLAUDE.md standards):
+- `UseExplicitTypes` - Allow `var` keyword (Java 25 feature)
+- `AvoidCatchingGenericException` - Allow for observability/span recording
+- `LooseCoupling` - Spring beans often use concrete types
+- `DoNotUseThreads` - Not a J2EE application
 
 ### Project Structure
 

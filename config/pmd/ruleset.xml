@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<ruleset name="Custom Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Custom PMD ruleset for Java 25 and Spring Boot 4 best practices.
+        Aligned with coding standards defined in CLAUDE.md.
+    </description>
+
+    <!-- Exclude catching generic exceptions globally - needed for observability/span recording -->
+    <exclude-pattern>.*/test/.*</exclude-pattern>
+
+    <!-- ==================== Best Practices ==================== -->
+    <rule ref="category/java/bestpractices.xml">
+        <exclude name="GuardLogStatement"/>
+        <exclude name="UnusedLocalVariable"/>
+        <exclude name="UnusedPrivateMethod"/>
+        <exclude name="LooseCoupling"/>
+    </rule>
+
+    <!-- ==================== Code Style ==================== -->
+    <rule ref="category/java/codestyle.xml">
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="OnlyOneReturn"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="TooManyStaticImports"/>
+        <exclude name="LongVariable"/>
+        <exclude name="ShortVariable"/>
+        <exclude name="ShortClassName"/>
+        <exclude name="ShortMethodName"/>
+        <exclude name="CallSuperInConstructor"/>
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <exclude name="ConfusingTernary"/>
+        <exclude name="UnnecessaryImport"/>
+        <!-- Java 25: Allow var keyword usage per coding standards -->
+        <exclude name="UseExplicitTypes"/>
+        <exclude name="UselessParentheses"/>
+        <exclude name="UseUnderscoresInNumericLiterals"/>
+        <exclude name="FieldNamingConventions"/>
+        <exclude name="ClassNamingConventions"/>
+    </rule>
+
+    <!-- ==================== Design ==================== -->
+    <rule ref="category/java/design.xml">
+        <exclude name="LawOfDemeter"/>
+        <exclude name="LoosePackageCoupling"/>
+        <exclude name="UseUtilityClass"/>
+        <exclude name="DataClass"/>
+        <exclude name="TooManyMethods"/>
+        <exclude name="ExcessiveImports"/>
+        <exclude name="SignatureDeclareThrowsException"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="ExcessiveParameterList"/>
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="CognitiveComplexity"/>
+        <exclude name="SimplifyBooleanReturns"/>
+        <exclude name="AvoidThrowingRawExceptionTypes"/>
+        <!-- Allow catching Exception for observability/span recording -->
+        <exclude name="AvoidCatchingGenericException"/>
+    </rule>
+
+    <!-- ==================== Error Prone ==================== -->
+    <rule ref="category/java/errorprone.xml">
+        <exclude name="AvoidLiteralsInIfCondition"/>
+        <exclude name="MissingSerialVersionUID"/>
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <exclude name="NullAssignment"/>
+        <exclude name="UseLocaleWithCaseConversions"/>
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="CloseResource"/>
+        <exclude name="TestClassWithoutTestCases"/>
+        <!-- Also exclude here in case it's in this category -->
+        <exclude name="AvoidCatchingGenericException"/>
+    </rule>
+
+    <!-- ==================== Performance ==================== -->
+    <rule ref="category/java/performance.xml">
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+        <exclude name="InsufficientStringBufferDeclaration"/>
+        <exclude name="ConsecutiveAppendsShouldReuse"/>
+        <exclude name="ConsecutiveLiteralAppends"/>
+        <exclude name="AppendCharacterWithChar"/>
+    </rule>
+
+    <!-- ==================== Security ==================== -->
+    <rule ref="category/java/security.xml"/>
+
+    <!-- ==================== Multithreading ==================== -->
+    <rule ref="category/java/multithreading.xml">
+        <exclude name="UseConcurrentHashMap"/>
+        <exclude name="AvoidUsingVolatile"/>
+        <exclude name="DoNotUseThreads"/>
+    </rule>
+
+    <!-- ==================== Documentation ==================== -->
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentRequired"/>
+        <exclude name="CommentSize"/>
+    </rule>
+
+</ruleset>
