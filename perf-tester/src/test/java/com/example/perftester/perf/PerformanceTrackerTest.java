@@ -165,4 +165,59 @@ class PerformanceTrackerTest {
         assertEquals(1, result.completedMessages());
         assertEquals(2, result.pendingMessages());
     }
+
+    @Test
+    void updateMinShouldNotUpdateWhenValueIsLarger() throws InterruptedException {
+        tracker.startTest(2);
+
+        // First message with short latency
+        tracker.recordSend("short");
+        Thread.sleep(5);
+        tracker.recordReceive("short");
+
+        double firstMin = tracker.getResult().minLatencyMs();
+
+        // Second message with longer latency should not update min
+        tracker.recordSend("long");
+        Thread.sleep(50);
+        tracker.recordReceive("long");
+
+        double secondMin = tracker.getResult().minLatencyMs();
+
+        // Min should remain the same (from first short message)
+        assertEquals(firstMin, secondMin, 1.0);
+    }
+
+    @Test
+    void updateMaxShouldNotUpdateWhenValueIsSmaller() throws InterruptedException {
+        tracker.startTest(2);
+
+        // First message with long latency
+        tracker.recordSend("long");
+        Thread.sleep(50);
+        tracker.recordReceive("long");
+
+        double firstMax = tracker.getResult().maxLatencyMs();
+
+        // Second message with shorter latency should not update max
+        tracker.recordSend("short");
+        Thread.sleep(5);
+        tracker.recordReceive("short");
+
+        double secondMax = tracker.getResult().maxLatencyMs();
+
+        // Max should remain approximately the same (from first long message)
+        assertTrue(secondMax >= firstMax - 5); // Allow small timing variance
+    }
+
+    @Test
+    void recordReceiveWithNullCompletionLatchShouldWork() {
+        // Don't call startTest to keep completionLatch null
+        tracker.recordSend("msg-1");
+        tracker.recordReceive("msg-1");
+
+        // Should not throw
+        PerfTestResult result = tracker.getResult();
+        assertEquals(1, result.completedMessages());
+    }
 }

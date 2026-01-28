@@ -15,6 +15,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestResultPackagerTest {
@@ -171,6 +172,139 @@ class TestResultPackagerTest {
         assertNotNull(result.zipBytes());
         assertTrue(result.filename().equals(filename));
         assertTrue(result.savedPath().equals(savedPath));
+    }
+
+    @Test
+    void packageResultsShouldIncludeDashboardUrlsInSummary() throws IOException {
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0)
+                .withDashboardExports(List.of("http://grafana/d/1", "http://grafana/d/2"), List.of());
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(),
+                null,
+                "test",
+                System.currentTimeMillis() - 10000,
+                System.currentTimeMillis()
+        );
+
+        assertTrue(zipContainsEntry(packageResult.zipBytes(), "summary.txt"));
+        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        assertTrue(summaryContent.contains("http://grafana/d/1"));
+        assertTrue(summaryContent.contains("http://grafana/d/2"));
+    }
+
+    @Test
+    void packageResultsShouldIncludeDashboardFilesInSummary() throws IOException {
+        Path dashboardFile = tempDir.resolve("dashboard.png");
+        Files.write(dashboardFile, "fake image data".getBytes());
+
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0)
+                .withDashboardExports(List.of(), List.of(dashboardFile.toString()));
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(dashboardFile.toString()),
+                null,
+                "test",
+                System.currentTimeMillis() - 10000,
+                System.currentTimeMillis()
+        );
+
+        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        assertTrue(summaryContent.contains("dashboard.png"));
+    }
+
+    @Test
+    void packageResultsShouldIncludePrometheusFileInSummary() throws IOException {
+        Path prometheusFile = tempDir.resolve("prometheus.json");
+        Files.write(prometheusFile, "{\"metrics\": []}".getBytes());
+
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0)
+                .withPrometheusExport(prometheusFile.toString());
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(),
+                prometheusFile.toString(),
+                "test",
+                System.currentTimeMillis() - 10000,
+                System.currentTimeMillis()
+        );
+
+        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        assertTrue(summaryContent.contains("prometheus.json"));
+    }
+
+    @Test
+    void packageResultsShouldIncludeTestIdInSummary() throws IOException {
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0);
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(),
+                null,
+                "my-test-id",
+                System.currentTimeMillis() - 10000,
+                System.currentTimeMillis()
+        );
+
+        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        assertTrue(summaryContent.contains("my-test-id"));
+    }
+
+    @Test
+    void packageResultsShouldHandleMultipleDashboardFiles() throws IOException {
+        Path file1 = tempDir.resolve("dashboard1.png");
+        Path file2 = tempDir.resolve("dashboard2.png");
+        Files.write(file1, "data1".getBytes());
+        Files.write(file2, "data2".getBytes());
+
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0);
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(file1.toString(), file2.toString()),
+                null,
+                "test",
+                System.currentTimeMillis(),
+                System.currentTimeMillis()
+        );
+
+        assertTrue(zipContainsEntry(packageResult.zipBytes(), "dashboards/dashboard1.png"));
+        assertTrue(zipContainsEntry(packageResult.zipBytes(), "dashboards/dashboard2.png"));
+    }
+
+    @Test
+    void packageResultsShouldThrowWhenDirectoryCreationFails() throws Exception {
+        // Create a file where the directory should be created
+        Path blockingFile = tempDir.resolve("blocking-file");
+        Files.write(blockingFile, "blocking content".getBytes());
+
+        // Try to create subdirectory inside a file (should fail)
+        TestResultPackager invalidPathPackager = new TestResultPackager(blockingFile.resolve("subdir").toString());
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0);
+
+        assertThrows(RuntimeException.class, () -> invalidPathPackager.packageResults(
+                result,
+                List.of(),
+                null,
+                "test",
+                System.currentTimeMillis(),
+                System.currentTimeMillis()
+        ));
+    }
+
+    private String getZipEntryContent(byte[] zipBytes, String entryName) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName().equals(entryName)) {
+                    return new String(zis.readAllBytes());
+                }
+            }
+        }
+        return "";
     }
 
     private boolean zipContainsEntry(byte[] zipBytes, String entryName) throws IOException {

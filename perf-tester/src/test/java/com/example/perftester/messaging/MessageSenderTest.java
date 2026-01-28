@@ -7,6 +7,8 @@ import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import jakarta.jms.JMSException;
+import jakarta.jms.Message;
+import jakarta.jms.Queue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,6 +52,9 @@ class MessageSenderTest {
     @Mock
     private SpanContext spanContext;
 
+    @Mock
+    private Message jmsMessage;
+
     private MessageSender messageSender;
 
     @BeforeEach
@@ -57,7 +63,7 @@ class MessageSenderTest {
     }
 
     @Test
-    void sendMessageShouldSendToOutboundQueue() {
+    void sendMessageShouldSendToOutboundQueue() throws JMSException {
         setupTracerMocks();
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
@@ -65,12 +71,22 @@ class MessageSenderTest {
         messageSender.sendMessage("test payload");
 
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-        verify(jmsTemplate).convertAndSend(eq("DEV.QUEUE.2"), messageCaptor.capture(), any(MessagePostProcessor.class));
+        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+        verify(jmsTemplate).convertAndSend(eq("DEV.QUEUE.2"), messageCaptor.capture(), processorCaptor.capture());
 
         String sentMessage = messageCaptor.getValue();
         assertTrue(sentMessage.contains("|test payload"));
         verify(performanceTracker).recordSend(anyString());
         verify(span).end();
+
+        // Invoke the lambda to cover the MessagePostProcessor code
+        MessagePostProcessor processor = processorCaptor.getValue();
+        Message result = processor.postProcessMessage(jmsMessage);
+        assertNotNull(result);
+        verify(jmsMessage).setJMSReplyTo(any(Queue.class));
+        verify(jmsMessage).setStringProperty("traceId", "trace-123");
+        verify(jmsMessage).setStringProperty("spanId", "span-456");
+        verify(jmsMessage).setJMSCorrelationID(anyString());
     }
 
     @Test
