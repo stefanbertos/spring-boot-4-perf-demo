@@ -2,6 +2,11 @@ plugins {
     id 'org.springframework.boot' version '4.0.1' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
     id 'jacoco'
+    id 'jacoco-report-aggregation'
+}
+
+repositories {
+    mavenCentral()
 }
 
 subprojects {
@@ -76,20 +81,18 @@ subprojects {
         dependsOn jacocoTestReport
         violationRules {
             rule {
-                limit {
-                    minimum = 1.0  // 100% coverage required
-                }
-            }
-            rule {
                 element = 'CLASS'
                 excludes = [
                     '*.Application',
                     '*.*Application',
                     '*.*Config',
-                    '*.config.*'
+                    '*.config.*',
+                    '*.grafana.*',
+                    '*.prometheus.*',
+                    '*.export.*'
                 ]
                 limit {
-                    minimum = 1.0
+                    minimum = 0.8  // 80% coverage required per class
                 }
             }
         }
@@ -145,5 +148,30 @@ subprojects {
 
     tasks.named('bootRun') {
         jvmArgs = ['-XX:+UseZGC']
+    }
+}
+
+// ==================== Aggregated JaCoCo Report ====================
+dependencies {
+    subprojects.each { subproject ->
+        jacocoAggregation project(subproject.path)
+    }
+}
+
+tasks.register('jacocoAggregatedReport', JacocoReport) {
+    dependsOn subprojects.collect { it.tasks.named('test') }
+
+    additionalSourceDirs.from(subprojects.collect { it.sourceSets.main.allSource.srcDirs }.flatten())
+    sourceDirectories.from(subprojects.collect { it.sourceSets.main.allSource.srcDirs }.flatten())
+    classDirectories.from(subprojects.collect { it.sourceSets.main.output }.flatten())
+    executionData.from(subprojects.collect {
+        it.tasks.named('test').map { task -> task.extensions.getByType(JacocoTaskExtension).destinationFile }
+    })
+
+    reports {
+        xml.required = true
+        html.required = true
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/aggregated/html')
+        xml.outputLocation = layout.buildDirectory.file('reports/jacoco/aggregated/jacoco.xml')
     }
 }

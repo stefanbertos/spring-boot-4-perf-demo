@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -110,9 +111,13 @@ class TestResultPackagerTest {
     void packageResultsShouldHandleNullDashboardFiles() throws IOException {
         PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0);
 
+        // Use ArrayList which allows null elements (unlike List.of())
+        List<String> filesWithNull = new ArrayList<>();
+        filesWithNull.add(null);
+
         TestResultPackager.PackageResult packageResult = packager.packageResults(
                 result,
-                List.of((String) null),
+                filesWithNull,
                 null,
                 "test",
                 System.currentTimeMillis(),

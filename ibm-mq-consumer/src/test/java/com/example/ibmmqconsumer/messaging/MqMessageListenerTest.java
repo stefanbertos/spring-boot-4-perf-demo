@@ -95,13 +95,10 @@ class MqMessageListenerTest {
 
     @Test
     void onMessageShouldDropMessageWhenNoReplyTo() throws JMSException {
-        setupTracerMocks();
+        setupTracerMocksWithoutSpanContext();
 
         when(jmsMessage.getText()).thenReturn("test message");
         when(jmsMessage.getJMSReplyTo()).thenReturn(null);
-        when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
-        when(jmsMessage.getStringProperty("traceId")).thenReturn(null);
-        when(jmsMessage.getStringProperty("spanId")).thenReturn(null);
 
         listener.onMessage(jmsMessage);
 
@@ -157,11 +154,15 @@ class MqMessageListenerTest {
     }
 
     private void setupTracerMocks() {
+        setupTracerMocksWithoutSpanContext();
+        when(span.getSpanContext()).thenReturn(spanContext);
+    }
+
+    private void setupTracerMocksWithoutSpanContext() {
         when(tracer.spanBuilder(anyString())).thenReturn(spanBuilder);
         when(spanBuilder.setSpanKind(any())).thenReturn(spanBuilder);
         when(spanBuilder.setAttribute(anyString(), anyString())).thenReturn(spanBuilder);
         when(spanBuilder.startSpan()).thenReturn(span);
         when(span.makeCurrent()).thenReturn(scope);
-        when(span.getSpanContext()).thenReturn(spanContext);
     }
 }

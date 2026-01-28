@@ -7,6 +7,8 @@ import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import jakarta.jms.JMSException;
+import jakarta.jms.Message;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,6 +52,9 @@ class KafkaResponseListenerTest {
     @Mock
     private SpanContext spanContext;
 
+    @Mock
+    private Message jmsMessage;
+
     private MeterRegistry meterRegistry;
     private KafkaResponseListener listener;
 
@@ -61,7 +65,7 @@ class KafkaResponseListenerTest {
     }
 
     @Test
-    void onMessageShouldSendToMqWhenReplyToIsSet() {
+    void onMessageShouldSendToMqWhenReplyToIsSet() throws JMSException {
         setupTracerMocks();
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
@@ -73,15 +77,23 @@ class KafkaResponseListenerTest {
 
         ArgumentCaptor<String> queueCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-        verify(jmsTemplate).convertAndSend(queueCaptor.capture(), messageCaptor.capture(), any(MessagePostProcessor.class));
+        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+        verify(jmsTemplate).convertAndSend(queueCaptor.capture(), messageCaptor.capture(), processorCaptor.capture());
 
         assertEquals("DEV.QUEUE.1", queueCaptor.getValue());
         assertEquals("test message processed", messageCaptor.getValue());
+
+        // Invoke the lambda to cover the MessagePostProcessor code
+        MessagePostProcessor processor = processorCaptor.getValue();
+        processor.postProcessMessage(jmsMessage);
+        verify(jmsMessage).setStringProperty("traceId", "trace-123");
+        verify(jmsMessage).setStringProperty("spanId", "span-456");
+        verify(jmsMessage).setJMSCorrelationID("corr-123");
         verify(span).end();
     }
 
     @Test
-    void onMessageShouldExtractQueueNameWithoutPrefix() {
+    void onMessageShouldExtractQueueNameWithoutPrefix() throws JMSException {
         setupTracerMocks();
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
@@ -91,14 +103,22 @@ class KafkaResponseListenerTest {
         listener.onMessage(record);
 
         ArgumentCaptor<String> queueCaptor = ArgumentCaptor.forClass(String.class);
-        verify(jmsTemplate).convertAndSend(queueCaptor.capture(), anyString(), any(MessagePostProcessor.class));
+        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+        verify(jmsTemplate).convertAndSend(queueCaptor.capture(), anyString(), processorCaptor.capture());
 
         assertEquals("DEV.QUEUE.1", queueCaptor.getValue());
+
+        // Invoke the lambda to cover the case when correlationId is null
+        MessagePostProcessor processor = processorCaptor.getValue();
+        processor.postProcessMessage(jmsMessage);
+        verify(jmsMessage).setStringProperty("traceId", "trace-123");
+        verify(jmsMessage).setStringProperty("spanId", "span-456");
+        verify(jmsMessage, never()).setJMSCorrelationID(anyString());
     }
 
     @Test
     void onMessageShouldDropMessageWhenNoReplyTo() {
-        setupTracerMocks();
+        setupTracerMocksWithoutSpanContext();
 
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mq-responses", 0, 0, "key", "test message");
 
@@ -164,11 +184,15 @@ class KafkaResponseListenerTest {
     }
 
     private void setupTracerMocks() {
+        setupTracerMocksWithoutSpanContext();
+        when(span.getSpanContext()).thenReturn(spanContext);
+    }
+
+    private void setupTracerMocksWithoutSpanContext() {
         when(tracer.spanBuilder(anyString())).thenReturn(spanBuilder);
         when(spanBuilder.setSpanKind(any())).thenReturn(spanBuilder);
         when(spanBuilder.setAttribute(anyString(), anyString())).thenReturn(spanBuilder);
         when(spanBuilder.startSpan()).thenReturn(span);
         when(span.makeCurrent()).thenReturn(scope);
-        when(span.getSpanContext()).thenReturn(spanContext);
     }
 }

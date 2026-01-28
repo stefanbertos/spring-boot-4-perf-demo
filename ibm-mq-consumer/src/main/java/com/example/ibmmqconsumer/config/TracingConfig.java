@@ -42,7 +42,7 @@ public class TracingConfig {
         return OpenTelemetrySdk.builder()
                 .setTracerProvider(tracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
+                .build();
     }
 
     @Bean
