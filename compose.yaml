@@ -37,6 +37,26 @@ services:
     deploy:
       replicas: 10
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      GRAFANA_URL: http://grafana:3000
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      IBMMQ_URL: https://ibm-mq:9443
+      KAFDROP_URL: http://kafdrop:9000
+      PERF_TESTER_URL: http://perf-tester:8080
+      TEMPO_URL: http://tempo:3200
+    depends_on:
+      - grafana
+      - prometheus
+      - perf-tester
+
   kafka:
     image: apache/kafka:3.9.0
     ports:
@@ -96,6 +116,25 @@ services:
       - ./infrastructure/tempo:/etc/tempo
       - tempo-data:/var/tempo
 
+  loki:
+    image: grafana/loki:3.3.2
+    ports:
+      - "3100:3100"
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./infrastructure/loki:/etc/loki
+      - loki-data:/loki
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:4.0.2
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
+      SERVER_SERVLET_CONTEXTPATH: /kafdrop
+    depends_on:
+      - kafka
+
   grafana:
     image: grafana/grafana:11.4.0
     ports:
@@ -125,3 +164,4 @@ services:
 volumes:
   grafana-data:
   tempo-data:
+  loki-data:

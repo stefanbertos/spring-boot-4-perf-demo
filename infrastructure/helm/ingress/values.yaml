@@ -3,7 +3,6 @@ enabled: true
 className: ""
 
 host: localhost
-mqHost: mq.localhost
 
 annotations: {}
 
@@ -12,26 +11,6 @@ tls:
   secretName: ""
 
 services:
-  grafana:
-    name: perf-grafana
-    port: 3000
-    path: /grafana
-  prometheus:
-    name: perf-prometheus
-    port: 9090
-    path: /prometheus
-  perfTester:
-    name: perf-perf-tester
-    port: 8080
-    path: /api
-  kafdrop:
-    name: perf-kafdrop
-    port: 9000
-    path: /kafdrop
-  mqWeb:
-    name: perf-ibm-mq
-    port: 9443
-  loki:
-    name: perf-loki
-    port: 3100
-    path: /loki
+  gateway:
+    name: perf-api-gateway
+    port: 8090

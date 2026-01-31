@@ -625,3 +625,285 @@ data:
       "uid": "kafka-consumer",
       "version": 1
     }
+  k8s.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "CPU Usage by Pod",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"perf-demo\"}[5m])) by (pod)", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Memory Usage by Pod",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(container_memory_usage_bytes{namespace=\"perf-demo\"}) by (pod)", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "Network Received by Pod",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(container_network_receive_bytes_total{namespace=\"perf-demo\"}[5m])) by (pod)", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        },
+        {
+          "title": "Network Transmitted by Pod",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"perf-demo\"}[5m])) by (pod)", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        },
+        {
+          "title": "Pod Restarts",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kube_pod_container_status_restarts_total{namespace=\"perf-demo\"}) by (pod)", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Pods Running",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "count(kube_pod_status_phase{namespace=\"perf-demo\", phase=\"Running\"})", "legendFormat": "Running"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "CPU Requests vs Limits",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(kube_pod_container_resource_requests{namespace=\"perf-demo\", resource=\"cpu\"})", "legendFormat": "Requests"},
+            {"expr": "sum(kube_pod_container_resource_limits{namespace=\"perf-demo\", resource=\"cpu\"})", "legendFormat": "Limits"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Memory Requests vs Limits",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(kube_pod_container_resource_requests{namespace=\"perf-demo\", resource=\"memory\"})", "legendFormat": "Requests"},
+            {"expr": "sum(kube_pod_container_resource_limits{namespace=\"perf-demo\", resource=\"memory\"})", "legendFormat": "Limits"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "templating": {"list": []},
+      "time": {"from": "now-5m", "to": "now"},
+      "title": "K8S Dashboard",
+      "uid": "k8s",
+      "version": 1
+    }
+  node-exporter.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "{{ "{{instance}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100}, "overrides": []}
+        },
+        {
+          "title": "Memory Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "Used"},
+            {"expr": "node_memory_MemTotal_bytes", "legendFormat": "Total"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "Disk Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100)", "legendFormat": "{{ "{{instance}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100}, "overrides": []}
+        },
+        {
+          "title": "Network Traffic",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(node_network_receive_bytes_total[5m])", "legendFormat": "Receive {{ "{{device}}" }}"},
+            {"expr": "rate(node_network_transmit_bytes_total[5m])", "legendFormat": "Transmit {{ "{{device}}" }}"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        },
+        {
+          "title": "Load Average",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "node_load1", "legendFormat": "1m"},
+            {"expr": "node_load5", "legendFormat": "5m"},
+            {"expr": "node_load15", "legendFormat": "15m"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Disk I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "rate(node_disk_read_bytes_total[5m])", "legendFormat": "Read {{ "{{device}}" }}"},
+            {"expr": "rate(node_disk_written_bytes_total[5m])", "legendFormat": "Write {{ "{{device}}" }}"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "templating": {"list": []},
+      "time": {"from": "now-5m", "to": "now"},
+      "title": "Node Exporter",
+      "uid": "node-exporter",
+      "version": 1
+    }
+  tempo-tracing.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Service Graph",
+          "type": "nodeGraph",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "options": {"query": ""}
+        },
+        {
+          "title": "Recent Traces",
+          "type": "table",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 8},
+          "datasource": {"type": "tempo", "uid": "tempo"},
+          "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "limit": 20, "queryType": "traceqlSearch", "refId": "A", "tableType": "traces"}],
+          "fieldConfig": {"defaults": {"custom": {"align": "auto", "displayMode": "auto"}}, "overrides": []},
+          "options": {"showHeader": true}
+        },
+        {
+          "title": "Span Rate by Service",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(traces_spanmetrics_calls_total[5m])) by (service)", "legendFormat": "{{ "{{service}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Span Latency p95 by Service",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service))", "legendFormat": "{{ "{{service}}" }} p95"}],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["tracing", "tempo"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Tempo Tracing",
+      "uid": "tempo-tracing",
+      "version": 1
+    }
+  kafka-exporter.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Messages In Per Second",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(kafka_topic_partition_current_offset[1m])) by (topic)", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Consumer Lag by Group",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_consumergroup_lag) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} ({{ "{{topic}}" }})"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Messages In Per Minute",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(delta(kafka_topic_partition_current_offset[5m])/5) by (topic)", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Messages Consumed Per Minute",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(delta(kafka_consumergroup_current_offset[5m])/5) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} ({{ "{{topic}}" }})"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Partitions per Topic",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "kafka_topic_partitions", "legendFormat": "{{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Consumer Group Members",
+          "type": "stat",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "kafka_consumergroup_members", "legendFormat": "{{ "{{consumergroup}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["kafka"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Kafka Exporter Overview",
+      "uid": "kafka-exporter",
+      "version": 1
+    }

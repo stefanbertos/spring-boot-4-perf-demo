@@ -291,3 +291,47 @@ perf-demo/
         └── messaging/
             └── KafkaRequestListener.java  # Kafka request -> Kafka response
 ```
+
+## Kubernetes / Helm Guidelines
+
+### Resource Requests and Limits (Required)
+
+All Kubernetes workloads (Deployments, DaemonSets, StatefulSets) **must** define resource requests and limits in their `values.yaml`:
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+```
+
+**Rules:**
+- Always specify both `requests` and `limits` for `memory` and `cpu`
+- Requests should be set to typical usage, limits to maximum acceptable
+- Memory limits prevent OOM kills; CPU limits prevent resource starvation
+- Use appropriate units: memory in `Mi`/`Gi`, CPU in `m` (millicores) or cores
+
+**Deployment template must reference resources:**
+```yaml
+containers:
+  - name: {{ .Chart.Name }}
+    resources:
+      {{- toYaml .Values.resources | nindent 12 }}
+```
+
+### Helm Chart Structure
+
+Each service in `infrastructure/helm/` follows this structure:
+```
+service-name/
+├── Chart.yaml           # Chart metadata
+├── values.yaml          # Default configuration (must include resources)
+└── templates/
+    ├── _helpers.tpl     # Template helpers
+    ├── deployment.yaml  # Deployment with resource specs
+    ├── service.yaml     # Service definition
+    └── ...              # Other resources (configmap, secret, pvc)
+```

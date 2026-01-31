@@ -1,0 +1,134 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Grafana - supports subpath natively
+        - id: grafana
+          uri: ${GRAFANA_URL:http://localhost:3000}
+          predicates:
+            - Path=/grafana/**
+          filters:
+            - StripPrefix=0
+
+        # Prometheus - supports subpath via --web.external-url
+        - id: prometheus
+          uri: ${PROMETHEUS_URL:http://localhost:9090}
+          predicates:
+            - Path=/prometheus/**
+          filters:
+            - StripPrefix=0
+
+        # Loki - needs path stripping
+        - id: loki
+          uri: ${LOKI_URL:http://localhost:3100}
+          predicates:
+            - Path=/loki/**
+          filters:
+            - StripPrefix=1
+
+        # IBM MQ Web Console - needs path stripping
+        - id: ibmmq
+          uri: ${IBMMQ_URL:https://localhost:9443}
+          predicates:
+            - Path=/ibmmq/**
+          filters:
+            - StripPrefix=1
+
+        # Kafdrop - supports subpath via server.servlet.context-path
+        - id: kafdrop
+          uri: ${KAFDROP_URL:http://localhost:9000}
+          predicates:
+            - Path=/kafdrop/**
+          filters:
+            - StripPrefix=0
+
+        # Perf-Tester API
+        - id: perf-tester
+          uri: ${PERF_TESTER_URL:http://localhost:8080}
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=0
+
+        # Tempo - needs path stripping
+        - id: tempo
+          uri: ${TEMPO_URL:http://localhost:3200}
+          predicates:
+            - Path=/tempo/**
+          filters:
+            - StripPrefix=1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  cloud:
+    gateway:
+      routes:
+        - id: grafana
+          uri: http://perf-grafana:3000
+          predicates:
+            - Path=/grafana/**
+          filters:
+            - StripPrefix=0
+
+        - id: prometheus
+          uri: http://perf-prometheus:9090
+          predicates:
+            - Path=/prometheus/**
+          filters:
+            - StripPrefix=0
+
+        - id: loki
+          uri: http://perf-loki:3100
+          predicates:
+            - Path=/loki/**
+          filters:
+            - StripPrefix=1
+
+        - id: ibmmq
+          uri: https://perf-ibm-mq:9443
+          predicates:
+            - Path=/ibmmq/**
+          filters:
+            - StripPrefix=1
+
+        - id: kafdrop
+          uri: http://perf-kafdrop:9000
+          predicates:
+            - Path=/kafdrop/**
+          filters:
+            - StripPrefix=0
+
+        - id: perf-tester
+          uri: http://perf-perf-tester:8080
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=0
+
+        - id: tempo
+          uri: http://perf-tempo:3200
+          predicates:
+            - Path=/tempo/**
+          filters:
+            - StripPrefix=1

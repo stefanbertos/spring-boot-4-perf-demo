@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -120,12 +123,37 @@ public class PerfController {
 
         log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
 
-        ByteArrayResource resource = new ByteArrayResource(packageResult.zipBytes());
+        // Clean up exported files after packaging
+        cleanupExportedFiles(dashboardFiles, prometheusFile);
+
+        var resource = new ByteArrayResource(packageResult.zipBytes());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(packageResult.zipBytes().length)
                 .body(resource);
+    }
+
+    private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile) {
+        for (String file : dashboardFiles) {
+            try {
+                Files.deleteIfExists(Path.of(file));
+                log.debug("Deleted dashboard export: {}", file);
+            } catch (IOException e) {
+                log.warn("Failed to delete dashboard export {}: {}", file, e.getMessage());
+            }
+        }
+
+        if (prometheusFile != null) {
+            try {
+                Files.deleteIfExists(Path.of(prometheusFile));
+                log.debug("Deleted prometheus export: {}", prometheusFile);
+            } catch (IOException e) {
+                log.warn("Failed to delete prometheus export {}: {}", prometheusFile, e.getMessage());
+            }
+        }
+
+        log.info("Cleaned up {} exported files", dashboardFiles.size() + (prometheusFile != null ? 1 : 0));
     }
 }

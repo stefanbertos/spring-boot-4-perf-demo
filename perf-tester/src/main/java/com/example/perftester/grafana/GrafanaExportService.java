@@ -27,7 +27,11 @@ public class GrafanaExportService {
             new DashboardInfo("ibm-mq", "IBM MQ"),
             new DashboardInfo("kafka", "Kafka"),
             new DashboardInfo("ibm-mq-consumer", "IBM Mq Consumer"),
-            new DashboardInfo("kafka-consumer", "Kafka Consumer")
+            new DashboardInfo("kafka-consumer", "Kafka Consumer"),
+            new DashboardInfo("k8s", "K8S Dashboard"),
+            new DashboardInfo("node-exporter", "Node Exporter"),
+            new DashboardInfo("tempo-tracing", "Tempo Tracing"),
+            new DashboardInfo("kafka-exporter", "Kafka Exporter")
     );
 
     public GrafanaExportService(

@@ -18,96 +18,18 @@ spec:
     - host: {{ .Values.host }}
       http:
         paths:
-          # Grafana
-          - path: /grafana
+          # Route all traffic through API Gateway
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ .Values.services.grafana.name }}
+                name: {{ .Values.services.gateway.name }}
                 port:
-                  number: {{ .Values.services.grafana.port }}
-          # Prometheus
-          - path: /prometheus
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.prometheus.name }}
-                port:
-                  number: {{ .Values.services.prometheus.port }}
-          # Perf-Tester API
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.perfTester.name }}
-                port:
-                  number: {{ .Values.services.perfTester.port }}
-          # Kafdrop
-          - path: /kafdrop
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.kafdrop.name }}
-                port:
-                  number: {{ .Values.services.kafdrop.port }}
+                  number: {{ .Values.services.gateway.port }}
   {{- if .Values.tls.enabled }}
   tls:
     - hosts:
         - {{ .Values.host }}
       secretName: {{ .Values.tls.secretName | default "perf-demo-tls" }}
   {{- end }}
----
-# Dedicated ingress for IBM MQ (requires root path and HTTPS backend)
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: perf-demo-ingress-mq
-  labels:
-    app.kubernetes.io/name: perf-demo-ingress-mq
-    app.kubernetes.io/instance: {{ .Release.Name }}
-  annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-spec:
-  {{- if .Values.className }}
-  ingressClassName: {{ .Values.className }}
-  {{- end }}
-  rules:
-    - host: {{ .Values.mqHost }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.mqWeb.name }}
-                port:
-                  number: {{ .Values.services.mqWeb.port }}
----
-# Dedicated ingress for Loki (requires URL rewriting)
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: perf-demo-ingress-loki
-  labels:
-    app.kubernetes.io/name: perf-demo-ingress-loki
-    app.kubernetes.io/instance: {{ .Release.Name }}
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
-spec:
-  {{- if .Values.className }}
-  ingressClassName: {{ .Values.className }}
-  {{- end }}
-  rules:
-    - host: {{ .Values.host }}
-      http:
-        paths:
-          - path: /loki(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ .Values.services.loki.name }}
-                port:
-                  number: {{ .Values.services.loki.port }}
 {{- end }}

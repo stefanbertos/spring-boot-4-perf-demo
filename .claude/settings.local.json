@@ -18,7 +18,13 @@
       "Bash(./gradlew:*)",
       "Bash(git mv:*)",
       "Bash(helm lint:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(powershell -Command:*)",
+      "Bash(.gradlew.bat :perf-tester:compileJava:*)",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo && gradlew.bat :perf-tester:compileJava --quiet\")",
+      "Bash(cmd /c \"mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\infrastructure\\\\helm\\\\promtail\\\\templates\")",
+      "Bash(cmd /c \"mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\api-gateway\\\\src\\\\main\\\\java\\\\com\\\\example\\\\apigateway\")",
+      "Bash(cmd /c \"mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\api-gateway\\\\src\\\\main\\\\resources\")"
     ]
   }
 }
