@@ -44,3 +44,10 @@ data:
         static_configs:
           - targets: ['{{ .Values.targets.kafkaExporter.serviceName }}:{{ .Values.targets.kafkaExporter.port }}']
       {{- end }}
+
+      {{- if .Values.targets.oracleExporter.enabled }}
+      - job_name: 'oracle'
+        metrics_path: '{{ .Values.targets.oracleExporter.metricsPath }}'
+        static_configs:
+          - targets: ['{{ .Values.targets.oracleExporter.serviceName }}:{{ .Values.targets.oracleExporter.port }}']
+      {{- end }}

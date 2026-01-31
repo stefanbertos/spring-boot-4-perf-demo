@@ -411,6 +411,59 @@
         },
         "overrides": []
       }
+    },
+    {
+      "title": "Service Health Status",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 56 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "health_mq_status{job=\"perf-tester\"}",
+          "legendFormat": "IBM MQ"
+        },
+        {
+          "expr": "health_kafka_status{job=\"perf-tester\"}",
+          "legendFormat": "Kafka"
+        },
+        {
+          "expr": "health_oracle_status{job=\"perf-tester\"}",
+          "legendFormat": "Oracle"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              }
+            }
+          ],
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Health Check Ping Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 56 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(health_ping_duration_seconds_sum{job=\"perf-tester\"}[1m]) / rate(health_ping_duration_seconds_count{job=\"perf-tester\"}[1m])",
+          "legendFormat": "{{service}} avg"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ],
   "schemaVersion": 39,

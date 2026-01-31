@@ -131,6 +131,30 @@ data:
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [{"expr": "mq_e2e_latency_seconds_max{job=\"perf-tester\"}", "legendFormat": "Max Latency"}],
           "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "Service Health Status",
+          "type": "stat",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 48},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "health_mq_status{job=\"perf-tester\"}", "legendFormat": "IBM MQ"},
+            {"expr": "health_kafka_status{job=\"perf-tester\"}", "legendFormat": "Kafka"},
+            {"expr": "health_oracle_status{job=\"perf-tester\"}", "legendFormat": "Oracle"}
+          ],
+          "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}], "unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Health Check Ping Duration",
+          "type": "timeseries",
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 48},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "health_ping_duration_seconds{job=\"perf-tester\", service=\"ibm-mq\", quantile=\"0.95\"}", "legendFormat": "IBM MQ p95"},
+            {"expr": "health_ping_duration_seconds{job=\"perf-tester\", service=\"kafka\", quantile=\"0.95\"}", "legendFormat": "Kafka p95"},
+            {"expr": "health_ping_duration_seconds{job=\"perf-tester\", service=\"oracle\", quantile=\"0.95\"}", "legendFormat": "Oracle p95"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
         }
       ],
       "schemaVersion": 39,
@@ -905,5 +929,130 @@ data:
       "time": {"from": "now-1h", "to": "now"},
       "title": "Kafka Exporter Overview",
       "uid": "kafka-exporter",
+      "version": 1
+    }
+  oracle.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Database Up",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_up{job=\"oracle\"}", "legendFormat": "Status"}],
+          "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}], "unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Active Sessions",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_sessions_active{job=\"oracle\"}", "legendFormat": "Active"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Total Sessions",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_sessions_total{job=\"oracle\"}", "legendFormat": "Total"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Tablespace Usage %",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "(oracledb_tablespace_bytes{job=\"oracle\"} / oracledb_tablespace_max_bytes{job=\"oracle\"}) * 100", "legendFormat": "{{ "{{tablespace}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 90}]}}, "overrides": []}
+        },
+        {
+          "title": "Sessions Over Time",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "oracledb_sessions_active{job=\"oracle\"}", "legendFormat": "Active"},
+            {"expr": "oracledb_sessions_total{job=\"oracle\"}", "legendFormat": "Total"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        },
+        {
+          "title": "Wait Time by Class",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(oracledb_wait_time_seconds{job=\"oracle\"}[5m])", "legendFormat": "{{ "{{wait_class}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {
+          "title": "Tablespace Used Bytes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_tablespace_bytes{job=\"oracle\"}", "legendFormat": "{{ "{{tablespace}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "Tablespace Free Bytes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_tablespace_free{job=\"oracle\"}", "legendFormat": "{{ "{{tablespace}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+        },
+        {
+          "title": "Physical I/O Reads",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(oracledb_physical_reads_total{job=\"oracle\"}[5m])", "legendFormat": "Reads/s"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Physical I/O Writes",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(oracledb_physical_writes_total{job=\"oracle\"}[5m])", "legendFormat": "Writes/s"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Buffer Cache Hit Ratio",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 28},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_buffer_cache_hit_ratio{job=\"oracle\"} * 100", "legendFormat": "Hit Ratio"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 80}, {"color": "green", "value": 95}]}}, "overrides": []}
+        },
+        {
+          "title": "Redo Log Space Requests",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 28},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(oracledb_redo_log_space_requests_total{job=\"oracle\"}[5m])", "legendFormat": "Requests/s"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {
+          "title": "Process Count",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 28},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "oracledb_process_count{job=\"oracle\"}", "legendFormat": "Processes"}],
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["oracle", "database"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Oracle Database",
+      "uid": "oracle",
       "version": 1
     }

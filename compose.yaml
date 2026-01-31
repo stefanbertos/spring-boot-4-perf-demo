@@ -161,7 +161,28 @@ services:
     environment:
       ENABLE_METRICS: "true"
 
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: oracle
+      APP_USER: perfuser
+      APP_USER_PASSWORD: perfpass
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  oracle-exporter:
+    image: iamseth/oracledb_exporter:0.6.0
+    ports:
+      - "9161:9161"
+    environment:
+      DATA_SOURCE_NAME: perfuser/perfpass@oracle:1521/XEPDB1
+    depends_on:
+      - oracle
+
 volumes:
   grafana-data:
   tempo-data:
   loki-data:
+  oracle-data:

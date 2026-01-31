@@ -51,3 +51,8 @@ targets:
     serviceName: perf-kafka-consumer
     port: 8082
     metricsPath: /actuator/prometheus
+  oracleExporter:
+    enabled: true
+    serviceName: perf-oracle-exporter
+    port: 9161
+    metricsPath: /metrics

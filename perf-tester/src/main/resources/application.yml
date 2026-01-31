@@ -93,3 +93,34 @@ app:
     export-path: ./prometheus-exports
   export:
     path: ./test-exports
+  healthcheck:
+    enabled: true
+    interval-ms: 60000
+    connection-timeout-ms: 5000
+    kafka:
+      bootstrap-servers: localhost:9092
+    oracle:
+      url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+      user: perfuser
+      password: perfpass
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+ibm:
+  mq:
+    conn-name: ibm-mq(1414)
+
+app:
+  grafana:
+    url: http://grafana:3000
+  prometheus:
+    url: http://prometheus:9090
+  healthcheck:
+    kafka:
+      bootstrap-servers: kafka:9092
+    oracle:
+      url: jdbc:oracle:thin:@oracle:1521/XEPDB1

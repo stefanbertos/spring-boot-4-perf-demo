@@ -2,11 +2,10 @@ ollama launch claude
 https://docs.ollama.com/integrations/claude-code
 Lamacpp
 
-add oracle database to docker-compose and helm, deploy and cleanup command, add prometheus metrics, and new grafana dashboard
-PerfController add new scheduler which will run each minute, configurable in confis, it would ping kafka,mq, oracle db and push the metrics to prometheus. Then add new panel with those into the per-tester dashbord as last one
-fix grafana dashboards
-add github action to trigger the build and publish the reports
 add sonar plugin 7.2.2.6593 and sonar docker sonarqube:community, helm charts, fix sonar violations
+fix grafana dashboards
+add liquibase or flyway support to initialize database from scratch in the perf-tester module
+add github action to trigger the build and publish the reports
 add documentation generator
 run test 50000 messages
 add spring config server for all resources

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oracle.fullname" . }}
+  labels:
+    {{- include "oracle.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "oracle.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "oracle.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oracle.fullname" . }}-secret
+                  key: oracle-password
+            - name: APP_USER
+              value: {{ .Values.oracle.appUser }}
+            - name: APP_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oracle.fullname" . }}-secret
+                  key: app-user-password
+          ports:
+            - name: oracle
+              containerPort: 1521
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/oracle/oradata
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - echo "SELECT 1 FROM DUAL;" | sqlplus -s perfuser/perfpass@localhost:1521/XEPDB1
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - echo "SELECT 1 FROM DUAL;" | sqlplus -s perfuser/perfpass@localhost:1521/XEPDB1
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "oracle.fullname" . }}-pvc
+      {{- end }}

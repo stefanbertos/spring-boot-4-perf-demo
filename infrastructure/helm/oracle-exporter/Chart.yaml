@@ -1,0 +1,6 @@
+apiVersion: v2
+name: oracle-exporter
+description: Prometheus exporter for Oracle Database metrics
+type: application
+version: 1.0.0
+appVersion: "0.6.0"
