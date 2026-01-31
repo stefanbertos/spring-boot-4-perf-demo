@@ -1,6 +1,6 @@
 ollama launch claude
 https://docs.ollama.com/integrations/claude-code
-
+Lamacpp
 
 
 setup - partition 3

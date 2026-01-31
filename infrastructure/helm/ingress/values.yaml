@@ -31,3 +31,7 @@ services:
   mqWeb:
     name: perf-ibm-mq
     port: 9443
+  loki:
+    name: perf-loki
+    port: 3100
+    path: /loki

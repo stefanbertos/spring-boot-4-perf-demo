@@ -83,4 +83,31 @@ spec:
                 name: {{ .Values.services.mqWeb.name }}
                 port:
                   number: {{ .Values.services.mqWeb.port }}
+---
+# Dedicated ingress for Loki (requires URL rewriting)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: perf-demo-ingress-loki
+  labels:
+    app.kubernetes.io/name: perf-demo-ingress-loki
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  {{- if .Values.className }}
+  ingressClassName: {{ .Values.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          - path: /loki(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.services.loki.name }}
+                port:
+                  number: {{ .Values.services.loki.port }}
 {{- end }}
