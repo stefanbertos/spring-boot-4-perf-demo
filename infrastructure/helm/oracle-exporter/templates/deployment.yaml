@@ -34,11 +34,11 @@ spec:
             httpGet:
               path: /metrics
               port: metrics
-            initialDelaySeconds: 120
+            initialDelaySeconds: 60
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /metrics
               port: metrics
-            initialDelaySeconds: 120
+            initialDelaySeconds: 60
             periodSeconds: 10
