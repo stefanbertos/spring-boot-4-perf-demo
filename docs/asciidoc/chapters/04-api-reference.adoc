@@ -1,0 +1,334 @@
+= API Reference
+
+== Overview
+
+The perf-tester module exposes REST APIs for sending test messages and monitoring application health. All APIs are documented using OpenAPI 3.0 specification.
+
+== Base URL
+
+[cols="2,3"]
+|===
+|Environment |Base URL
+
+|Local Development
+|http://localhost:8080
+
+|Docker Compose
+|http://localhost:8080
+
+|Kubernetes (via Gateway)
+|http://localhost/api
+|===
+
+== Interactive Documentation
+
+Access Swagger UI for interactive API exploration:
+
+* *Local:* http://localhost:8080/swagger-ui/index.html
+* *Kubernetes:* http://localhost/api/swagger-ui/index.html
+
+OpenAPI JSON specification:
+
+* *Local:* http://localhost:8080/v3/api-docs
+* *Kubernetes:* http://localhost/api/v3/api-docs
+
+== Performance Testing API
+
+=== Send Message
+
+Sends a message through the entire message flow pipeline.
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/perf/send`
+|Content-Type |`text/plain`
+|===
+
+==== Request
+
+[source,bash]
+----
+curl -X POST http://localhost:8080/api/perf/send \
+  -H "Content-Type: text/plain" \
+  -d "Your test message"
+----
+
+==== Response
+
+[source,json]
+----
+{
+  "correlationId": "ID:414d5120514d312020202020202020207e8f9a66012c0040",
+  "status": "SENT",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+----
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Message successfully sent to queue
+
+|500
+|Failed to send message (MQ connection error)
+|===
+
+=== Send Batch Messages
+
+Sends multiple messages for load testing.
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/perf/send/batch`
+|Content-Type |`application/json`
+|===
+
+==== Request
+
+[source,bash]
+----
+curl -X POST http://localhost:8080/api/perf/send/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messagePrefix": "Test message",
+    "count": 100,
+    "delayMs": 10
+  }'
+----
+
+==== Request Body
+
+[cols="2,1,1,3"]
+|===
+|Field |Type |Required |Description
+
+|messagePrefix
+|string
+|Yes
+|Prefix for generated messages
+
+|count
+|integer
+|Yes
+|Number of messages to send
+
+|delayMs
+|integer
+|No
+|Delay between messages in milliseconds
+|===
+
+==== Response
+
+[source,json]
+----
+{
+  "totalSent": 100,
+  "successCount": 100,
+  "failureCount": 0,
+  "durationMs": 1523
+}
+----
+
+== Health & Monitoring APIs
+
+=== Health Check
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/actuator/health`
+|===
+
+==== Response
+
+[source,json]
+----
+{
+  "status": "UP",
+  "components": {
+    "diskSpace": {
+      "status": "UP",
+      "details": {
+        "total": 499963174912,
+        "free": 250123456789,
+        "threshold": 10485760
+      }
+    },
+    "jms": {
+      "status": "UP",
+      "details": {
+        "provider": "IBM MQ JMS Provider"
+      }
+    },
+    "ping": {
+      "status": "UP"
+    }
+  }
+}
+----
+
+=== Prometheus Metrics
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/actuator/prometheus`
+|===
+
+==== Response (excerpt)
+
+[source,text]
+----
+# HELP jvm_memory_used_bytes The amount of used memory
+# TYPE jvm_memory_used_bytes gauge
+jvm_memory_used_bytes{area="heap",id="G1 Eden Space"} 1.048576E7
+
+# HELP messages_sent_total Total messages sent
+# TYPE messages_sent_total counter
+messages_sent_total{queue="DEV.QUEUE.2"} 1523
+
+# HELP message_processing_seconds Message processing duration
+# TYPE message_processing_seconds histogram
+message_processing_seconds_bucket{le="0.001"} 150
+message_processing_seconds_bucket{le="0.01"} 1400
+message_processing_seconds_bucket{le="0.1"} 1520
+----
+
+=== Application Info
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/actuator/info`
+|===
+
+==== Response
+
+[source,json]
+----
+{
+  "app": {
+    "name": "perf-tester",
+    "version": "0.0.1-SNAPSHOT",
+    "description": "Performance Testing Application"
+  },
+  "java": {
+    "version": "25"
+  }
+}
+----
+
+== Custom Metrics
+
+The application exposes custom metrics for monitoring message processing:
+
+=== Message Metrics
+
+[cols="2,1,3"]
+|===
+|Metric |Type |Description
+
+|`messages.sent.total`
+|Counter
+|Total messages sent to outbound queue
+
+|`messages.received.total`
+|Counter
+|Total messages received from inbound queue
+
+|`message.processing.time`
+|Timer
+|Time to process each message
+
+|`message.roundtrip.time`
+|Timer
+|End-to-end message roundtrip time
+|===
+
+=== Queue Metrics
+
+[cols="2,1,3"]
+|===
+|Metric |Type |Description
+
+|`mq.queue.depth`
+|Gauge
+|Current queue depth
+
+|`mq.connection.count`
+|Gauge
+|Active MQ connections
+
+|`kafka.consumer.lag`
+|Gauge
+|Kafka consumer lag per partition
+|===
+
+== Error Responses
+
+=== Standard Error Format
+
+All error responses follow RFC 7807 Problem Details format:
+
+[source,json]
+----
+{
+  "type": "https://api.example.com/errors/mq-connection-failed",
+  "title": "MQ Connection Failed",
+  "status": 500,
+  "detail": "Unable to connect to queue manager QM1",
+  "instance": "/api/perf/send",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "traceId": "abc123def456"
+}
+----
+
+=== Common Error Codes
+
+[cols="1,2,3"]
+|===
+|Status |Type |Description
+
+|400
+|bad-request
+|Invalid request body or parameters
+
+|500
+|mq-connection-failed
+|Cannot connect to IBM MQ
+
+|500
+|kafka-connection-failed
+|Cannot connect to Kafka
+
+|503
+|service-unavailable
+|Downstream service unavailable
+|===
+
+== Rate Limiting
+
+Currently, no rate limiting is implemented. For production deployments, consider adding rate limiting at the API Gateway level.
+
+== Authentication
+
+The API is currently unauthenticated for development purposes. For production, implement:
+
+* OAuth 2.0 / JWT tokens
+* API keys
+* mTLS
+
+== API Versioning
+
+The API uses URL path versioning. Current version is v1 (implicit).
+
+Future versions will be available at:
+
+* `/api/v2/perf/send`

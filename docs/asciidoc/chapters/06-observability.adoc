@@ -1,0 +1,376 @@
+= Observability
+
+== Overview
+
+The application implements comprehensive observability through the three pillars:
+
+* *Metrics* - Quantitative measurements (Prometheus/Grafana)
+* *Logs* - Event records (Loki/Promtail)
+* *Traces* - Request flow tracking (Tempo)
+
+== Metrics with Prometheus
+
+=== Architecture
+
+[source,text]
+----
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Application │────▶│ Prometheus  │────▶│   Grafana   │
+│  /actuator/ │     │   Scrape    │     │  Dashboard  │
+│  prometheus │     │   & Store   │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
+----
+
+=== Accessing Prometheus
+
+[cols="2,3"]
+|===
+|Environment |URL
+
+|Docker Compose
+|http://localhost:9090
+
+|Kubernetes
+|http://localhost/prometheus
+|===
+
+=== Key Metrics
+
+==== JVM Metrics
+
+[cols="2,3"]
+|===
+|Metric |Description
+
+|`jvm_memory_used_bytes`
+|Current memory usage by area
+
+|`jvm_gc_pause_seconds`
+|GC pause duration
+
+|`jvm_threads_live_threads`
+|Current thread count
+
+|`jvm_classes_loaded_classes`
+|Loaded class count
+|===
+
+==== Application Metrics
+
+[cols="2,3"]
+|===
+|Metric |Description
+
+|`http_server_requests_seconds`
+|HTTP request duration
+
+|`spring_kafka_listener_seconds`
+|Kafka listener processing time
+
+|`jms_message_processing_seconds`
+|JMS message processing time
+|===
+
+==== Infrastructure Metrics
+
+[cols="2,3"]
+|===
+|Metric |Description
+
+|`kafka_consumer_records_lag`
+|Kafka consumer lag
+
+|`kafka_producer_record_send_total`
+|Total records sent
+
+|`oracledb_sessions_active`
+|Active Oracle sessions
+|===
+
+=== PromQL Examples
+
+[source,promql]
+----
+# Request rate per second
+rate(http_server_requests_seconds_count[5m])
+
+# 99th percentile latency
+histogram_quantile(0.99, rate(http_server_requests_seconds_bucket[5m]))
+
+# Error rate
+sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+/ sum(rate(http_server_requests_seconds_count[5m]))
+
+# Kafka consumer lag
+kafka_consumer_records_lag{topic="mq-requests"}
+----
+
+== Logging with Loki
+
+=== Architecture
+
+[source,text]
+----
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Application │────▶│  Promtail   │────▶│    Loki     │────▶│   Grafana   │
+│    Logs     │     │  (Shipper)  │     │   (Store)   │     │  (Query)    │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+----
+
+=== Accessing Loki
+
+Query logs through Grafana's Explore feature or directly:
+
+[cols="2,3"]
+|===
+|Environment |URL
+
+|Docker Compose
+|http://localhost:3100
+
+|Kubernetes
+|http://localhost/loki
+|===
+
+=== LogQL Examples
+
+[source,logql]
+----
+# All logs from perf-tester
+{app="perf-tester"}
+
+# Error logs only
+{app="perf-tester"} |= "ERROR"
+
+# Parse JSON logs
+{app="perf-tester"} | json | level="ERROR"
+
+# Count errors per minute
+count_over_time({app="perf-tester"} |= "ERROR" [1m])
+
+# Filter by trace ID
+{app="perf-tester"} |= "traceId=abc123"
+----
+
+=== Log Format
+
+Applications output structured JSON logs:
+
+[source,json]
+----
+{
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "level": "INFO",
+  "service": "perf-tester",
+  "traceId": "abc123def456",
+  "spanId": "789xyz",
+  "message": "Message sent successfully",
+  "correlationId": "ID:414d5120514d31",
+  "queue": "DEV.QUEUE.2"
+}
+----
+
+== Distributed Tracing with Tempo
+
+=== Architecture
+
+[source,text]
+----
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Application │────▶│    Tempo    │────▶│   Grafana   │
+│   (OTLP)    │     │   (Store)   │     │  (Trace UI) │
+└─────────────┘     └─────────────┘     └─────────────┘
+----
+
+=== Accessing Tempo
+
+View traces through Grafana's Explore feature:
+
+. Open Grafana
+. Go to Explore
+. Select Tempo data source
+. Search by trace ID or service name
+
+=== Trace Propagation
+
+Traces are automatically propagated across services:
+
+[source,text]
+----
+perf-tester (HTTP request)
+    └── ibm-mq-consumer (JMS message)
+            └── kafka-consumer (Kafka message)
+                    └── Processing span
+----
+
+=== Instrumentation
+
+Applications are instrumented using Micrometer Tracing:
+
+[source,java]
+----
+@Observed(name = "message.process", contextualName = "process-message")
+public void processMessage(String message) {
+    // Automatically creates span
+}
+----
+
+=== Trace Context
+
+Trace context is passed via headers:
+
+[cols="2,2,3"]
+|===
+|Protocol |Header |Format
+
+|HTTP
+|traceparent
+|W3C Trace Context
+
+|JMS
+|traceparent (property)
+|W3C Trace Context
+
+|Kafka
+|traceparent (header)
+|W3C Trace Context
+|===
+
+== Grafana Dashboards
+
+=== Accessing Grafana
+
+[cols="2,3,2"]
+|===
+|Environment |URL |Credentials
+
+|Docker Compose
+|http://localhost:3000
+|admin / admin
+
+|Kubernetes
+|http://localhost/grafana
+|admin / admin
+|===
+
+=== Pre-configured Dashboards
+
+==== Spring Boot Dashboard
+
+Monitors all Spring Boot applications:
+
+* JVM memory and GC
+* HTTP request rates and latencies
+* Thread pool utilization
+* Connection pool metrics
+
+==== IBM MQ Dashboard
+
+Monitors IBM MQ queue manager:
+
+* Queue depths
+* Message rates (in/out)
+* Connection counts
+* Error rates
+
+==== Kafka Dashboard
+
+Monitors Kafka cluster:
+
+* Consumer lag per topic/partition
+* Producer throughput
+* Broker metrics
+* Topic statistics
+
+==== Infrastructure Dashboard
+
+Overall system health:
+
+* Node resource utilization
+* Pod status
+* Network I/O
+* Storage utilization
+
+=== Creating Custom Dashboards
+
+. Open Grafana
+. Click + > Dashboard
+. Add panels with PromQL/LogQL queries
+. Save dashboard
+
+=== Alerting
+
+Configure alerts in Grafana:
+
+. Open dashboard panel
+. Click Alert tab
+. Define conditions and thresholds
+. Configure notification channels
+
+Example alert rule:
+
+[source,yaml]
+----
+alert: HighErrorRate
+expr: |
+  sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+  / sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+for: 5m
+labels:
+  severity: critical
+annotations:
+  summary: High error rate detected
+  description: Error rate is above 5% for 5 minutes
+----
+
+== Correlating Signals
+
+=== From Metrics to Logs
+
+. Find anomaly in metrics dashboard
+. Note the time range
+. Switch to Explore > Loki
+. Query logs for that time range
+
+=== From Logs to Traces
+
+. Find error in logs
+. Extract traceId from log entry
+. Switch to Explore > Tempo
+. Search by trace ID
+
+=== From Traces to Logs
+
+. View trace in Tempo
+. Click on span
+. Use "Logs for this span" link (if configured)
+
+== Health Checks
+
+=== Kubernetes Probes
+
+[source,yaml]
+----
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+----
+
+=== Health Indicators
+
+Custom health indicators for:
+
+* IBM MQ connectivity
+* Kafka connectivity
+* Database connectivity
+* External service availability

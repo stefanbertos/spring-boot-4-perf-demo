@@ -4,6 +4,8 @@ plugins {
     id 'org.sonarqube' version '7.2.2.6593'
     id 'jacoco'
     id 'jacoco-report-aggregation'
+    id 'org.asciidoctor.jvm.convert' version '4.0.4'
+    id 'org.asciidoctor.jvm.pdf' version '4.0.4'
 }
 
 repositories {
@@ -200,4 +202,72 @@ sonar {
 tasks.named('sonar') {
     dependsOn subprojects.collect { it.tasks.named('test') }
     dependsOn subprojects.collect { it.tasks.named('jacocoTestReport') }
+}
+
+// ==================== Documentation Generation ====================
+asciidoctorj {
+    modules {
+        diagram.use()
+        diagram.version '2.3.1'
+    }
+}
+
+tasks.named('asciidoctor') {
+    sourceDir = file('docs/asciidoc')
+    sources {
+        include 'index.adoc'
+    }
+    baseDirFollowsSourceDir()
+    outputDir = layout.buildDirectory.dir('docs/html')
+    attributes = [
+        'source-highlighter': 'rouge',
+        'toc': 'left',
+        'toclevels': '3',
+        'sectnums': '',
+        'icons': 'font',
+        'idprefix': '',
+        'idseparator': '-',
+        'revnumber': project.version,
+        'revdate': new Date().format('yyyy-MM-dd'),
+        'project-name': 'Spring Boot 4 Performance Demo',
+        'imagesdir': 'images',
+        'docdir': file('docs/asciidoc').absolutePath
+    ]
+}
+
+tasks.named('asciidoctorPdf') {
+    sourceDir = file('docs/asciidoc')
+    sources {
+        include 'index.adoc'
+    }
+    baseDirFollowsSourceDir()
+    outputDir = layout.buildDirectory.dir('docs/pdf')
+    attributes = [
+        'source-highlighter': 'rouge',
+        'toc': 'book',
+        'toclevels': '3',
+        'sectnums': '',
+        'icons': 'font',
+        'idprefix': '',
+        'idseparator': '-',
+        'revnumber': project.version,
+        'revdate': new Date().format('yyyy-MM-dd'),
+        'project-name': 'Spring Boot 4 Performance Demo',
+        'imagesdir': 'images',
+        'docdir': file('docs/asciidoc').absolutePath,
+        'pdf-theme': 'custom',
+        'pdf-themesdir': file('docs/asciidoc/themes').absolutePath,
+        'pdf-fontsdir': file('docs/asciidoc/fonts').absolutePath
+    ]
+}
+
+tasks.register('generateDocs') {
+    group = 'documentation'
+    description = 'Generates HTML and PDF documentation'
+    dependsOn 'asciidoctor', 'asciidoctorPdf'
+}
+
+// Include documentation generation in the build
+tasks.named('build') {
+    dependsOn 'generateDocs'
 }

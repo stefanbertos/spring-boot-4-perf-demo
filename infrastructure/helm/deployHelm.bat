@@ -529,7 +529,7 @@ echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
 echo   - Loki:        http://localhost/loki
 echo   - MQ Console:  http://localhost/ibmmq (admin/passw0rd)
-echo   - SonarQube:   http://localhost:9001 (admin/admin)
+echo   - SonarQube:   http://localhost/sonar (admin/admin)
 echo.
 echo ============================================
 echo  Usage Notes

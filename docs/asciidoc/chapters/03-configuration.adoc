@@ -1,0 +1,403 @@
+= Configuration
+
+== Configuration Overview
+
+The application uses Spring Boot's externalized configuration, supporting multiple configuration sources:
+
+. `application.yaml` (default configuration)
+. `application-{profile}.yaml` (profile-specific)
+. Environment variables
+. Command-line arguments
+
+== Module Configuration
+
+=== perf-tester Configuration
+
+.application.yaml
+[source,yaml]
+----
+server:
+  port: 8080
+
+spring:
+  application:
+    name: perf-tester
+  threads:
+    virtual:
+      enabled: true
+
+# IBM MQ Configuration
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.APP.SVRCONN
+    conn-name: localhost(1414)
+    user: app
+    password: passw0rd
+
+# Queues
+app:
+  mq:
+    inbound-queue: DEV.QUEUE.1
+    outbound-queue: DEV.QUEUE.2
+
+# Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+----
+
+=== ibm-mq-consumer Configuration
+
+.application.yaml
+[source,yaml]
+----
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ibm-mq-consumer
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: mq-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+# IBM MQ Configuration
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.APP.SVRCONN
+    conn-name: localhost(1414)
+    user: app
+    password: passw0rd
+
+# Kafka Topics
+app:
+  kafka:
+    request-topic: mq-requests
+    response-topic: mq-responses
+  mq:
+    inbound-queue: DEV.QUEUE.2
+    outbound-queue: DEV.QUEUE.1
+----
+
+=== kafka-consumer Configuration
+
+.application.yaml
+[source,yaml]
+----
+server:
+  port: 8082
+
+spring:
+  application:
+    name: kafka-consumer
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: kafka-consumer-group
+      auto-offset-reset: earliest
+
+app:
+  kafka:
+    request-topic: mq-requests
+    response-topic: mq-responses
+----
+
+=== api-gateway Configuration
+
+.application.yaml
+[source,yaml]
+----
+server:
+  port: 8090
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: grafana
+              uri: ${GRAFANA_URL:http://localhost:3000}
+              predicates:
+                - Path=/grafana/**
+              filters:
+                - StripPrefix=0
+
+            - id: prometheus
+              uri: ${PROMETHEUS_URL:http://localhost:9090}
+              predicates:
+                - Path=/prometheus/**
+              filters:
+                - StripPrefix=0
+
+            - id: loki
+              uri: ${LOKI_URL:http://localhost:3100}
+              predicates:
+                - Path=/loki/**
+              filters:
+                - StripPrefix=1
+
+            - id: ibmmq
+              uri: ${IBMMQ_URL:https://localhost:9443}
+              predicates:
+                - Path=/ibmmq/**
+              filters:
+                - StripPrefix=1
+
+            - id: kafdrop
+              uri: ${KAFDROP_URL:http://localhost:9000}
+              predicates:
+                - Path=/kafdrop/**
+              filters:
+                - StripPrefix=0
+
+            - id: perf-tester
+              uri: ${PERF_TESTER_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/**
+              filters:
+                - StripPrefix=0
+
+            - id: sonar
+              uri: ${SONAR_URL:http://localhost:9000}
+              predicates:
+                - Path=/sonar/**
+              filters:
+                - StripPrefix=1
+----
+
+== Environment Variables
+
+=== Application Environment Variables
+
+[cols="3,2,4"]
+|===
+|Variable |Default |Description
+
+|`SPRING_PROFILES_ACTIVE`
+|default
+|Active Spring profile (docker, kubernetes)
+
+|`SERVER_PORT`
+|varies
+|HTTP server port
+
+|`JAVA_OPTS`
+|-XX:+UseZGC
+|JVM options
+|===
+
+=== IBM MQ Environment Variables
+
+[cols="3,2,4"]
+|===
+|Variable |Default |Description
+
+|`IBM_MQ_QUEUE_MANAGER`
+|QM1
+|Queue manager name
+
+|`IBM_MQ_CHANNEL`
+|DEV.APP.SVRCONN
+|MQ channel name
+
+|`IBM_MQ_CONN_NAME`
+|localhost(1414)
+|Connection string
+
+|`IBM_MQ_USER`
+|app
+|MQ username
+
+|`IBM_MQ_PASSWORD`
+|passw0rd
+|MQ password
+|===
+
+=== Kafka Environment Variables
+
+[cols="3,2,4"]
+|===
+|Variable |Default |Description
+
+|`SPRING_KAFKA_BOOTSTRAP_SERVERS`
+|localhost:9092
+|Kafka broker addresses
+
+|`SPRING_KAFKA_CONSUMER_GROUP_ID`
+|varies
+|Consumer group ID
+|===
+
+=== Observability Environment Variables
+
+[cols="3,2,4"]
+|===
+|Variable |Default |Description
+
+|`OTEL_EXPORTER_OTLP_ENDPOINT`
+|http://localhost:4317
+|OpenTelemetry collector endpoint
+
+|`MANAGEMENT_TRACING_SAMPLING_PROBABILITY`
+|1.0
+|Trace sampling rate (0.0-1.0)
+|===
+
+== Spring Profiles
+
+=== default Profile
+
+Used for local development with services running on localhost.
+
+=== docker Profile
+
+Used when running in Docker Compose. Updates service URLs to use Docker network hostnames.
+
+.Activating docker profile
+[source,bash]
+----
+# Via environment variable
+export SPRING_PROFILES_ACTIVE=docker
+
+# Via command line
+./gradlew bootRun --args='--spring.profiles.active=docker'
+----
+
+=== kubernetes Profile
+
+Used for Kubernetes deployment. Services are accessed via Kubernetes service names.
+
+== Logging Configuration
+
+=== Log Levels
+
+[source,yaml]
+----
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG
+    org.springframework.jms: INFO
+    org.springframework.kafka: INFO
+    com.ibm.mq: WARN
+----
+
+=== Debug Logging
+
+Enable detailed logging for troubleshooting:
+
+[source,yaml]
+----
+logging:
+  level:
+    org.springframework.jms: DEBUG
+    com.ibm.mq: DEBUG
+    com.ibm.msg: DEBUG
+    org.springframework.kafka: DEBUG
+----
+
+=== Log Format (JSON)
+
+For production environments with log aggregation:
+
+[source,yaml]
+----
+logging:
+  pattern:
+    console: '{"timestamp":"%d{ISO8601}","level":"%level","service":"${spring.application.name}","trace":"%X{traceId}","span":"%X{spanId}","message":"%msg"}%n'
+----
+
+== Queue Configuration
+
+=== IBM MQ Queue Settings
+
+Queues are configured via MQSC scripts:
+
+.20-create-queues.mqsc
+[source,text]
+----
+DEFINE QLOCAL('DEV.QUEUE.1') MAXDEPTH(50000) REPLACE
+DEFINE QLOCAL('DEV.QUEUE.2') MAXDEPTH(50000) REPLACE
+----
+
+=== Kafka Topic Settings
+
+Topics are auto-created with default settings or can be pre-configured:
+
+[cols="2,1,1,2"]
+|===
+|Topic |Partitions |Replication |Retention
+
+|mq-requests
+|3
+|1
+|7 days
+
+|mq-responses
+|3
+|1
+|7 days
+|===
+
+== Security Configuration
+
+=== IBM MQ Security
+
+Default development credentials:
+
+[cols="2,3"]
+|===
+|Setting |Value
+
+|Admin User
+|admin
+
+|Admin Password
+|passw0rd
+
+|App User
+|app
+
+|App Password
+|passw0rd
+|===
+
+WARNING: Change default passwords for production deployments.
+
+=== API Gateway SSL
+
+The API Gateway is configured to trust self-signed certificates for IBM MQ:
+
+[source,java]
+----
+@Configuration
+public class SslConfig {
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder()
+                .requestFactory(createSslTrustingRequestFactory());
+    }
+}
+----
+
+NOTE: This configuration trusts all certificates and should only be used in development/testing environments.

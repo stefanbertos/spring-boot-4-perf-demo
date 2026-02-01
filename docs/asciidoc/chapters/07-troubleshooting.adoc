@@ -1,0 +1,413 @@
+= Troubleshooting
+
+== Common Issues
+
+=== Application Won't Start
+
+==== Symptom
+Application fails to start with connection errors.
+
+==== Possible Causes
+
+. IBM MQ not running or not ready
+. Kafka not running or not ready
+. Incorrect connection configuration
+. Port conflicts
+
+==== Solutions
+
+[source,bash]
+----
+# Check if MQ is running
+docker compose ps ibm-mq
+curl -k https://localhost:9443/ibmmq/console
+
+# Check if Kafka is running
+docker compose ps kafka
+kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# Check port availability
+netstat -an | grep 8080
+----
+
+=== Messages Not Being Processed
+
+==== Symptom
+Messages sent but not received or processed.
+
+==== Diagnostic Steps
+
+. Check queue depths in MQ Console
+. Check Kafka consumer lag in Kafdrop
+. Review application logs for errors
+. Verify topic/queue names match configuration
+
+[source,bash]
+----
+# Check MQ queue depth
+# Via MQ Console or:
+docker exec perf-demo-ibm-mq-1 \
+  /opt/mqm/bin/runmqsc QM1 <<< "DISPLAY QSTATUS(DEV.QUEUE.2) CURDEPTH"
+
+# Check Kafka consumer lag
+curl http://localhost:9308/metrics | grep kafka_consumer_group_lag
+----
+
+=== High Latency
+
+==== Symptom
+Message processing takes longer than expected.
+
+==== Diagnostic Steps
+
+. Check Grafana dashboards for bottlenecks
+. Review trace data in Tempo
+. Check resource utilization (CPU, memory)
+. Verify network connectivity
+
+==== Common Causes
+
+* Insufficient resources allocated to containers
+* GC pauses (check JVM metrics)
+* Network latency between services
+* Database connection pool exhaustion
+
+=== Out of Memory Errors
+
+==== Symptom
+Application crashes with OutOfMemoryError.
+
+==== Solutions
+
+. Increase JVM heap size:
++
+[source,yaml]
+----
+environment:
+  JAVA_OPTS: "-Xmx1g -Xms512m"
+----
+
+. Increase container memory limits:
++
+[source,yaml]
+----
+resources:
+  limits:
+    memory: "2Gi"
+----
+
+. Check for memory leaks using heap dumps:
++
+[source,bash]
+----
+# Generate heap dump
+kubectl exec -it pod-name -- jcmd 1 GC.heap_dump /tmp/heap.hprof
+
+# Copy heap dump locally
+kubectl cp pod-name:/tmp/heap.hprof ./heap.hprof
+----
+
+=== Connection Pool Exhaustion
+
+==== Symptom
+"Unable to acquire connection" or timeout errors.
+
+==== Solutions
+
+. Increase pool size:
++
+[source,yaml]
+----
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+----
+
+. Check for connection leaks (connections not being closed)
+. Review slow queries that hold connections
+
+== IBM MQ Troubleshooting
+
+=== Cannot Connect to Queue Manager
+
+==== Error
+`MQRC_NOT_AUTHORIZED (2035)` or `MQRC_CHANNEL_CONFIG_ERROR (2539)`
+
+==== Solutions
+
+. Verify credentials:
++
+[source,yaml]
+----
+ibm:
+  mq:
+    user: app
+    password: passw0rd
+----
+
+. Check channel configuration:
++
+[source,bash]
+----
+docker exec perf-demo-ibm-mq-1 \
+  /opt/mqm/bin/runmqsc QM1 <<< "DISPLAY CHANNEL(DEV.APP.SVRCONN)"
+----
+
+=== Queue Full
+
+==== Error
+`MQRC_Q_FULL (2053)`
+
+==== Solutions
+
+. Increase queue depth:
++
+[source,bash]
+----
+ALTER QLOCAL('DEV.QUEUE.2') MAXDEPTH(100000)
+----
+
+. Clear stuck messages:
++
+[source,bash]
+----
+CLEAR QLOCAL('DEV.QUEUE.2')
+----
+
+. Scale consumers to process backlog faster
+
+=== SSL/TLS Errors
+
+==== Error
+`PKIX path building failed` or SSL handshake errors
+
+==== Solutions
+
+. For development, trust all certificates (already configured in api-gateway)
+. For production, import MQ certificate:
++
+[source,bash]
+----
+keytool -import -trustcacerts -alias ibmmq \
+  -file mq-cert.pem -keystore truststore.jks
+----
+
+== Kafka Troubleshooting
+
+=== Consumer Lag Increasing
+
+==== Symptom
+Kafka consumer lag keeps growing.
+
+==== Solutions
+
+. Scale consumers:
++
+[source,bash]
+----
+docker compose up -d --scale kafka-consumer=5
+----
+
+. Increase partition count (requires topic recreation)
+. Optimize consumer processing code
+. Check for slow downstream services
+
+=== Topic Not Found
+
+==== Error
+`UNKNOWN_TOPIC_OR_PARTITION`
+
+==== Solutions
+
+. Verify auto-create is enabled:
++
+[source,yaml]
+----
+environment:
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+----
+
+. Create topic manually:
++
+[source,bash]
+----
+kafka-topics.sh --bootstrap-server localhost:9092 \
+  --create --topic mq-requests \
+  --partitions 3 --replication-factor 1
+----
+
+=== Serialization Errors
+
+==== Error
+`SerializationException`
+
+==== Solutions
+
+. Verify serializer configuration matches data format
+. Check for schema changes
+. Clear consumer offsets if format changed:
++
+[source,bash]
+----
+kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
+  --group mq-consumer-group --reset-offsets \
+  --to-earliest --topic mq-requests --execute
+----
+
+== Kubernetes Troubleshooting
+
+=== Pod CrashLoopBackOff
+
+==== Diagnostic Steps
+
+[source,bash]
+----
+# Check pod status
+kubectl describe pod <pod-name> -n perf-demo
+
+# Check logs
+kubectl logs <pod-name> -n perf-demo --previous
+
+# Check events
+kubectl get events -n perf-demo --sort-by='.lastTimestamp'
+----
+
+=== Pod Pending
+
+==== Common Causes
+
+* Insufficient resources
+* PVC not bound
+* Image pull errors
+
+==== Solutions
+
+[source,bash]
+----
+# Check node resources
+kubectl describe nodes
+
+# Check PVC status
+kubectl get pvc -n perf-demo
+
+# Check image pull secrets
+kubectl get secrets -n perf-demo
+----
+
+=== Service Not Accessible
+
+==== Diagnostic Steps
+
+[source,bash]
+----
+# Check service endpoints
+kubectl get endpoints -n perf-demo
+
+# Test connectivity from another pod
+kubectl run curl --image=curlimages/curl -it --rm -- \
+  curl http://perf-perf-tester:8080/actuator/health
+----
+
+== Logging and Diagnostics
+
+=== Enable Debug Logging
+
+[source,bash]
+----
+# Via environment variable
+LOGGING_LEVEL_ROOT=DEBUG
+
+# Via application restart
+./gradlew bootRun --args='--logging.level.root=DEBUG'
+----
+
+=== Specific Component Debugging
+
+[source,yaml]
+----
+logging:
+  level:
+    # IBM MQ
+    com.ibm.mq: DEBUG
+    com.ibm.msg: DEBUG
+    org.springframework.jms: DEBUG
+
+    # Kafka
+    org.springframework.kafka: DEBUG
+    org.apache.kafka: DEBUG
+
+    # HTTP
+    org.springframework.web: DEBUG
+
+    # Database
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+----
+
+=== Thread Dump
+
+[source,bash]
+----
+# Get thread dump
+kubectl exec -it <pod-name> -- jcmd 1 Thread.print
+
+# Or via actuator
+curl http://localhost:8080/actuator/threaddump
+----
+
+=== Heap Dump
+
+[source,bash]
+----
+# Generate heap dump on OOM
+JAVA_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"
+
+# Manual heap dump
+kubectl exec -it <pod-name> -- jcmd 1 GC.heap_dump /tmp/heap.hprof
+----
+
+== Getting Help
+
+=== Useful Commands Summary
+
+[source,bash]
+----
+# Overall status
+docker compose ps
+kubectl get all -n perf-demo
+
+# Logs
+docker compose logs -f <service>
+kubectl logs -f deployment/<name> -n perf-demo
+
+# Shell access
+docker compose exec <service> bash
+kubectl exec -it <pod> -n perf-demo -- bash
+
+# Resource usage
+docker stats
+kubectl top pods -n perf-demo
+----
+
+=== Log Locations
+
+[cols="2,3"]
+|===
+|Component |Log Location
+
+|Application
+|stdout / Loki
+
+|IBM MQ
+|/var/mqm/errors/
+
+|Kafka
+|stdout
+
+|Prometheus
+|stdout
+
+|Grafana
+|/var/log/grafana/
+|===

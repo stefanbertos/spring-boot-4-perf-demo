@@ -1,36 +1,8 @@
-# perf-demo
+# Spring Boot 4 Performance Demo
 
-Multi-module Spring Boot application with IBM MQ and Kafka integration for performance testing.
+Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing with full observability stack.
 
-## Modules
-
-| Module | Description | Port |
-|--------|-------------|------|
-| perf-tester | REST API to send messages, listens for processed responses | 8080 |
-| ibm-mq-consumer | Consumes MQ messages, publishes to Kafka, receives Kafka responses, sends to MQ | 8081 |
-| kafka-consumer | Consumes Kafka requests, processes (adds "processed" suffix), sends Kafka responses | 8082 |
-
-## Prerequisites
-
-- Java 25
-- Docker
-
-## Running the Application
-
-1. Start services (IBM MQ, Kafka, Prometheus, Grafana):
-   ```bash
-   runLocalDocker.bat
-   ```
-
-2. Run all modules locally:
-   ```bash
-   gradlew.bat :perf-tester:bootRun
-   gradlew.bat :ibm-mq-consumer:bootRun
-   gradlew.bat :kafka-consumer:bootRun
-   gradlew.bat :api-gateway:bootRun
-   ```
-
-## Message Flow
+## Architecture
 
 ```
 perf-tester -> DEV.QUEUE.2 -> ibm-mq-consumer -> Kafka (mq-requests) -> kafka-consumer
@@ -40,35 +12,97 @@ perf-tester -> DEV.QUEUE.2 -> ibm-mq-consumer -> Kafka (mq-requests) -> kafka-co
 perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 ```
 
-## IBM MQ Web Console
+## Modules
 
-- URL: https://localhost:9443/ibmmq/console
-- Username: `admin`
-- Password: `passw0rd`
+| Module | Description | Port |
+|--------|-------------|------|
+| perf-tester | REST API to send messages, listens for processed responses | 8080 |
+| ibm-mq-consumer | Bridges MQ to Kafka and back | 8081 |
+| kafka-consumer | Processes Kafka messages, adds "processed" suffix | 8082 |
+| api-gateway | Routes all services through a single endpoint | 8090 |
 
-Note: The console uses a self-signed certificate, so you'll need to accept the browser warning.
+## Tech Stack
 
-## Prometheus
+- **Java 25** with virtual threads
+- **Spring Boot 4.0** with Spring Cloud Gateway
+- **Gradle** multi-module build with Checkstyle and PMD
+- **IBM MQ** with mq-jms-spring-boot-starter
+- **Apache Kafka** for message streaming
+- **Oracle Database** for persistence
+- **Observability**: Prometheus, Grafana, Loki, Tempo
+- **Code Quality**: SonarQube
 
-- URL: http://localhost:9090
-- Metrics endpoint (perf-tester): http://localhost:8080/actuator/prometheus
-- Metrics endpoint (ibm-mq-consumer): http://localhost:8081/actuator/prometheus
-- Metrics endpoint (kafka-consumer): http://localhost:8082/actuator/prometheus
+## Prerequisites
 
-## Grafana
+- Java 25
+- Docker & Docker Compose
+- Kubernetes cluster (for Helm deployment)
+- Helm 3.x (for Kubernetes deployment)
 
-- URL: http://localhost:3000
-- Username: `admin`
-- Password: `admin`
+## Quick Start
 
-Dashboards are auto-provisioned:
-- Spring Boot - perf-demo
-- IBM MQ
+### Local Development (Docker Compose)
 
-## Swagger UI
+1. Build and start all services:
+   ```bash
+   docker compose up --build
+   ```
 
-- URL: http://localhost:8080/swagger-ui.html
-- OpenAPI JSON: http://localhost:8080/v3/api-docs
+2. Or run infrastructure only and start apps locally:
+   ```bash
+   runLocalDocker.bat
+   ```
+
+   Then run each module:
+   ```bash
+   ./gradlew :perf-tester:bootRun
+   ./gradlew :ibm-mq-consumer:bootRun
+   ./gradlew :kafka-consumer:bootRun
+   ./gradlew :api-gateway:bootRun
+   ```
+
+### Kubernetes Deployment (Helm)
+
+```bash
+cd infrastructure/helm
+deployHelm.bat
+```
+
+To uninstall:
+```bash
+cd infrastructure/helm
+cleanup.bat
+```
+
+## Service URLs
+
+### Via API Gateway (Kubernetes with Ingress)
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Grafana | http://localhost/grafana | admin / admin |
+| Prometheus | http://localhost/prometheus | - |
+| Kafdrop | http://localhost/kafdrop | - |
+| Loki | http://localhost/loki | - |
+| Tempo | http://localhost/tempo | - |
+| IBM MQ Console | http://localhost/ibmmq | admin / passw0rd |
+| SonarQube | http://localhost/sonar | admin / admin |
+| Swagger UI | http://localhost/api/swagger-ui/index.html | - |
+| API Docs | http://localhost/api/v3/api-docs | - |
+
+### Direct Access (Docker Compose)
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Grafana | http://localhost:3000 | admin / admin |
+| Prometheus | http://localhost:9090 | - |
+| Kafdrop | http://localhost:9000/kafdrop | - |
+| Loki | http://localhost:3100 | - |
+| Tempo | http://localhost:3200 | - |
+| IBM MQ Console | https://localhost:9443/ibmmq/console | admin / passw0rd |
+| SonarQube | http://localhost:9001 | admin / admin |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | - |
+| Oracle DB | localhost:1521/XEPDB1 | perfuser / perfpass |
 
 ## API Endpoints
 
@@ -77,41 +111,157 @@ Dashboards are auto-provisioned:
 curl -X POST http://localhost:8080/api/perf/send -d "your message"
 ```
 
-## Queue Configuration
+### Health Check
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+### Metrics
+```bash
+curl http://localhost:8080/actuator/prometheus
+```
+
+## Queue & Topic Configuration
+
+### IBM MQ Queues
 
 | Queue | Purpose |
 |-------|---------|
 | DEV.QUEUE.1 | perf-tester inbound / ibm-mq-consumer outbound |
 | DEV.QUEUE.2 | perf-tester outbound / ibm-mq-consumer inbound |
 
-## Kafka Topics
+### Kafka Topics
 
 | Topic | Purpose |
 |-------|---------|
 | mq-requests | ibm-mq-consumer outbound / kafka-consumer inbound |
 | mq-responses | kafka-consumer outbound / ibm-mq-consumer inbound |
 
-## Debugging MQ Messages
+## Build Commands
 
-To enable detailed JMS/MQ logging, uncomment the debug levels in `application.yml`:
+```bash
+# Build all modules (includes documentation generation)
+./gradlew build
 
+# Run tests
+./gradlew test
+
+# Run specific module
+./gradlew :perf-tester:bootRun
+./gradlew :ibm-mq-consumer:bootRun
+./gradlew :kafka-consumer:bootRun
+./gradlew :api-gateway:bootRun
+
+# Clean build
+./gradlew clean build
+
+# Run static analysis only
+./gradlew checkstyleMain pmdMain
+
+# Generate documentation only
+./gradlew generateDocs
+```
+
+## Documentation
+
+Technical documentation is automatically generated as part of the build process in both PDF and HTML formats.
+
+### Generated Documentation
+
+| Format | Location | Description |
+|--------|----------|-------------|
+| PDF | `build/docs/pdf/index.pdf` | Complete technical documentation |
+| HTML | `build/docs/html/index.html` | Web-browsable documentation |
+
+### Documentation Chapters
+
+1. **Architecture Overview** - System design, modules, message flow
+2. **Installation Guide** - Prerequisites, setup, verification
+3. **Configuration** - Application settings, environment variables
+4. **API Reference** - REST endpoints, metrics, health checks
+5. **Deployment** - Docker Compose, Kubernetes, GCP
+6. **Observability** - Metrics, logging, tracing
+7. **Troubleshooting** - Common issues and solutions
+8. **Appendix** - Quick reference, commands, glossary
+
+## Infrastructure Components
+
+### Helm Charts
+
+| Chart | Description |
+|-------|-------------|
+| api-gateway | Spring Cloud Gateway for routing |
+| grafana | Dashboards and visualization |
+| ibm-mq | IBM MQ queue manager |
+| ibm-mq-consumer | MQ to Kafka bridge service |
+| ingress | Kubernetes ingress configuration |
+| kafdrop | Kafka web UI |
+| kafka | Apache Kafka broker |
+| kafka-consumer | Kafka message processor |
+| kafka-exporter | Kafka metrics for Prometheus |
+| loki | Log aggregation |
+| oracle | Oracle XE database |
+| oracle-exporter | Oracle metrics for Prometheus |
+| perf-tester | Main REST API service |
+| prometheus | Metrics collection |
+| promtail | Log shipping to Loki |
+| sonarqube | Code quality analysis |
+| tempo | Distributed tracing |
+
+## Observability
+
+### Grafana Dashboards
+
+Pre-configured dashboards for:
+- Spring Boot application metrics
+- IBM MQ queue depths and message rates
+- Kafka consumer lag and throughput
+- Oracle database performance
+- JVM metrics (heap, GC, threads)
+
+### Distributed Tracing
+
+All services are instrumented with Micrometer Tracing, sending traces to Tempo. View traces in Grafana.
+
+### Log Aggregation
+
+Logs are collected by Promtail and stored in Loki. Query logs in Grafana using LogQL.
+
+## Debugging
+
+### Enable Debug Logging
+
+```bash
+./gradlew :perf-tester:bootRun --args='--logging.level.org.springframework.jms=DEBUG --logging.level.com.ibm.mq=DEBUG'
+```
+
+Or in application.yaml:
 ```yaml
 logging:
   level:
     org.springframework.jms: DEBUG
     com.ibm.mq: DEBUG
-    com.ibm.msg: DEBUG
 ```
 
-Or pass as command-line arguments:
+## Static Analysis
+
+Build enforces **Checkstyle** and **PMD 7.20.0**:
+
 ```bash
-gradlew.bat :perf-tester:bootRun --args='--logging.level.org.springframework.jms=DEBUG --logging.level.com.ibm.mq=DEBUG'
+# View reports after build
+# Checkstyle: build/reports/checkstyle/main.html
+# PMD: build/reports/pmd/main.html
 ```
 
-This will log message headers, properties, and routing information.
+## GCP/GKE Deployment
 
-## Production Deployment
+For Google Kubernetes Engine:
+
 ```bash
+set GCP_PROJECT=your-project-id
+set GCP_REGION=us-central1
 cd infrastructure/helm
 deployHelm.bat
 ```
+
+Images are automatically pushed to Google Artifact Registry.

@@ -1,0 +1,286 @@
+= Architecture Overview
+
+== Introduction
+
+The Spring Boot 4 Performance Demo is a multi-module application designed for testing and demonstrating message processing performance using IBM MQ and Apache Kafka. The application showcases modern Java development practices including virtual threads, reactive patterns, and comprehensive observability.
+
+== System Architecture
+
+The system follows a microservices architecture pattern with the following key characteristics:
+
+* *Message-driven communication* between services via IBM MQ and Kafka
+* *API Gateway pattern* for unified access to all services
+* *Full observability stack* with metrics, logs, and traces
+* *Cloud-native deployment* support via Kubernetes and Helm
+
+=== High-Level Architecture Diagram
+
+[source,text]
+----
+                                    ┌─────────────────────────────────────────────────────────────┐
+                                    │                      Kubernetes Cluster                      │
+                                    │                                                              │
+┌──────────┐    ┌───────────┐       │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    │
+│  Client  │───▶│  Ingress  │──────▶│   │ API Gateway │───▶│ Perf-Tester │───▶│   IBM MQ    │    │
+└──────────┘    └───────────┘       │   └─────────────┘    └─────────────┘    └──────┬──────┘    │
+                                    │          │                   ▲                  │           │
+                                    │          │                   │                  ▼           │
+                                    │          ▼                   │          ┌─────────────┐    │
+                                    │   ┌─────────────┐            │          │ MQ Consumer │    │
+                                    │   │   Grafana   │            │          └──────┬──────┘    │
+                                    │   │ Prometheus  │            │                  │           │
+                                    │   │    Loki     │            │                  ▼           │
+                                    │   │   Tempo     │            │          ┌─────────────┐    │
+                                    │   └─────────────┘            └──────────│    Kafka    │    │
+                                    │                                         └──────┬──────┘    │
+                                    │                                                │           │
+                                    │                                                ▼           │
+                                    │                                         ┌─────────────┐    │
+                                    │                                         │Kafka Consumer│   │
+                                    │                                         └─────────────┘    │
+                                    └─────────────────────────────────────────────────────────────┘
+----
+
+== Application Modules
+
+=== perf-tester (Port 8080)
+
+The main entry point for the application, providing REST APIs for sending test messages.
+
+*Responsibilities:*
+
+* Expose REST endpoints for message submission
+* Send messages to IBM MQ (DEV.QUEUE.2)
+* Listen for processed responses on IBM MQ (DEV.QUEUE.1)
+* Provide Swagger UI for API exploration
+* Export metrics via Prometheus endpoint
+
+*Key Technologies:*
+
+* Spring Boot 4.0 with WebMVC
+* Spring JMS for MQ connectivity
+* SpringDoc OpenAPI for documentation
+* Micrometer for observability
+
+=== ibm-mq-consumer (Port 8081)
+
+A bridge service that connects IBM MQ to Apache Kafka.
+
+*Responsibilities:*
+
+* Consume messages from IBM MQ (DEV.QUEUE.2)
+* Publish messages to Kafka topic (mq-requests)
+* Consume responses from Kafka topic (mq-responses)
+* Send responses back to IBM MQ (DEV.QUEUE.1)
+
+*Key Technologies:*
+
+* Spring Boot 4.0 with JMS
+* Spring Kafka for Kafka connectivity
+* IBM MQ JMS Spring Boot Starter
+
+=== kafka-consumer (Port 8082)
+
+The message processing service that handles business logic.
+
+*Responsibilities:*
+
+* Consume messages from Kafka topic (mq-requests)
+* Process messages (adds "processed" suffix)
+* Publish responses to Kafka topic (mq-responses)
+
+*Key Technologies:*
+
+* Spring Boot 4.0
+* Spring Kafka
+* Virtual threads for concurrent processing
+
+=== api-gateway (Port 8090)
+
+A Spring Cloud Gateway that provides unified access to all services.
+
+*Responsibilities:*
+
+* Route requests to appropriate backend services
+* Handle SSL termination for IBM MQ web console
+* Provide path-based routing for all UI components
+
+*Routing Configuration:*
+
+[cols="2,3,2"]
+|===
+|Path |Backend Service |Description
+
+|`/grafana/**`
+|Grafana
+|Dashboards and visualization
+
+|`/prometheus/**`
+|Prometheus
+|Metrics collection
+
+|`/loki/**`
+|Loki
+|Log aggregation
+
+|`/tempo/**`
+|Tempo
+|Distributed tracing
+
+|`/ibmmq/**`
+|IBM MQ Console
+|Queue management
+
+|`/kafdrop/**`
+|Kafdrop
+|Kafka UI
+
+|`/sonar/**`
+|SonarQube
+|Code quality
+
+|`/api/**`
+|Perf-Tester
+|Application API
+|===
+
+== Message Flow
+
+The application implements a request-response pattern across multiple messaging systems:
+
+[source,text]
+----
+┌─────────────┐     DEV.QUEUE.2     ┌─────────────────┐     mq-requests     ┌────────────────┐
+│ Perf-Tester │────────────────────▶│ IBM-MQ-Consumer │────────────────────▶│ Kafka-Consumer │
+└─────────────┘                     └─────────────────┘                     └────────────────┘
+       ▲                                    │                                        │
+       │                                    │                                        │
+       │         DEV.QUEUE.1                │         mq-responses                   │
+       └────────────────────────────────────┴────────────────────────────────────────┘
+----
+
+=== Message Flow Steps
+
+. Client sends HTTP POST to `/api/perf/send` with message content
+. Perf-Tester places message on IBM MQ queue `DEV.QUEUE.2`
+. IBM-MQ-Consumer reads from `DEV.QUEUE.2`
+. IBM-MQ-Consumer publishes to Kafka topic `mq-requests`
+. Kafka-Consumer reads from `mq-requests`
+. Kafka-Consumer processes message (appends "processed" suffix)
+. Kafka-Consumer publishes to Kafka topic `mq-responses`
+. IBM-MQ-Consumer reads from `mq-responses`
+. IBM-MQ-Consumer sends to IBM MQ queue `DEV.QUEUE.1`
+. Perf-Tester receives processed message from `DEV.QUEUE.1`
+
+== Technology Stack
+
+=== Core Technologies
+
+[cols="2,2,3"]
+|===
+|Category |Technology |Version
+
+|Language
+|Java
+|25 (with virtual threads)
+
+|Framework
+|Spring Boot
+|4.0.1
+
+|Build Tool
+|Gradle
+|9.x
+
+|Messaging (MQ)
+|IBM MQ
+|9.2.5.0
+
+|Messaging (Kafka)
+|Apache Kafka
+|3.9.0
+
+|Database
+|Oracle XE
+|21
+|===
+
+=== Observability Stack
+
+[cols="2,2,3"]
+|===
+|Component |Technology |Purpose
+
+|Metrics
+|Prometheus
+|Time-series metrics collection
+
+|Visualization
+|Grafana
+|Dashboards and alerting
+
+|Logging
+|Loki + Promtail
+|Log aggregation and search
+
+|Tracing
+|Tempo
+|Distributed trace collection
+
+|Code Quality
+|SonarQube
+|Static analysis and coverage
+|===
+
+== Design Principles
+
+=== Virtual Threads
+
+The application leverages Java 25 virtual threads for improved scalability:
+
+[source,java]
+----
+// application.properties
+spring.threads.virtual.enabled=true
+----
+
+=== Constructor Injection
+
+All Spring beans use constructor injection for better testability:
+
+[source,java]
+----
+@Service
+public class MessageService {
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
+
+    public MessageService(KafkaTemplate<String, String> kafkaTemplate,
+                         MeterRegistry meterRegistry) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.meterRegistry = meterRegistry;
+    }
+}
+----
+
+=== Records for DTOs
+
+Immutable data transfer objects using Java records:
+
+[source,java]
+----
+public record MessageRequest(String content, String correlationId) {}
+public record MessageResponse(String content, String status, Instant timestamp) {}
+----
+
+=== Observability First
+
+All services are instrumented with Micrometer for comprehensive observability:
+
+[source,java]
+----
+@Observed(name = "message.process", contextualName = "process-message")
+public void processMessage(String message) {
+    // Method is automatically traced and metered
+}
+----

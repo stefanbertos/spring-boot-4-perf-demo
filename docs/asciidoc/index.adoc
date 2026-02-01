@@ -1,0 +1,48 @@
+= {project-name}: Technical Documentation
+:author: Performance Demo Team
+:email: team@example.com
+:revnumber: {revnumber}
+:revdate: {revdate}
+:revremark: Technical Documentation
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 4
+:icons: font
+:source-highlighter: rouge
+:listing-caption: Listing
+:chapter-label: Chapter
+:appendix-caption: Appendix
+:figure-caption: Figure
+:table-caption: Table
+:preface-title: Preface
+:last-update-label: Last updated
+
+[preface]
+== Preface
+
+This document provides comprehensive technical documentation for the Spring Boot 4 Performance Demo application. It covers architecture, installation, configuration, and operational procedures.
+
+*Document Version:* {revnumber}
+
+*Last Updated:* {revdate}
+
+include::{docdir}/chapters/01-architecture-overview.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/02-installation-guide.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/03-configuration.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/04-api-reference.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/05-deployment.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/06-observability.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/07-troubleshooting.adoc[leveloffset=+1]
+
+include::{docdir}/chapters/08-appendix.adoc[leveloffset=+1]
+
+[index]
+== Index

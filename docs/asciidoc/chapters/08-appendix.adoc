@@ -1,0 +1,458 @@
+= Appendix
+
+[appendix]
+== Quick Reference
+
+=== Service Ports
+
+[cols="2,1,3"]
+|===
+|Service |Port |Description
+
+|perf-tester
+|8080
+|Main application REST API
+
+|ibm-mq-consumer
+|8081
+|MQ to Kafka bridge
+
+|kafka-consumer
+|8082
+|Kafka message processor
+
+|api-gateway
+|8090
+|API Gateway
+
+|IBM MQ (MQ)
+|1414
+|MQ listener port
+
+|IBM MQ (Web)
+|9443
+|MQ web console (HTTPS)
+
+|IBM MQ (Metrics)
+|9157
+|MQ Prometheus metrics
+
+|Kafka
+|9092
+|Kafka broker
+
+|Kafka Exporter
+|9308
+|Kafka Prometheus metrics
+
+|Prometheus
+|9090
+|Metrics server
+
+|Grafana
+|3000
+|Visualization
+
+|Loki
+|3100
+|Log aggregation
+
+|Tempo (OTLP gRPC)
+|4317
+|Trace ingestion (gRPC)
+
+|Tempo (OTLP HTTP)
+|4318
+|Trace ingestion (HTTP)
+
+|Tempo (Query)
+|3200
+|Trace query API
+
+|Kafdrop
+|9000
+|Kafka web UI
+
+|Oracle
+|1521
+|Database
+
+|Oracle Exporter
+|9161
+|Oracle Prometheus metrics
+
+|SonarQube
+|9000/9001
+|Code quality
+|===
+
+=== Default Credentials
+
+WARNING: Change all default credentials for production deployments.
+
+[cols="2,2,2"]
+|===
+|Service |Username |Password
+
+|IBM MQ Admin
+|admin
+|passw0rd
+
+|IBM MQ App
+|app
+|passw0rd
+
+|Grafana
+|admin
+|admin
+
+|SonarQube
+|admin
+|admin
+
+|Oracle
+|perfuser
+|perfpass
+|===
+
+=== Queue and Topic Names
+
+[cols="2,3"]
+|===
+|Name |Purpose
+
+|DEV.QUEUE.1
+|perf-tester inbound, ibm-mq-consumer outbound
+
+|DEV.QUEUE.2
+|perf-tester outbound, ibm-mq-consumer inbound
+
+|mq-requests
+|Kafka topic for requests
+
+|mq-responses
+|Kafka topic for responses
+|===
+
+[appendix]
+== Gradle Tasks
+
+=== Build Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`build`
+|Full build including tests and documentation
+
+|`clean`
+|Delete build outputs
+
+|`assemble`
+|Build without tests
+
+|`test`
+|Run unit tests
+
+|`check`
+|Run all checks (tests, checkstyle, pmd, coverage)
+|===
+
+=== Documentation Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`generateDocs`
+|Generate HTML and PDF documentation
+
+|`asciidoctor`
+|Generate HTML documentation only
+
+|`asciidoctorPdf`
+|Generate PDF documentation only
+|===
+
+=== Quality Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`checkstyleMain`
+|Run Checkstyle on main sources
+
+|`pmdMain`
+|Run PMD on main sources
+
+|`jacocoTestReport`
+|Generate coverage report
+
+|`jacocoTestCoverageVerification`
+|Verify coverage thresholds
+
+|`sonar`
+|Run SonarQube analysis
+|===
+
+=== Run Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`:perf-tester:bootRun`
+|Run perf-tester locally
+
+|`:ibm-mq-consumer:bootRun`
+|Run ibm-mq-consumer locally
+
+|`:kafka-consumer:bootRun`
+|Run kafka-consumer locally
+
+|`:api-gateway:bootRun`
+|Run api-gateway locally
+|===
+
+[appendix]
+== Environment Variables Reference
+
+=== Application Configuration
+
+[cols="3,2,3"]
+|===
+|Variable |Default |Description
+
+|SPRING_PROFILES_ACTIVE
+|default
+|Active Spring profile
+
+|SERVER_PORT
+|varies
+|HTTP server port
+
+|JAVA_OPTS
+|-XX:+UseZGC
+|JVM options
+|===
+
+=== IBM MQ Configuration
+
+[cols="3,2,3"]
+|===
+|Variable |Default |Description
+
+|IBM_MQ_QUEUE_MANAGER
+|QM1
+|Queue manager name
+
+|IBM_MQ_CHANNEL
+|DEV.APP.SVRCONN
+|Channel name
+
+|IBM_MQ_CONN_NAME
+|localhost(1414)
+|Connection string
+
+|IBM_MQ_USER
+|app
+|Username
+
+|IBM_MQ_PASSWORD
+|passw0rd
+|Password
+|===
+
+=== Kafka Configuration
+
+[cols="3,2,3"]
+|===
+|Variable |Default |Description
+
+|SPRING_KAFKA_BOOTSTRAP_SERVERS
+|localhost:9092
+|Broker addresses
+
+|SPRING_KAFKA_CONSUMER_GROUP_ID
+|varies
+|Consumer group
+|===
+
+=== Observability Configuration
+
+[cols="3,2,3"]
+|===
+|Variable |Default |Description
+
+|OTEL_EXPORTER_OTLP_ENDPOINT
+|http://localhost:4317
+|OTLP endpoint
+
+|MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+|1.0
+|Trace sampling rate
+|===
+
+=== GCP Configuration
+
+[cols="3,2,3"]
+|===
+|Variable |Default |Description
+
+|GCP_PROJECT
+|(required)
+|GCP project ID
+
+|GCP_REGION
+|us-central1
+|GCP region
+
+|GCP_REGISTRY
+|(auto)
+|Artifact Registry path
+|===
+
+[appendix]
+== MQSC Commands Reference
+
+=== Queue Management
+
+[source,text]
+----
+# Display queue status
+DISPLAY QSTATUS('DEV.QUEUE.1') CURDEPTH
+
+# Display queue definition
+DISPLAY QLOCAL('DEV.QUEUE.1')
+
+# Alter queue depth
+ALTER QLOCAL('DEV.QUEUE.1') MAXDEPTH(100000)
+
+# Clear queue
+CLEAR QLOCAL('DEV.QUEUE.1')
+
+# Create queue
+DEFINE QLOCAL('NEW.QUEUE') MAXDEPTH(50000)
+
+# Delete queue
+DELETE QLOCAL('NEW.QUEUE')
+----
+
+=== Channel Management
+
+[source,text]
+----
+# Display channel
+DISPLAY CHANNEL('DEV.APP.SVRCONN')
+
+# Display channel status
+DISPLAY CHSTATUS('DEV.APP.SVRCONN')
+
+# Stop channel
+STOP CHANNEL('DEV.APP.SVRCONN')
+
+# Start channel
+START CHANNEL('DEV.APP.SVRCONN')
+----
+
+[appendix]
+== Kafka Commands Reference
+
+=== Topic Management
+
+[source,bash]
+----
+# List topics
+kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# Describe topic
+kafka-topics.sh --bootstrap-server localhost:9092 \
+  --describe --topic mq-requests
+
+# Create topic
+kafka-topics.sh --bootstrap-server localhost:9092 \
+  --create --topic new-topic \
+  --partitions 3 --replication-factor 1
+
+# Delete topic
+kafka-topics.sh --bootstrap-server localhost:9092 \
+  --delete --topic new-topic
+----
+
+=== Consumer Groups
+
+[source,bash]
+----
+# List consumer groups
+kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+
+# Describe consumer group
+kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
+  --describe --group mq-consumer-group
+
+# Reset offsets
+kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
+  --group mq-consumer-group \
+  --reset-offsets --to-earliest \
+  --topic mq-requests --execute
+----
+
+=== Console Tools
+
+[source,bash]
+----
+# Consume messages
+kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic mq-requests --from-beginning
+
+# Produce messages
+kafka-console-producer.sh --bootstrap-server localhost:9092 \
+  --topic mq-requests
+----
+
+[appendix]
+== Glossary
+
+API Gateway::
+A service that acts as a single entry point for all clients, routing requests to appropriate backend services.
+
+Consumer Lag::
+The difference between the latest message offset in a Kafka partition and the consumer's current offset, indicating how far behind the consumer is.
+
+Correlation ID::
+A unique identifier used to track a message through the entire processing pipeline.
+
+Dead Letter Queue::
+A queue where messages that cannot be processed are sent for later analysis.
+
+Helm::
+A package manager for Kubernetes that helps define, install, and upgrade applications.
+
+JMS::
+Java Message Service, a Java API for sending messages between two or more clients.
+
+LogQL::
+Query language used by Grafana Loki for filtering and querying logs.
+
+Micrometer::
+A metrics collection facade for JVM-based applications.
+
+OTLP::
+OpenTelemetry Protocol, a standard for transmitting telemetry data.
+
+PromQL::
+Query language used by Prometheus for selecting and aggregating time series data.
+
+Queue Depth::
+The number of messages currently waiting in a queue.
+
+Span::
+A single unit of work in a distributed trace, representing an operation.
+
+Trace::
+A collection of spans that represents the entire journey of a request through a distributed system.
+
+Virtual Threads::
+Lightweight threads in Java that dramatically reduce the overhead of concurrent programming.

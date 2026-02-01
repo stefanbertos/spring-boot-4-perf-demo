@@ -1,0 +1,309 @@
+= Installation Guide
+
+== Prerequisites
+
+Before installing the application, ensure you have the following software installed:
+
+=== Required Software
+
+[cols="2,2,3"]
+|===
+|Software |Minimum Version |Download URL
+
+|Java JDK
+|25
+|https://jdk.java.net/25/
+
+|Docker
+|24.0
+|https://docs.docker.com/get-docker/
+
+|Docker Compose
+|2.20
+|Included with Docker Desktop
+
+|Git
+|2.40
+|https://git-scm.com/downloads
+|===
+
+=== Optional Software (for Kubernetes deployment)
+
+[cols="2,2,3"]
+|===
+|Software |Minimum Version |Purpose
+
+|kubectl
+|1.28
+|Kubernetes CLI
+
+|Helm
+|3.12
+|Kubernetes package manager
+
+|Minikube / Kind
+|Latest
+|Local Kubernetes cluster
+|===
+
+== Getting the Source Code
+
+Clone the repository:
+
+[source,bash]
+----
+git clone https://github.com/your-org/spring-boot-4-perf-demo.git
+cd spring-boot-4-perf-demo
+----
+
+== Building the Application
+
+=== Building with Gradle
+
+Build all modules:
+
+[source,bash]
+----
+# Windows
+gradlew.bat build
+
+# Linux/macOS
+./gradlew build
+----
+
+This command will:
+
+. Compile all Java source files
+. Run Checkstyle static analysis
+. Run PMD code analysis
+. Execute unit tests
+. Generate JaCoCo coverage reports
+. Generate PDF and HTML documentation
+. Package applications as JAR files
+
+=== Build Output
+
+After successful build, the following artifacts are created:
+
+[source,text]
+----
+build/
+├── docs/
+│   ├── html/
+│   │   └── index.html          # HTML documentation
+│   └── pdf/
+│       └── index.pdf           # PDF documentation
+├── reports/
+│   ├── checkstyle/             # Checkstyle reports
+│   ├── pmd/                    # PMD reports
+│   └── jacoco/                 # Coverage reports
+│
+perf-tester/build/libs/
+└── perf-tester-0.0.1-SNAPSHOT.jar
+
+ibm-mq-consumer/build/libs/
+└── ibm-mq-consumer-0.0.1-SNAPSHOT.jar
+
+kafka-consumer/build/libs/
+└── kafka-consumer-0.0.1-SNAPSHOT.jar
+
+api-gateway/build/libs/
+└── api-gateway-0.0.1-SNAPSHOT.jar
+----
+
+=== Skipping Tests
+
+To build without running tests:
+
+[source,bash]
+----
+./gradlew build -x test
+----
+
+=== Building Documentation Only
+
+To generate only the documentation:
+
+[source,bash]
+----
+./gradlew generateDocs
+----
+
+== Local Development Setup
+
+=== Option 1: Docker Compose (Recommended)
+
+Start all services using Docker Compose:
+
+[source,bash]
+----
+docker compose up --build
+----
+
+This will start:
+
+* All application modules
+* IBM MQ
+* Kafka
+* Prometheus
+* Grafana
+* Loki
+* Tempo
+* Oracle Database
+* SonarQube
+
+=== Option 2: Hybrid Mode
+
+Start infrastructure services only, then run applications locally:
+
+[source,bash]
+----
+# Start infrastructure
+runLocalDocker.bat
+
+# In separate terminals, start each application
+./gradlew :perf-tester:bootRun
+./gradlew :ibm-mq-consumer:bootRun
+./gradlew :kafka-consumer:bootRun
+./gradlew :api-gateway:bootRun
+----
+
+=== Option 3: Full Local Development
+
+For development without Docker:
+
+. Install and configure IBM MQ locally
+. Install and configure Apache Kafka locally
+. Install and configure Prometheus, Grafana locally
+. Update application properties to point to local services
+. Run applications using Gradle
+
+== Verifying the Installation
+
+=== Check Service Health
+
+After starting all services, verify they are running:
+
+[source,bash]
+----
+# Check perf-tester health
+curl http://localhost:8080/actuator/health
+
+# Check ibm-mq-consumer health
+curl http://localhost:8081/actuator/health
+
+# Check kafka-consumer health
+curl http://localhost:8082/actuator/health
+
+# Check api-gateway health
+curl http://localhost:8090/actuator/health
+----
+
+Expected response:
+
+[source,json]
+----
+{
+  "status": "UP",
+  "components": {
+    "diskSpace": { "status": "UP" },
+    "jms": { "status": "UP" },
+    "ping": { "status": "UP" }
+  }
+}
+----
+
+=== Send a Test Message
+
+[source,bash]
+----
+curl -X POST http://localhost:8080/api/perf/send \
+  -H "Content-Type: text/plain" \
+  -d "Hello, World!"
+----
+
+=== Access Web UIs
+
+Verify access to all web interfaces:
+
+[cols="2,3"]
+|===
+|Service |URL
+
+|Swagger UI
+|http://localhost:8080/swagger-ui/index.html
+
+|Grafana
+|http://localhost:3000 (admin/admin)
+
+|Prometheus
+|http://localhost:9090
+
+|Kafdrop
+|http://localhost:9000/kafdrop
+
+|IBM MQ Console
+|https://localhost:9443/ibmmq/console (admin/passw0rd)
+
+|SonarQube
+|http://localhost:9001 (admin/admin)
+|===
+
+== Troubleshooting Installation
+
+=== Java Version Issues
+
+If you encounter Java version errors:
+
+[source,bash]
+----
+# Check Java version
+java -version
+
+# Should show: openjdk version "25" or higher
+----
+
+If wrong version, set JAVA_HOME:
+
+[source,bash]
+----
+# Windows
+set JAVA_HOME=C:\path\to\jdk-25
+
+# Linux/macOS
+export JAVA_HOME=/path/to/jdk-25
+----
+
+=== Docker Memory Issues
+
+IBM MQ and SonarQube require significant memory. Ensure Docker has at least 8GB RAM allocated.
+
+For Docker Desktop:
+
+. Open Docker Desktop Settings
+. Go to Resources > Advanced
+. Set Memory to at least 8GB
+. Apply & Restart
+
+=== Port Conflicts
+
+If ports are already in use, modify `compose.yaml` or use different ports:
+
+[source,yaml]
+----
+services:
+  perf-tester:
+    ports:
+      - "18080:8080"  # Changed from 8080
+----
+
+=== IBM MQ License Error
+
+If IBM MQ fails to start with license error:
+
+[source,bash]
+----
+# Ensure LICENSE=accept is set in compose.yaml
+environment:
+  LICENSE: accept
+----

@@ -35,3 +35,15 @@ jobs:
         with:
           name: code-coverage-report
           path: build/reports/jacoco/html/*.html
+
+      - name: Archive technical documentation (PDF)
+        uses: actions/upload-artifact@v4
+        with:
+          name: technical-documentation-pdf
+          path: build/docs/pdf/index.pdf
+
+      - name: Archive technical documentation (HTML)
+        uses: actions/upload-artifact@v4
+        with:
+          name: technical-documentation-html
+          path: build/docs/html/

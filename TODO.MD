@@ -1,16 +1,12 @@
-ollama launch claude
-https://docs.ollama.com/integrations/claude-code
-Lamacpp
+ollama launch claude --config
 
-
-fix ingress
+fix ingress in api gateway http://localhost/kafdrop kafdrop returns Whitelabel Error Page, http://localhost/loki loki 404 page not found possible config in api gateway
 fix grafana dashboards
-add documentation generator in pdf format like technical doc with chapter like architecture overview, instalation guide etc
 run test 50000 messages
 add spring config server for all resources
 add deployment with argocd
 add some image violation check
-
+add E2E automated tests with gherkin etc, add smoke tests to check that all services are working
 
 Test7
 ======

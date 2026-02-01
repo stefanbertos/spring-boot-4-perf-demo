@@ -1,0 +1,405 @@
+= Deployment Guide
+
+== Deployment Options
+
+The application supports multiple deployment strategies:
+
+[cols="2,3,2"]
+|===
+|Option |Use Case |Complexity
+
+|Docker Compose
+|Local development, testing
+|Low
+
+|Kubernetes (Helm)
+|Production, cloud deployment
+|Medium
+
+|GCP/GKE
+|Google Cloud production
+|Medium
+|===
+
+== Docker Compose Deployment
+
+=== Starting All Services
+
+[source,bash]
+----
+# Build and start all services
+docker compose up --build
+
+# Start in detached mode
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+----
+
+=== Scaling Services
+
+Scale specific services for load testing:
+
+[source,bash]
+----
+# Scale ibm-mq-consumer to 10 replicas
+docker compose up -d --scale ibm-mq-consumer=10
+
+# Scale kafka-consumer to 10 replicas
+docker compose up -d --scale kafka-consumer=10
+----
+
+=== Resource Allocation
+
+Recommended resources for Docker Desktop:
+
+[cols="2,1,1"]
+|===
+|Setting |Minimum |Recommended
+
+|Memory
+|8 GB
+|16 GB
+
+|CPUs
+|4
+|8
+
+|Disk
+|50 GB
+|100 GB
+|===
+
+== Kubernetes Deployment with Helm
+
+=== Prerequisites
+
+* Kubernetes cluster (minikube, kind, GKE, EKS, AKS)
+* Helm 3.x installed
+* kubectl configured
+
+=== Deployment Steps
+
+[source,bash]
+----
+cd infrastructure/helm
+
+# Deploy all components
+deployHelm.bat          # Windows
+./deployHelm.sh         # Linux/macOS
+----
+
+=== Deployment Script Details
+
+The deployment script performs the following steps:
+
+. Build application JARs with Gradle
+. Build Docker images for all modules
+. Load/push images to cluster
+. Create namespace `perf-demo`
+. Deploy infrastructure (MQ, Kafka, databases)
+. Deploy observability stack (Prometheus, Grafana, Loki, Tempo)
+. Deploy application modules
+. Deploy API Gateway and Ingress
+
+=== Manual Helm Deployment
+
+Deploy individual components:
+
+[source,bash]
+----
+# Create namespace
+kubectl create namespace perf-demo
+
+# Deploy IBM MQ
+helm upgrade --install perf-ibm-mq ./ibm-mq \
+    --namespace perf-demo \
+    --wait --timeout 5m
+
+# Deploy Kafka
+helm upgrade --install perf-kafka ./kafka \
+    --namespace perf-demo \
+    --wait --timeout 5m
+
+# Deploy application
+helm upgrade --install perf-perf-tester ./perf-tester \
+    --namespace perf-demo \
+    --set image.tag=latest \
+    --wait --timeout 3m
+----
+
+=== Verifying Deployment
+
+[source,bash]
+----
+# Check all pods
+kubectl get pods -n perf-demo
+
+# Check services
+kubectl get svc -n perf-demo
+
+# Check ingress
+kubectl get ingress -n perf-demo
+
+# View pod logs
+kubectl logs -f deployment/perf-perf-tester -n perf-demo
+----
+
+=== Uninstalling
+
+[source,bash]
+----
+cd infrastructure/helm
+
+# Uninstall all components
+cleanup.bat             # Windows
+./cleanup.sh            # Linux/macOS
+----
+
+== GCP/GKE Deployment
+
+=== Prerequisites
+
+* GCP project with billing enabled
+* gcloud CLI installed and authenticated
+* GKE cluster created
+
+=== Configuration
+
+Set required environment variables:
+
+[source,bash]
+----
+# Required
+set GCP_PROJECT=your-project-id
+
+# Optional (defaults shown)
+set GCP_REGION=us-central1
+set GCP_REGISTRY=%GCP_REGION%-docker.pkg.dev/%GCP_PROJECT%/perf-demo
+----
+
+=== Deployment
+
+[source,bash]
+----
+# Connect to GKE cluster
+gcloud container clusters get-credentials your-cluster \
+    --region us-central1 \
+    --project your-project-id
+
+# Deploy
+cd infrastructure/helm
+deployHelm.bat
+----
+
+The script automatically:
+
+. Configures Docker for Artifact Registry
+. Creates Artifact Registry repository if needed
+. Tags and pushes images to Artifact Registry
+. Deploys using Helm with correct image references
+
+=== GKE-Specific Configuration
+
+For GKE, update Helm values:
+
+.values.yaml overrides
+[source,yaml]
+----
+# Enable GKE ingress
+ingress:
+  enabled: true
+  className: "gce"
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "perf-demo-ip"
+
+# Use workload identity
+serviceAccount:
+  annotations:
+    iam.gke.io/gcp-service-account: perf-demo@PROJECT.iam.gserviceaccount.com
+----
+
+== Helm Chart Structure
+
+Each component follows a standard Helm chart structure:
+
+[source,text]
+----
+component-name/
+├── Chart.yaml              # Chart metadata
+├── values.yaml             # Default values
+└── templates/
+    ├── _helpers.tpl        # Template helpers
+    ├── deployment.yaml     # Kubernetes Deployment
+    ├── service.yaml        # Kubernetes Service
+    ├── configmap.yaml      # Configuration (optional)
+    ├── secret.yaml         # Secrets (optional)
+    └── pvc.yaml            # Persistent storage (optional)
+----
+
+=== Resource Requirements
+
+All deployments include resource requests and limits:
+
+[source,yaml]
+----
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+----
+
+=== Available Helm Charts
+
+[cols="2,3,2"]
+|===
+|Chart |Description |Default Replicas
+
+|api-gateway
+|Spring Cloud Gateway
+|1
+
+|grafana
+|Visualization
+|1
+
+|ibm-mq
+|Message queue
+|1
+
+|ibm-mq-consumer
+|MQ to Kafka bridge
+|1
+
+|ingress
+|Ingress configuration
+|N/A
+
+|kafdrop
+|Kafka UI
+|1
+
+|kafka
+|Message broker
+|1
+
+|kafka-consumer
+|Message processor
+|1
+
+|kafka-exporter
+|Kafka metrics
+|1
+
+|loki
+|Log aggregation
+|1
+
+|oracle
+|Database
+|1
+
+|oracle-exporter
+|DB metrics
+|1
+
+|perf-tester
+|Main application
+|1
+
+|prometheus
+|Metrics collection
+|1
+
+|promtail
+|Log shipping
+|DaemonSet
+
+|sonarqube
+|Code quality
+|1
+
+|tempo
+|Tracing
+|1
+|===
+
+== Production Considerations
+
+=== High Availability
+
+For production, increase replicas:
+
+[source,yaml]
+----
+# values.yaml
+replicaCount: 3
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+----
+
+=== Persistent Storage
+
+Enable persistence for stateful components:
+
+[source,yaml]
+----
+persistence:
+  enabled: true
+  size: 50Gi
+  storageClass: "standard-rwo"
+----
+
+=== Security
+
+. Change default passwords
+. Enable TLS for all services
+. Use network policies
+. Enable pod security policies
+
+=== Monitoring
+
+. Configure alerting in Grafana
+. Set up PagerDuty/Slack integrations
+. Create runbooks for common alerts
+
+== Rollback Procedures
+
+=== Helm Rollback
+
+[source,bash]
+----
+# List release history
+helm history perf-perf-tester -n perf-demo
+
+# Rollback to previous revision
+helm rollback perf-perf-tester 1 -n perf-demo
+
+# Rollback to specific revision
+helm rollback perf-perf-tester 3 -n perf-demo
+----
+
+=== Docker Compose Rollback
+
+[source,bash]
+----
+# Pull previous image version
+docker compose pull
+
+# Restart with previous images
+docker compose up -d
+----
