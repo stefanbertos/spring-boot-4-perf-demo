@@ -30,12 +30,8 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
-      - name: Upload build artifacts
+      - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path:
-            - build/reports/jacoco/test-execution/*.exec
-            - build/reports/jacoco/html/*.html
-            - build/test-results/*.xml
-            - build/coverage/*.txt
+          name: code-coverage-report
+          path: build/reports/jacoco/html/*.html
