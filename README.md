@@ -27,6 +27,7 @@ Multi-module Spring Boot application with IBM MQ and Kafka integration for perfo
    gradlew.bat :perf-tester:bootRun
    gradlew.bat :ibm-mq-consumer:bootRun
    gradlew.bat :kafka-consumer:bootRun
+   gradlew.bat :api-gateway:bootRun
    ```
 
 ## Message Flow

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: iamseth/oracledb_exporter
+  repository: gvenzl/oracle-free:23.9-slim-faststart
   tag: "0.6.0"
   pullPolicy: IfNotPresent
 

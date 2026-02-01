@@ -96,14 +96,14 @@ services:
       - "9443:9443"
       - "9157:9157"
     volumes:
-      - ./infrastructure/mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
+      - ./infrastructure/docker/mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
 
   prometheus:
     image: prom/prometheus:v3.1.0
     ports:
       - "9090:9090"
     volumes:
-      - ./infrastructure/prometheus:/etc/prometheus
+      - ./infrastructure/docker/prometheus:/etc/prometheus
 
   tempo:
     image: grafana/tempo:2.6.1
@@ -113,7 +113,7 @@ services:
       - "3200:3200"
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
-      - ./infrastructure/tempo:/etc/tempo
+      - ./infrastructure/docker/tempo:/etc/tempo
       - tempo-data:/var/tempo
 
   loki:
@@ -122,7 +122,7 @@ services:
       - "3100:3100"
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
-      - ./infrastructure/loki:/etc/loki
+      - ./infrastructure/docker/loki:/etc/loki
       - loki-data:/loki
 
   kafdrop:
@@ -149,8 +149,8 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
-      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infrastructure/docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/docker/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - renderer
 

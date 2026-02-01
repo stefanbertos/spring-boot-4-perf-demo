@@ -2,9 +2,10 @@ ollama launch claude
 https://docs.ollama.com/integrations/claude-code
 Lamacpp
 
-
-fix grafana dashboards
+fix oracle exporter to use https://oracle.github.io/oracle-db-appdev-monitoring/docs/getting-started/basics
 fix ingress
+fix grafana dashboards
+
 add documentation generator in pdf format like technical doc with chapter like architecture overview, instalation guide etc
 run test 50000 messages
 add spring config server for all resources
