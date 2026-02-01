@@ -24,6 +24,9 @@ jobs:
         with:
           gradle-version: '9.2.1'
 
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
+
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
