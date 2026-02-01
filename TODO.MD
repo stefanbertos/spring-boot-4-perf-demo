@@ -1,6 +1,6 @@
 ollama launch claude --config
 
-fix ingress in api gateway http://localhost/kafdrop kafdrop returns Whitelabel Error Page, http://localhost/loki loki 404 page not found possible config in api gateway
+1.fix loki redirect to grafana explore
 fix grafana dashboards
 run test 50000 messages
 add spring config server for all resources
