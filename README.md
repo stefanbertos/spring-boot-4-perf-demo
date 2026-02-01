@@ -116,6 +116,35 @@ curl -X POST http://localhost:8080/api/perf/send -d "your message"
 curl http://localhost:8080/actuator/health
 ```
 
+### Infrastructure Health Monitoring
+
+The perf-tester module performs TCP port health checks on infrastructure services:
+
+| Service | Port | Metric |
+|---------|------|--------|
+| Kafka | 9092 | `health.infra.status{service="kafka"}` |
+| IBM MQ | 1414 | `health.infra.status{service="ibm-mq"}` |
+| Oracle | 1521 | `health.infra.status{service="oracle"}` |
+
+Health check timing is exposed via `health.ping.duration` metric.
+
+Configuration (application.yml):
+```yaml
+app:
+  healthcheck:
+    kafka:
+      host: kafka
+      port: 9092
+    mq:
+      host: ibm-mq
+      port: 1414
+    oracle:
+      host: oracle
+      port: 1521
+    connection-timeout-ms: 5000
+    interval-ms: 60000
+```
+
 ### Metrics
 ```bash
 curl http://localhost:8080/actuator/prometheus
@@ -138,6 +167,31 @@ curl http://localhost:8080/actuator/prometheus
 | mq-responses | kafka-consumer outbound / ibm-mq-consumer inbound |
 
 ## Build Commands
+
+### Build Profiles
+
+The build supports two profiles for different deployment targets:
+
+| Profile | Command | Description |
+|---------|---------|-------------|
+| `docker` (default) | `./gradlew build` | Docker Compose support enabled, localhost URLs |
+| `kubernetes` | `./gradlew build -Pprofile=kubernetes` | No docker-compose, Kubernetes service URLs |
+
+```bash
+# Show current build profile
+./gradlew showProfile
+
+# Build with default (docker) profile
+./gradlew build
+
+# Build for Kubernetes/Helm deployment
+./gradlew build -Pprofile=kubernetes
+
+# Run with Kubernetes profile (uses application-kubernetes.yml)
+./gradlew :perf-tester:bootRun -Pprofile=kubernetes
+```
+
+### Standard Commands
 
 ```bash
 # Build all modules (includes documentation generation)
@@ -251,6 +305,40 @@ Build enforces **Checkstyle** and **PMD 7.20.0**:
 # View reports after build
 # Checkstyle: build/reports/checkstyle/main.html
 # PMD: build/reports/pmd/main.html
+```
+
+## SonarQube Integration
+
+### Running SonarQube Analysis
+
+```bash
+# With Docker Compose (default)
+./gradlew sonar
+
+# With Kubernetes
+./gradlew sonar -Pprofile=kubernetes
+
+# With custom URL and token
+SONAR_HOST_URL=http://your-sonar:9000 SONAR_TOKEN=your-token ./gradlew sonar
+```
+
+### Helm Deployment with Sonar Token
+
+When deploying SonarQube via Helm, configure the authentication token:
+
+```bash
+# Deploy with token
+helm install perf-sonarqube ./sonarqube --set sonar.token=your-generated-token
+
+# Or update existing deployment
+helm upgrade perf-sonarqube ./sonarqube --set sonar.token=your-generated-token
+```
+
+The token is stored in a Kubernetes Secret (`perf-sonarqube-token`) and can be used by CI/CD pipelines:
+
+```bash
+# Retrieve token from secret
+kubectl get secret perf-sonarqube-token -o jsonpath='{.data.token}' | base64 -d
 ```
 
 ## GCP/GKE Deployment

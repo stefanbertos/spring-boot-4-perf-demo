@@ -1,8 +1,12 @@
-# Kubernetes profile
+sam# Kubernetes/Helm profile - uses Kubernetes service names
 spring:
   docker:
     compose:
       enabled: false
+  datasource:
+    url: jdbc:oracle:thin:@perf-oracle:1521/XEPDB1
+    username: perfuser
+    password: perfpass
 
 ibm:
   mq:
@@ -20,3 +24,15 @@ app:
     export-path: /tmp/prometheus-exports
   export:
     path: /tmp/test-exports
+  healthcheck:
+    kafka:
+      host: perf-kafka
+      port: 9092
+    mq:
+      host: perf-ibm-mq
+      port: 1414
+    oracle:
+      host: perf-oracle
+      port: 1521
+    connection-timeout-ms: 5000
+    interval-ms: 60000

@@ -1,3 +1,4 @@
+# Docker Compose profile - uses docker-compose service names
 spring:
   docker:
     compose:
@@ -25,6 +26,13 @@ app:
     path: /tmp/test-exports
   healthcheck:
     kafka:
-      bootstrap-servers: kafka:9092
+      host: kafka
+      port: 9092
+    mq:
+      host: ibm-mq
+      port: 1414
     oracle:
-      url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+      host: oracle
+      port: 1521
+    connection-timeout-ms: 5000
+    interval-ms: 60000

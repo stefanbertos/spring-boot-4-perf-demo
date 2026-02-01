@@ -9,6 +9,17 @@ service:
   type: ClusterIP
   port: 9000
 
+# Sonar authentication token for CI/CD integration
+# Generate token in SonarQube: Administration > Security > Users > Tokens
+sonar:
+  # Token used by Gradle/Maven to authenticate with SonarQube
+  # Set via --set sonar.token=<your-token> or in values override
+  token: ""
+  # Project key for analysis
+  projectKey: "spring-boot-4-perf-demo"
+  # External URL for Gradle to reach SonarQube (from outside cluster)
+  externalUrl: "http://localhost:9001/sonar"
+
 resources:
   requests:
     memory: "2Gi"

@@ -12,6 +12,21 @@ repositories {
     mavenCentral()
 }
 
+// ==================== Build Profile Configuration ====================
+// Usage:
+//   ./gradlew build                              # Default: docker-compose profile
+//   ./gradlew build -Pprofile=docker             # Explicit docker-compose profile
+//   ./gradlew build -Pprofile=kubernetes         # Kubernetes/Helm/Rancher profile
+//
+// Profile determines:
+//   - docker:     includes spring-boot-docker-compose, uses localhost URLs
+//   - kubernetes: excludes docker-compose, uses Kubernetes service URLs
+ext {
+    buildProfile = project.hasProperty('profile') ? project.property('profile') : 'docker'
+    isDockerProfile = buildProfile == 'docker'
+    isKubernetesProfile = buildProfile == 'kubernetes'
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
@@ -22,6 +37,13 @@ subprojects {
 
     group = 'com.example'
     version = '0.0.1-SNAPSHOT'
+
+    // Propagate profile to subprojects
+    ext {
+        buildProfile = rootProject.ext.buildProfile
+        isDockerProfile = rootProject.ext.isDockerProfile
+        isKubernetesProfile = rootProject.ext.isKubernetesProfile
+    }
 
     java {
         toolchain {
@@ -138,10 +160,14 @@ subprojects {
         implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 
         compileOnly 'org.projectlombok:lombok'
-        developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
         runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
         annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
         annotationProcessor 'org.projectlombok:lombok'
+
+        // Docker Compose support - only for docker profile
+        if (isDockerProfile) {
+            developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+        }
 
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -153,6 +179,21 @@ subprojects {
 
     tasks.named('bootRun') {
         jvmArgs = ['-XX:+UseZGC']
+        // Set Spring profile based on build profile
+        if (isKubernetesProfile) {
+            systemProperty 'spring.profiles.active', 'kubernetes'
+        }
+    }
+
+    // Log active build profile
+    tasks.register('showProfile') {
+        group = 'help'
+        description = 'Shows the active build profile'
+        doLast {
+            println "Active build profile: ${buildProfile}"
+            println "Docker Compose support: ${isDockerProfile ? 'ENABLED' : 'DISABLED'}"
+            println "Kubernetes/Helm mode: ${isKubernetesProfile ? 'ENABLED' : 'DISABLED'}"
+        }
     }
 }
 
@@ -182,11 +223,20 @@ tasks.register('jacocoAggregatedReport', JacocoReport) {
 }
 
 // ==================== SonarQube Configuration ====================
+// URLs differ based on profile:
+//   docker:     http://localhost:9001 (port-forwarded or docker-compose)
+//   kubernetes: http://perf-sonarqube:9000/sonar (Kubernetes service)
+ext {
+    sonarUrlDocker = 'http://localhost:9001'
+    sonarUrlKubernetes = 'http://perf-sonarqube:9000/sonar'
+    sonarDefaultUrl = isKubernetesProfile ? sonarUrlKubernetes : sonarUrlDocker
+}
+
 sonar {
     properties {
         property 'sonar.projectKey', 'spring-boot-4-perf-demo'
         property 'sonar.projectName', 'Spring Boot 4 Performance Demo'
-        property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'http://localhost:9001'
+        property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: sonarDefaultUrl
         property 'sonar.token', System.getenv('SONAR_TOKEN') ?: ''
         property 'sonar.sourceEncoding', 'UTF-8'
         property 'sonar.java.source', '25'

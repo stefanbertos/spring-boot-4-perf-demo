@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,15 +16,18 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class PerformanceTracker {
 
+    private static final long TPS_WINDOW_MS = 60_000L; // 1 minute window for TPS calculation
+
     private final Timer e2eLatencyTimer;
     private final ConcurrentHashMap<String, Long> inFlightMessages = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedDeque<Long> completionTimestamps = new ConcurrentLinkedDeque<>();
 
     private volatile CountDownLatch completionLatch;
     private volatile long testStartTime;
     private final AtomicLong completedCount = new AtomicLong(0);
     private final AtomicLong totalLatencyNanos = new AtomicLong(0);
     private final AtomicLong minLatencyNanos = new AtomicLong(Long.MAX_VALUE);
-    private final AtomicLong maxLatencyNanos = new AtomicLong(0);
+    private final AtomicLong maxLatencyNanos = new AtomicLong(Long.MIN_VALUE);
 
     public PerformanceTracker(MeterRegistry meterRegistry) {
         this.e2eLatencyTimer = Timer.builder("mq.e2e.latency")
@@ -35,10 +39,11 @@ public class PerformanceTracker {
 
     public void startTest(int messageCount) {
         inFlightMessages.clear();
+        completionTimestamps.clear();
         completedCount.set(0);
         totalLatencyNanos.set(0);
         minLatencyNanos.set(Long.MAX_VALUE);
-        maxLatencyNanos.set(0);
+        maxLatencyNanos.set(Long.MIN_VALUE);
         completionLatch = new CountDownLatch(messageCount);
         testStartTime = System.nanoTime();
         log.info("Started performance test with {} messages", messageCount);
@@ -52,6 +57,10 @@ public class PerformanceTracker {
         Long sendTime = inFlightMessages.remove(messageId);
         if (sendTime != null) {
             long latencyNanos = System.nanoTime() - sendTime;
+            long currentTimeMs = System.currentTimeMillis();
+
+            // Record completion timestamp for TPS calculation
+            completionTimestamps.addLast(currentTimeMs);
 
             // Record to Micrometer timer (automatically pushed to Prometheus)
             e2eLatencyTimer.record(Duration.ofNanos(latencyNanos));
@@ -102,14 +111,18 @@ public class PerformanceTracker {
         long testDurationNanos = System.nanoTime() - testStartTime;
         double testDurationSeconds = testDurationNanos / 1_000_000_000.0;
 
-        double tps = completed / testDurationSeconds;
+        // Calculate TPS over 1-minute window (same as Grafana rate[1m])
+        double tps = calculateWindowedTps();
+
         double avgLatencyMs = completed > 0
                 ? (totalLatencyNanos.get() / completed) / 1_000_000.0
                 : 0;
         double minLatencyMs = minLatencyNanos.get() != Long.MAX_VALUE
                 ? minLatencyNanos.get() / 1_000_000.0
                 : 0;
-        double maxLatencyMs = maxLatencyNanos.get() / 1_000_000.0;
+        double maxLatencyMs = maxLatencyNanos.get() != Long.MIN_VALUE
+                ? maxLatencyNanos.get() / 1_000_000.0
+                : 0;
 
         return new PerfTestResult(
                 completed,
@@ -120,6 +133,47 @@ public class PerformanceTracker {
                 minLatencyMs,
                 maxLatencyMs
         );
+    }
+
+    /**
+     * Calculates TPS over a 1-minute sliding window, matching Grafana's rate[1m] calculation.
+     * If the test duration is less than 1 minute, calculates rate over the actual duration.
+     */
+    private double calculateWindowedTps() {
+        long currentTimeMs = System.currentTimeMillis();
+        long windowStartMs = currentTimeMs - TPS_WINDOW_MS;
+
+        // Remove timestamps older than the window
+        while (!completionTimestamps.isEmpty()) {
+            Long oldest = completionTimestamps.peekFirst();
+            if (oldest != null && oldest < windowStartMs) {
+                completionTimestamps.pollFirst();
+            } else {
+                break;
+            }
+        }
+
+        int messagesInWindow = completionTimestamps.size();
+
+        if (messagesInWindow == 0) {
+            return 0.0;
+        }
+
+        // Find actual time span of messages in window
+        Long firstTimestamp = completionTimestamps.peekFirst();
+        Long lastTimestamp = completionTimestamps.peekLast();
+
+        if (firstTimestamp == null || lastTimestamp == null) {
+            return 0.0;
+        }
+
+        // Calculate the effective window duration
+        // Use the smaller of: actual message span or 1 minute
+        long actualSpanMs = lastTimestamp - firstTimestamp;
+        long effectiveWindowMs = Math.min(Math.max(actualSpanMs, 1), TPS_WINDOW_MS);
+
+        // TPS = messages in window / window duration in seconds
+        return messagesInWindow / (effectiveWindowMs / 1000.0);
     }
 
     public static String extractMessageId(String message) {

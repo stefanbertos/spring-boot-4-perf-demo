@@ -8,6 +8,7 @@ add deployment with argocd
 add some image violation check
 add E2E automated tests with gherkin etc, add smoke tests to check that all services are working
 
+
 Test7
 ======
 Completed Messages:   5000

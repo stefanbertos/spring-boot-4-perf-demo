@@ -2,293 +2,212 @@ package com.example.perftester.health;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import jakarta.jms.Connection;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.JMSException;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.ListTopicsResult;
-import org.apache.kafka.common.KafkaFuture;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.io.IOException;
+import java.net.ServerSocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class HealthCheckSchedulerTest {
 
-    @Mock
-    private ConnectionFactory mqConnectionFactory;
-
-    @Mock
-    private Connection mqConnection;
-
     private MeterRegistry meterRegistry;
+    private ServerSocket kafkaServer;
+    private ServerSocket mqServer;
+    private ServerSocket oracleServer;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         meterRegistry = new SimpleMeterRegistry();
+        kafkaServer = new ServerSocket(0);
+        mqServer = new ServerSocket(0);
+        oracleServer = new ServerSocket(0);
+    }
+
+    @AfterEach
+    void tearDown() {
+        closeServer(kafkaServer);
+        closeServer(mqServer);
+        closeServer(oracleServer);
+    }
+
+    private void closeServer(ServerSocket server) {
+        if (server != null && !server.isClosed()) {
+            try {
+                server.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
+    }
+
+    private HealthCheckProperties createProperties(int kafkaPort, int mqPort, int oraclePort) {
+        return new HealthCheckProperties(
+                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaPort),
+                new HealthCheckProperties.ServiceEndpoint("localhost", mqPort),
+                new HealthCheckProperties.ServiceEndpoint("localhost", oraclePort),
+                5000,
+                60000
+        );
     }
 
     private HealthCheckScheduler createScheduler() {
+        var properties = createProperties(
+                kafkaServer.getLocalPort(),
+                mqServer.getLocalPort(),
+                oracleServer.getLocalPort()
+        );
+        return new HealthCheckScheduler(properties, meterRegistry);
+    }
+
+    private HealthCheckScheduler createSchedulerWithBadPorts() {
+        var properties = createProperties(1, 2, 3);
         return new HealthCheckScheduler(
-                mqConnectionFactory,
-                meterRegistry,
-                "localhost:9092",
-                "jdbc:oracle:thin:@localhost:1521/XEPDB1",
-                "testuser",
-                "testpass",
-                1000
+                new HealthCheckProperties(
+                        new HealthCheckProperties.ServiceEndpoint("localhost", 1),
+                        new HealthCheckProperties.ServiceEndpoint("localhost", 2),
+                        new HealthCheckProperties.ServiceEndpoint("localhost", 3),
+                        1000,
+                        60000
+                ),
+                meterRegistry
         );
     }
 
     @Test
     void constructorShouldRegisterGauges() {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+        createScheduler();
 
-            var scheduler = createScheduler();
-
-            assertThat(meterRegistry.find("health.mq.status").gauge()).isNotNull();
-            assertThat(meterRegistry.find("health.kafka.status").gauge()).isNotNull();
-            assertThat(meterRegistry.find("health.oracle.status").gauge()).isNotNull();
-        }
+        assertThat(meterRegistry.find("health.infra.status").tag("service", "kafka").gauge()).isNotNull();
+        assertThat(meterRegistry.find("health.infra.status").tag("service", "ibm-mq").gauge()).isNotNull();
+        assertThat(meterRegistry.find("health.infra.status").tag("service", "oracle").gauge()).isNotNull();
     }
 
     @Test
     void constructorShouldRegisterTimers() {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+        createScheduler();
 
-            var scheduler = createScheduler();
-
-            assertThat(meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer()).isNotNull();
-            assertThat(meterRegistry.find("health.ping.duration").tag("service", "kafka").timer()).isNotNull();
-            assertThat(meterRegistry.find("health.ping.duration").tag("service", "oracle").timer()).isNotNull();
-        }
+        assertThat(meterRegistry.find("health.ping.duration").tag("service", "kafka").timer()).isNotNull();
+        assertThat(meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer()).isNotNull();
+        assertThat(meterRegistry.find("health.ping.duration").tag("service", "oracle").timer()).isNotNull();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void performHealthChecksShouldCheckAllServices() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void performHealthChecksShouldSetStatusToOneWhenAllServicesUp() {
+        var scheduler = createScheduler();
+        scheduler.performHealthChecks();
 
-            var scheduler = createScheduler();
-
-            when(mqConnectionFactory.createConnection()).thenReturn(mqConnection);
-            setupKafkaSuccess(adminClientMock);
-            setupOracleSuccess(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            verify(mqConnection).start();
-            verify(mqConnection).close();
-        }
+        assertGaugeValue("kafka", 1.0);
+        assertGaugeValue("ibm-mq", 1.0);
+        assertGaugeValue("oracle", 1.0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkMqShouldSetStatusToOneOnSuccess() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void checkKafkaShouldSetStatusToZeroOnFailure() throws IOException {
+        kafkaServer.close();
 
-            var scheduler = createScheduler();
+        var properties = new HealthCheckProperties(
+                new HealthCheckProperties.ServiceEndpoint("localhost", 1),
+                new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", oracleServer.getLocalPort()),
+                1000,
+                60000
+        );
+        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
+        scheduler.performHealthChecks();
 
-            when(mqConnectionFactory.createConnection()).thenReturn(mqConnection);
-            setupKafkaFailure(adminClientMock);
-            setupOracleFailure(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var mqGauge = meterRegistry.find("health.mq.status").gauge();
-            assertThat(mqGauge).isNotNull();
-            assertThat(mqGauge.value()).isEqualTo(1.0);
-        }
+        assertGaugeValue("kafka", 0.0);
+        assertGaugeValue("ibm-mq", 1.0);
+        assertGaugeValue("oracle", 1.0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkMqShouldSetStatusToZeroOnFailure() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void checkMqShouldSetStatusToZeroOnFailure() throws IOException {
+        mqServer.close();
 
-            var scheduler = createScheduler();
+        var properties = new HealthCheckProperties(
+                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", 2),
+                new HealthCheckProperties.ServiceEndpoint("localhost", oracleServer.getLocalPort()),
+                1000,
+                60000
+        );
+        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
+        scheduler.performHealthChecks();
 
-            when(mqConnectionFactory.createConnection()).thenThrow(new JMSException("Connection failed"));
-            setupKafkaFailure(adminClientMock);
-            setupOracleFailure(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var mqGauge = meterRegistry.find("health.mq.status").gauge();
-            assertThat(mqGauge).isNotNull();
-            assertThat(mqGauge.value()).isEqualTo(0.0);
-        }
+        assertGaugeValue("kafka", 1.0);
+        assertGaugeValue("ibm-mq", 0.0);
+        assertGaugeValue("oracle", 1.0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkKafkaShouldSetStatusToOneOnSuccess() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void checkOracleShouldSetStatusToZeroOnFailure() throws IOException {
+        oracleServer.close();
 
-            var scheduler = createScheduler();
+        var properties = new HealthCheckProperties(
+                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", 3),
+                1000,
+                60000
+        );
+        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
+        scheduler.performHealthChecks();
 
-            when(mqConnectionFactory.createConnection()).thenThrow(new JMSException("MQ down"));
-            setupKafkaSuccess(adminClientMock);
-            setupOracleFailure(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var kafkaGauge = meterRegistry.find("health.kafka.status").gauge();
-            assertThat(kafkaGauge).isNotNull();
-            assertThat(kafkaGauge.value()).isEqualTo(1.0);
-        }
+        assertGaugeValue("kafka", 1.0);
+        assertGaugeValue("ibm-mq", 1.0);
+        assertGaugeValue("oracle", 0.0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkKafkaShouldSetStatusToZeroOnFailure() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void healthChecksShouldRecordTimerMetrics() {
+        var scheduler = createScheduler();
+        scheduler.performHealthChecks();
 
-            var scheduler = createScheduler();
+        var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
+        var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
+        var oracleTimer = meterRegistry.find("health.ping.duration").tag("service", "oracle").timer();
 
-            when(mqConnectionFactory.createConnection()).thenThrow(new JMSException("MQ down"));
-            setupKafkaFailure(adminClientMock);
-            setupOracleFailure(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var kafkaGauge = meterRegistry.find("health.kafka.status").gauge();
-            assertThat(kafkaGauge).isNotNull();
-            assertThat(kafkaGauge.value()).isEqualTo(0.0);
-        }
+        assertThat(kafkaTimer).isNotNull();
+        assertThat(kafkaTimer.count()).isEqualTo(1);
+        assertThat(mqTimer).isNotNull();
+        assertThat(mqTimer.count()).isEqualTo(1);
+        assertThat(oracleTimer).isNotNull();
+        assertThat(oracleTimer.count()).isEqualTo(1);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkOracleShouldSetStatusToOneOnSuccess() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void healthChecksShouldRecordTimerMetricsOnFailure() {
+        var scheduler = createSchedulerWithBadPorts();
+        scheduler.performHealthChecks();
 
-            var scheduler = createScheduler();
+        var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
+        var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
+        var oracleTimer = meterRegistry.find("health.ping.duration").tag("service", "oracle").timer();
 
-            when(mqConnectionFactory.createConnection()).thenThrow(new JMSException("MQ down"));
-            setupKafkaFailure(adminClientMock);
-            setupOracleSuccess(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var oracleGauge = meterRegistry.find("health.oracle.status").gauge();
-            assertThat(oracleGauge).isNotNull();
-            assertThat(oracleGauge.value()).isEqualTo(1.0);
-        }
+        assertThat(kafkaTimer).isNotNull();
+        assertThat(kafkaTimer.count()).isEqualTo(1);
+        assertThat(mqTimer).isNotNull();
+        assertThat(mqTimer.count()).isEqualTo(1);
+        assertThat(oracleTimer).isNotNull();
+        assertThat(oracleTimer.count()).isEqualTo(1);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void checkOracleShouldSetStatusToZeroOnFailure() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
+    void allServicesDownShouldSetAllStatusesToZero() {
+        var scheduler = createSchedulerWithBadPorts();
+        scheduler.performHealthChecks();
 
-            var scheduler = createScheduler();
-
-            when(mqConnectionFactory.createConnection()).thenThrow(new JMSException("MQ down"));
-            setupKafkaFailure(adminClientMock);
-            setupOracleFailure(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var oracleGauge = meterRegistry.find("health.oracle.status").gauge();
-            assertThat(oracleGauge).isNotNull();
-            assertThat(oracleGauge.value()).isEqualTo(0.0);
-        }
+        assertGaugeValue("kafka", 0.0);
+        assertGaugeValue("ibm-mq", 0.0);
+        assertGaugeValue("oracle", 0.0);
     }
 
-    @Test
-    @SuppressWarnings("unchecked")
-    void healthChecksShouldRecordTimerMetrics() throws Exception {
-        try (var adminClientMock = mockStatic(AdminClient.class);
-             var driverManagerMock = mockStatic(DriverManager.class)) {
-
-            var scheduler = createScheduler();
-
-            when(mqConnectionFactory.createConnection()).thenReturn(mqConnection);
-            setupKafkaSuccess(adminClientMock);
-            setupOracleSuccess(driverManagerMock);
-
-            scheduler.performHealthChecks();
-
-            var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
-            var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
-            var oracleTimer = meterRegistry.find("health.ping.duration").tag("service", "oracle").timer();
-
-            assertThat(mqTimer).isNotNull();
-            assertThat(mqTimer.count()).isEqualTo(1);
-            assertThat(kafkaTimer).isNotNull();
-            assertThat(kafkaTimer.count()).isEqualTo(1);
-            assertThat(oracleTimer).isNotNull();
-            assertThat(oracleTimer.count()).isEqualTo(1);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void setupKafkaSuccess(org.mockito.MockedStatic<AdminClient> adminClientMock) throws Exception {
-        var adminClient = mock(AdminClient.class);
-        var listTopicsResult = mock(ListTopicsResult.class);
-        var future = mock(KafkaFuture.class);
-
-        adminClientMock.when(() -> AdminClient.create(any(Map.class))).thenReturn(adminClient);
-        lenient().when(adminClient.listTopics()).thenReturn(listTopicsResult);
-        lenient().when(listTopicsResult.names()).thenReturn(future);
-        lenient().when(future.get(anyLong(), any(TimeUnit.class))).thenReturn(Set.of("topic1"));
-    }
-
-    @SuppressWarnings("unchecked")
-    private void setupKafkaFailure(org.mockito.MockedStatic<AdminClient> adminClientMock) throws Exception {
-        var adminClient = mock(AdminClient.class);
-        var listTopicsResult = mock(ListTopicsResult.class);
-        var future = mock(KafkaFuture.class);
-
-        adminClientMock.when(() -> AdminClient.create(any(Map.class))).thenReturn(adminClient);
-        lenient().when(adminClient.listTopics()).thenReturn(listTopicsResult);
-        lenient().when(listTopicsResult.names()).thenReturn(future);
-        lenient().when(future.get(anyLong(), any(TimeUnit.class))).thenAnswer(invocation -> {
-            throw new TimeoutException("Kafka timeout");
-        });
-    }
-
-    private void setupOracleSuccess(org.mockito.MockedStatic<DriverManager> driverManagerMock) throws SQLException {
-        var oracleConnection = mock(java.sql.Connection.class);
-        driverManagerMock.when(() -> DriverManager.getConnection(anyString(), anyString(), anyString()))
-                .thenReturn(oracleConnection);
-        lenient().when(oracleConnection.isValid(anyInt())).thenReturn(true);
-    }
-
-    private void setupOracleFailure(org.mockito.MockedStatic<DriverManager> driverManagerMock) {
-        driverManagerMock.when(() -> DriverManager.getConnection(anyString(), anyString(), anyString()))
-                .thenAnswer(invocation -> {
-                    throw new SQLException("Oracle connection failed");
-                });
+    private void assertGaugeValue(String service, double expectedValue) {
+        var gauge = meterRegistry.find("health.infra.status").tag("service", service).gauge();
+        assertThat(gauge).isNotNull();
+        assertThat(gauge.value()).isEqualTo(expectedValue);
     }
 }
