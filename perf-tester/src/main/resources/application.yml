@@ -7,6 +7,26 @@ spring:
   docker:
     compose:
       file: ../compose.yaml
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: perfuser
+    password: perfpass
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        format_sql: true
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   jms:
     cache:
       enabled: true
@@ -109,6 +129,9 @@ spring:
   config:
     activate:
       on-profile: docker
+
+  datasource:
+    url: jdbc:oracle:thin:@oracle:1521/XEPDB1
 
 ibm:
   mq:

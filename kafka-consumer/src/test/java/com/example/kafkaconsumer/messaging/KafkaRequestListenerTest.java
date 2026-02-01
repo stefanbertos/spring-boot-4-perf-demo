@@ -17,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.charset.StandardCharsets;
 
@@ -56,8 +55,7 @@ class KafkaRequestListenerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        listener = new KafkaRequestListener(kafkaTemplate, meterRegistry, tracer);
-        ReflectionTestUtils.setField(listener, "kafkaResponseTopic", "mq-responses");
+        listener = new KafkaRequestListener(kafkaTemplate, meterRegistry, tracer, "mq-responses");
     }
 
     @Test

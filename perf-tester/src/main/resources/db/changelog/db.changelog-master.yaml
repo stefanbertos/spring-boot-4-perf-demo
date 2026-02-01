@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-perf-schema.yaml
+  - include:
+      file: db/changelog/changes/002-create-perf-test-run.yaml
+  - include:
+      file: db/changelog/changes/003-create-perf-message.yaml
+  - include:
+      file: db/changelog/changes/004-create-perf-metric.yaml
+  - include:
+      file: db/changelog/changes/005-create-indexes.yaml

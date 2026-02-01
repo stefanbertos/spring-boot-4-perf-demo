@@ -18,6 +18,9 @@ import java.util.Objects;
 @Service
 public class GrafanaExportService {
 
+    private static final long BUFFER_BEFORE_MS = 60000;
+    private static final long BUFFER_AFTER_MS = 30000;
+
     private final RestClient restClient;
     private final String grafanaUrl;
     private final String exportPath;
@@ -68,9 +71,8 @@ public class GrafanaExportService {
             return new DashboardExportResult(List.of(), List.of());
         }
 
-        // Add buffer time for metrics to be visible
-        long fromMs = testStartTimeMs - 60000; // 1 min before
-        long toMs = testEndTimeMs + 30000;     // 30 sec after
+        long fromMs = testStartTimeMs - BUFFER_BEFORE_MS;
+        long toMs = testEndTimeMs + BUFFER_AFTER_MS;
 
         for (DashboardInfo dashboard : DASHBOARDS) {
             try {

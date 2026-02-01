@@ -14,4 +14,7 @@
 
     <!-- Allow longer Application classes -->
     <suppress checks="FileLength" files=".*Application\.java$"/>
+
+    <!-- Suppress TooManyFields for JPA entity classes -->
+    <suppress checks="TooManyFields" files=".*/persistence/entity/.*\.java$"/>
 </suppressions>

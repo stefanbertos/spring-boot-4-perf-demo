@@ -2,11 +2,10 @@ ollama launch claude
 https://docs.ollama.com/integrations/claude-code
 Lamacpp
 
-add sonar plugin 7.2.2.6593 and sonar docker sonarqube:community, helm charts, fix sonar violations
+
 fix grafana dashboards
-add liquibase or flyway support to initialize database from scratch in the perf-tester module
-add github action to trigger the build and publish the reports
-add documentation generator
+fix ingress
+add documentation generator in pdf format like technical doc with chapter like architecture overview, instalation guide etc
 run test 50000 messages
 add spring config server for all resources
 add deployment with argocd

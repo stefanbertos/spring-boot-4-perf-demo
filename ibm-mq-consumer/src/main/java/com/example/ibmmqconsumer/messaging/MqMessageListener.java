@@ -28,15 +28,15 @@ public class MqMessageListener {
     private final Counter messagesForwarded;
     private final Counter messagesDropped;
     private final Tracer tracer;
-
-    @Value("${app.kafka.topic.request}")
-    private String kafkaRequestTopic;
+    private final String kafkaRequestTopic;
 
     public MqMessageListener(KafkaTemplate<String, String> kafkaTemplate,
                             MeterRegistry meterRegistry,
-                            Tracer tracer) {
+                            Tracer tracer,
+                            @Value("${app.kafka.topic.request}") String kafkaRequestTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.tracer = tracer;
+        this.kafkaRequestTopic = kafkaRequestTopic;
         this.messagesReceived = Counter.builder("mq.listener.messages.received")
                 .description("Total MQ messages received")
                 .tag("listener", "mq-to-kafka")

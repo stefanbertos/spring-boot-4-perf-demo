@@ -26,15 +26,15 @@ public class KafkaRequestListener {
     private final Counter messagesReceived;
     private final Counter messagesProcessed;
     private final Tracer tracer;
-
-    @Value("${app.kafka.topic.response}")
-    private String kafkaResponseTopic;
+    private final String kafkaResponseTopic;
 
     public KafkaRequestListener(KafkaTemplate<String, String> kafkaTemplate,
                                 MeterRegistry meterRegistry,
-                                Tracer tracer) {
+                                Tracer tracer,
+                                @Value("${app.kafka.topic.response}") String kafkaResponseTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.tracer = tracer;
+        this.kafkaResponseTopic = kafkaResponseTopic;
         this.messagesReceived = Counter.builder("kafka.request.messages.received")
                 .description("Total Kafka request messages received")
                 .tag("listener", "kafka-processor")

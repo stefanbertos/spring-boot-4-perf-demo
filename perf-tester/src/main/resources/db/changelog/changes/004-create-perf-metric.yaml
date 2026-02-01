@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-perf-metric
+      author: perf-tester
+      comment: Create PERF_METRIC table to store periodic metric snapshots
+      changes:
+        - createSequence:
+            sequenceName: PERF_METRIC_SEQ
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: PERF_METRIC
+            columns:
+              - column:
+                  name: ID
+                  type: NUMBER(19)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: TEST_RUN_ID
+                  type: NUMBER(19)
+                  constraints:
+                    nullable: false
+                  remarks: Foreign key to PERF_TEST_RUN
+              - column:
+                  name: METRIC_NAME
+                  type: VARCHAR2(200)
+                  constraints:
+                    nullable: false
+                  remarks: Name of the metric
+              - column:
+                  name: METRIC_TYPE
+                  type: VARCHAR2(50)
+                  constraints:
+                    nullable: false
+                  remarks: "Type: COUNTER, GAUGE, TIMER, HISTOGRAM"
+              - column:
+                  name: METRIC_VALUE
+                  type: NUMBER(20, 6)
+                  constraints:
+                    nullable: false
+                  remarks: Metric value
+              - column:
+                  name: METRIC_UNIT
+                  type: VARCHAR2(50)
+                  remarks: "Unit of measurement: ms, bytes, count, etc."
+              - column:
+                  name: TAGS
+                  type: VARCHAR2(2000)
+                  remarks: JSON string of metric tags/labels
+              - column:
+                  name: COLLECTED_AT
+                  type: TIMESTAMP(6)
+                  constraints:
+                    nullable: false
+                  remarks: Timestamp when metric was collected
+              - column:
+                  name: CREATED_AT
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: PERF_METRIC
+            baseColumnNames: TEST_RUN_ID
+            referencedTableName: PERF_TEST_RUN
+            referencedColumnNames: ID
+            constraintName: FK_PERF_METRIC_TEST_RUN
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: PERF_METRIC
+        - dropSequence:
+            sequenceName: PERF_METRIC_SEQ

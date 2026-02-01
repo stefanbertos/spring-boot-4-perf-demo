@@ -368,6 +368,16 @@ if %errorlevel% neq 0 (
 echo      Grafana deployed.
 echo.
 
+echo [12b/23] Deploying SonarQube...
+helm upgrade --install %RELEASE_PREFIX%-sonarqube ./sonarqube ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 10m
+if %errorlevel% neq 0 (
+    echo WARNING: Failed to deploy SonarQube (optional component)
+)
+echo      SonarQube deployed.
+echo.
+
 :: ============================================
 :: Deploy Kafka
 :: ============================================
@@ -519,6 +529,7 @@ echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
 echo   - Loki:        http://localhost/loki
 echo   - MQ Console:  http://localhost/ibmmq (admin/passw0rd)
+echo   - SonarQube:   http://localhost:9001 (admin/admin)
 echo.
 echo ============================================
 echo  Usage Notes

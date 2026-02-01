@@ -18,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,8 +62,7 @@ class MqMessageListenerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        listener = new MqMessageListener(kafkaTemplate, meterRegistry, tracer);
-        ReflectionTestUtils.setField(listener, "kafkaRequestTopic", "mq-requests");
+        listener = new MqMessageListener(kafkaTemplate, meterRegistry, tracer, "mq-requests");
     }
 
     @Test

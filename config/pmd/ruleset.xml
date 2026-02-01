@@ -50,7 +50,9 @@
         <exclude name="UseUtilityClass"/>
         <exclude name="DataClass"/>
         <exclude name="TooManyMethods"/>
+        <exclude name="TooManyFields"/>
         <exclude name="ExcessiveImports"/>
+        <exclude name="ExcessivePublicCount"/>
         <exclude name="SignatureDeclareThrowsException"/>
         <exclude name="CouplingBetweenObjects"/>
         <exclude name="ExcessiveParameterList"/>

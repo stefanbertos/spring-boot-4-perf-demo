@@ -27,7 +27,11 @@
       "Bash(cmd /c \"mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\api-gateway\\\\src\\\\main\\\\resources\")",
       "Bash(cmd /c \"mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\infrastructure\\\\helm\\\\oracle\\\\templates && mkdir C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\perf-demo\\\\infrastructure\\\\helm\\\\oracle-exporter\\\\templates\")",
       "Bash(gradlew.bat :perf-tester:compileJava:*)",
-      "Bash(cmd /c \"gradlew.bat :perf-tester:compileJava --no-daemon\")"
+      "Bash(cmd /c \"gradlew.bat :perf-tester:compileJava --no-daemon\")",
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(export JAVA_HOME=\"$USERPROFILE/.jdks/temurin-25.0.2\")"
     ]
   }
 }

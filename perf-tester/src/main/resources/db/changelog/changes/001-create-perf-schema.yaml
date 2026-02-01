@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-perf-schema
+      author: perf-tester
+      comment: Create PERF schema for performance testing tables
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck:
+                expectedResult: 1
+                sql: SELECT COUNT(*) FROM all_users WHERE username = 'PERF'
+      changes:
+        - sql:
+            sql: CREATE USER PERF IDENTIFIED BY perf DEFAULT TABLESPACE USERS QUOTA UNLIMITED ON USERS
+        - sql:
+            sql: GRANT CONNECT, RESOURCE TO PERF
+      rollback:
+        - sql:
+            sql: DROP USER PERF CASCADE

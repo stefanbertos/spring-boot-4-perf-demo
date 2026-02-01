@@ -2,6 +2,10 @@ spring:
   docker:
     compose:
       enabled: false
+  datasource:
+    url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+    username: perfuser
+    password: perfpass
 
 ibm:
   mq:
@@ -19,3 +23,8 @@ app:
     export-path: /tmp/prometheus-exports
   export:
     path: /tmp/test-exports
+  healthcheck:
+    kafka:
+      bootstrap-servers: kafka:9092
+    oracle:
+      url: jdbc:oracle:thin:@oracle:1521/XEPDB1

@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class PerfController {
 
+    private static final int METRICS_PROPAGATION_DELAY_MS = 16000;
+
     private final MessageSender messageSender;
     private final PerformanceTracker performanceTracker;
     private final GrafanaExportService grafanaExportService;
@@ -77,7 +79,7 @@ public class PerfController {
             log.warn("Test timed out: {}/{} messages completed", result.completedMessages(), count);
         }
 
-        Thread.sleep(16000); // sleep 2 minutes to propagate metrics
+        Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
 
         // Export Grafana dashboards
         List<String> dashboardFiles = new ArrayList<>();
