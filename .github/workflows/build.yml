@@ -19,6 +19,11 @@ jobs:
           distribution: 'temurin'
           architecture: x64
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '9.2.1'
+
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
