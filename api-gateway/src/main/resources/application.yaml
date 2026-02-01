@@ -9,13 +9,13 @@ spring:
       server:
         webmvc:
           routes:
-            # Grafana - supports subpath natively
+            # Grafana - strip /grafana prefix
             - id: grafana
               uri: ${GRAFANA_URL:http://localhost:3000}
               predicates:
-                - Path=/grafana/**
+                - Path=/grafana,/grafana/**
               filters:
-                - StripPrefix=0
+                - StripPrefix=1
 
             # Prometheus - supports subpath via --web.external-url
             - id: prometheus
@@ -25,16 +25,16 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Loki - redirect root to /ready endpoint
+            # Loki - redirect to Grafana Explore with Loki datasource
             - id: loki-root
-              uri: ${LOKI_URL:http://localhost:3100}
+              uri: ${GRAFANA_URL:http://localhost:3000}
               predicates:
                 - Path=/loki
               filters:
-                - RewritePath=/loki, /ready
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=loki
 
-            # Loki - needs path stripping for API calls
-            - id: loki
+            # Loki API - needs path stripping for API calls
+            - id: loki-api
               uri: ${LOKI_URL:http://localhost:3100}
               predicates:
                 - Path=/loki/**
@@ -65,16 +65,16 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Tempo - redirect root to /ready endpoint
+            # Tempo - redirect to Grafana Explore with Tempo datasource
             - id: tempo-root
-              uri: ${TEMPO_URL:http://localhost:3200}
+              uri: ${GRAFANA_URL:http://localhost:3000}
               predicates:
                 - Path=/tempo
               filters:
-                - RewritePath=/tempo, /ready
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
 
-            # Tempo - needs path stripping for API calls
-            - id: tempo
+            # Tempo API - needs path stripping for API calls
+            - id: tempo-api
               uri: ${TEMPO_URL:http://localhost:3200}
               predicates:
                 - Path=/tempo/**
@@ -120,9 +120,9 @@ spring:
             - id: grafana
               uri: http://perf-grafana:3000
               predicates:
-                - Path=/grafana/**
+                - Path=/grafana,/grafana/**
               filters:
-                - StripPrefix=0
+                - StripPrefix=1
 
             - id: prometheus
               uri: http://perf-prometheus:9090
@@ -132,13 +132,13 @@ spring:
                 - StripPrefix=0
 
             - id: loki-root
-              uri: http://perf-loki:3100
+              uri: http://perf-grafana:3000
               predicates:
                 - Path=/loki
               filters:
-                - RewritePath=/loki, /ready
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=loki
 
-            - id: loki
+            - id: loki-api
               uri: http://perf-loki:3100
               predicates:
                 - Path=/loki/**
@@ -167,13 +167,13 @@ spring:
                 - StripPrefix=0
 
             - id: tempo-root
-              uri: http://perf-tempo:3200
+              uri: http://perf-grafana:3000
               predicates:
                 - Path=/tempo
               filters:
-                - RewritePath=/tempo, /ready
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
 
-            - id: tempo
+            - id: tempo-api
               uri: http://perf-tempo:3200
               predicates:
                 - Path=/tempo/**

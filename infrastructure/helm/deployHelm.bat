@@ -528,6 +528,7 @@ echo   - Swagger UI:  http://localhost/api/swagger-ui/index.html
 echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
 echo   - Loki:        http://localhost/loki
+echo   - Tempo:        http://localhost/tempo
 echo   - MQ Console:  http://localhost/ibmmq (admin/passw0rd)
 echo   - SonarQube:   http://localhost/sonar (admin/admin)
 echo.

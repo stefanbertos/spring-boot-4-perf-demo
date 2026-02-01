@@ -1,4 +1,4 @@
-sam# Kubernetes/Helm profile - uses Kubernetes service names
+# Kubernetes/Helm profile - uses Kubernetes service names
 spring:
   docker:
     compose:
