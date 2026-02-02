@@ -14,6 +14,7 @@ spec:
       labels:
         {{- include "perf-tester.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "perf-tester.fullname" . }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

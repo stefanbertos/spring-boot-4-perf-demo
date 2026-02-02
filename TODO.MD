@@ -1,9 +1,8 @@
 ollama launch claude --config
 
-1.fix loki redirect to grafana explore http://localhost/loki just displays ready
-cannot signin http://localhost/grafana/?orgId=1&from=now-6h&to=now&timezone=browser&forceLogin=true add default login with admin and admin
+1.ibmmq doest work http://localhost/ibmmq 500 (Internal Server Error)
 fix grafana dashboards
-add spring config server for all resources
+add spring config server for all apps, but use the filesystem backend
 add deployment with argocd
 add some image violation check
 add E2E automated tests with gherkin etc, add smoke tests to check that all services are working

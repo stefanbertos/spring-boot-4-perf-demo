@@ -13,7 +13,7 @@ kafka:
   brokerConnect: "perf-kafka:9092"
 
 server:
-  contextPath: /kafdrop
+  contextPath: /
 
 resources:
   requests:

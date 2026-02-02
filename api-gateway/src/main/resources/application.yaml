@@ -7,7 +7,7 @@ spring:
   cloud:
     gateway:
       server:
-        webmvc:
+         webflux:
           routes:
             # Grafana - serves from /grafana subpath (GF_SERVER_SERVE_FROM_SUB_PATH=true)
             - id: grafana
@@ -41,21 +41,21 @@ spring:
               filters:
                 - StripPrefix=1
 
-            # IBM MQ Web Console - needs path stripping
+            # IBM MQ Web Console - serves at /ibmmq/console/ path
             - id: ibmmq
               uri: ${IBMMQ_URL:https://localhost:9443}
               predicates:
                 - Path=/ibmmq,/ibmmq/**
               filters:
-                - StripPrefix=1
+                - StripPrefix=0
 
-            # Kafdrop - supports subpath via server.servlet.context-path
+            # Kafdrop - strip prefix, Kafdrop serves from root
             - id: kafdrop
               uri: ${KAFDROP_URL:http://localhost:9000}
               predicates:
                 - Path=/kafdrop,/kafdrop/**
               filters:
-                - StripPrefix=0
+                - StripPrefix=1
 
             # Perf-Tester API
             - id: perf-tester
@@ -89,6 +89,7 @@ spring:
               filters:
                 - StripPrefix=0
 
+
 management:
   endpoints:
     web:
@@ -103,10 +104,11 @@ management:
 
 logging:
   level:
-    org.springframework: DEBUG
-
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty: DEBUG
 
 ---
+
 spring:
   config:
     activate:
@@ -115,14 +117,14 @@ spring:
   cloud:
     gateway:
       server:
-        webmvc:
+        webflux:
           routes:
             - id: grafana
               uri: http://perf-grafana:3000
               predicates:
-                - Path=/grafana,/grafana/**
+               - Path=/grafana,/grafana/**
               filters:
-                - StripPrefix=0
+               - StripPrefix=0
 
             - id: prometheus
               uri: http://perf-prometheus:9090
@@ -150,14 +152,14 @@ spring:
               predicates:
                 - Path=/ibmmq,/ibmmq/**
               filters:
-                - StripPrefix=1
+                - StripPrefix=0
 
             - id: kafdrop
               uri: http://perf-kafdrop:9000
               predicates:
                 - Path=/kafdrop,/kafdrop/**
               filters:
-                - StripPrefix=0
+                - StripPrefix=1
 
             - id: perf-tester
               uri: http://perf-perf-tester:8080
