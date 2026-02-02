@@ -17,14 +17,19 @@ import javax.net.ssl.SSLContext;
 
 /**
  * SSL configuration to support self-signed certificates for IBM MQ web console.
+ * Configures RestClient used by Spring Cloud Gateway Server MVC to trust all certificates.
  */
 @Configuration
 public class SslConfig {
 
     @Bean
-    public RestClient.Builder restClientBuilder() {
-        return RestClient.builder()
-                .requestFactory(createSslTrustingRequestFactory());
+    public ClientHttpRequestFactory clientHttpRequestFactory() {
+        return createSslTrustingRequestFactory();
+    }
+
+    @Bean
+    public RestClient.Builder restClientBuilder(ClientHttpRequestFactory requestFactory) {
+        return RestClient.builder().requestFactory(requestFactory);
     }
 
     private ClientHttpRequestFactory createSslTrustingRequestFactory() {

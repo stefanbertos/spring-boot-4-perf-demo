@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,11 +42,11 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertNotNull(packageResult.zipBytes());
-        assertTrue(packageResult.zipBytes().length > 0);
+        assertNotNull(packageResult.savedPath());
+        assertTrue(Files.exists(Path.of(packageResult.savedPath())));
+        assertTrue(Files.size(Path.of(packageResult.savedPath())) > 0);
         assertTrue(packageResult.filename().startsWith("test-id_"));
         assertTrue(packageResult.filename().endsWith(".zip"));
-        assertTrue(Files.exists(Path.of(packageResult.savedPath())));
     }
 
     @Test
@@ -63,7 +62,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "summary.txt"));
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "summary.txt"));
     }
 
     @Test
@@ -84,7 +83,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "dashboards/dashboard.png"));
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "dashboards/dashboard.png"));
     }
 
     @Test
@@ -105,7 +104,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "metrics/prometheus.json"));
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "metrics/prometheus.json"));
     }
 
     @Test
@@ -125,7 +124,8 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertNotNull(packageResult.zipBytes());
+        assertNotNull(packageResult.savedPath());
+        assertTrue(Files.exists(Path.of(packageResult.savedPath())));
     }
 
     @Test
@@ -142,7 +142,8 @@ class TestResultPackagerTest {
         );
 
         // Should not throw, just skip missing files
-        assertNotNull(packageResult.zipBytes());
+        assertNotNull(packageResult.savedPath());
+        assertTrue(Files.exists(Path.of(packageResult.savedPath())));
     }
 
     @Test
@@ -163,13 +164,11 @@ class TestResultPackagerTest {
 
     @Test
     void packageResultRecordShouldStoreValues() {
-        byte[] zipBytes = new byte[]{1, 2, 3};
         String filename = "test.zip";
         String savedPath = "/path/to/test.zip";
 
-        TestResultPackager.PackageResult result = new TestResultPackager.PackageResult(zipBytes, filename, savedPath);
+        TestResultPackager.PackageResult result = new TestResultPackager.PackageResult(filename, savedPath);
 
-        assertNotNull(result.zipBytes());
         assertTrue(result.filename().equals(filename));
         assertTrue(result.savedPath().equals(savedPath));
     }
@@ -188,8 +187,8 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "summary.txt"));
-        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "summary.txt"));
+        String summaryContent = getZipEntryContent(packageResult.savedPath(), "summary.txt");
         assertTrue(summaryContent.contains("http://grafana/d/1"));
         assertTrue(summaryContent.contains("http://grafana/d/2"));
     }
@@ -211,7 +210,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        String summaryContent = getZipEntryContent(packageResult.savedPath(), "summary.txt");
         assertTrue(summaryContent.contains("dashboard.png"));
     }
 
@@ -232,7 +231,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        String summaryContent = getZipEntryContent(packageResult.savedPath(), "summary.txt");
         assertTrue(summaryContent.contains("prometheus.json"));
     }
 
@@ -249,7 +248,7 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        String summaryContent = getZipEntryContent(packageResult.zipBytes(), "summary.txt");
+        String summaryContent = getZipEntryContent(packageResult.savedPath(), "summary.txt");
         assertTrue(summaryContent.contains("my-test-id"));
     }
 
@@ -271,8 +270,8 @@ class TestResultPackagerTest {
                 System.currentTimeMillis()
         );
 
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "dashboards/dashboard1.png"));
-        assertTrue(zipContainsEntry(packageResult.zipBytes(), "dashboards/dashboard2.png"));
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "dashboards/dashboard1.png"));
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "dashboards/dashboard2.png"));
     }
 
     @Test
@@ -295,8 +294,8 @@ class TestResultPackagerTest {
         ));
     }
 
-    private String getZipEntryContent(byte[] zipBytes, String entryName) throws IOException {
-        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+    private String getZipEntryContent(String zipPath, String entryName) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(Path.of(zipPath)))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.getName().equals(entryName)) {
@@ -307,8 +306,8 @@ class TestResultPackagerTest {
         return "";
     }
 
-    private boolean zipContainsEntry(byte[] zipBytes, String entryName) throws IOException {
-        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+    private boolean zipContainsEntry(String zipPath, String entryName) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(Path.of(zipPath)))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.getName().equals(entryName)) {

@@ -6,6 +6,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
@@ -226,6 +228,11 @@ class GrafanaExportServiceTest {
         lenient().when(restClient.get()).thenReturn(requestHeadersUriSpec);
         lenient().when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersUriSpec);
         lenient().when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-        lenient().when(responseSpec.body(byte[].class)).thenReturn(responseBody);
+
+        // Return Resource instead of byte[] for streaming support
+        Resource resource = responseBody != null && responseBody.length > 0
+                ? new ByteArrayResource(responseBody)
+                : null;
+        lenient().when(responseSpec.body(Resource.class)).thenReturn(resource);
     }
 }

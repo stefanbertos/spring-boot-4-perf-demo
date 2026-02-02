@@ -4,6 +4,8 @@ import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.grafana.GrafanaExportService.DashboardExportResult;
+import com.example.perftester.kubernetes.KubernetesNodeInfo;
+import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
@@ -12,12 +14,16 @@ import com.example.perftester.prometheus.PrometheusExportService.PrometheusExpor
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -50,16 +56,25 @@ class PerfControllerTest {
     @Mock
     private TestResultPackager testResultPackager;
 
+    @Mock
+    private KubernetesService kubernetesService;
+
+    @TempDir
+    Path tempDir;
+
     private PerfController controller;
 
     @BeforeEach
     void setUp() {
         controller = new PerfController(messageSender, performanceTracker,
-                grafanaExportService, prometheusExportService, testResultPackager);
+                grafanaExportService, prometheusExportService, testResultPackager, kubernetesService);
+
+        // Default mock for Kubernetes service
+        when(kubernetesService.getNodeInfo()).thenReturn(List.of(KubernetesNodeInfo.unavailable()));
     }
 
     @Test
-    void sendMessagesShouldReturnZipFile() throws InterruptedException {
+    void sendMessagesShouldReturnZipFile() throws InterruptedException, IOException {
         PerfTestResult perfResult = new PerfTestResult(10, 0, 1.0, 10.0, 50.0, 10.0, 100.0);
         PerfTestResult withDashboards = perfResult.withDashboardExports(List.of("http://grafana/d/1"), List.of("/path/to/file.png"));
         PerfTestResult withPrometheus = withDashboards.withPrometheusExport("/path/to/prometheus.json");
@@ -78,8 +93,11 @@ class PerfControllerTest {
                 "/path/to/prometheus.json", "http://prometheus/query", null);
         when(prometheusExportService.exportMetrics(anyLong(), anyLong(), anyString())).thenReturn(prometheusExport);
 
-        PackageResult packageResult = new PackageResult(
-                "test content".getBytes(), "test-id_20230101.zip", "/path/to/test.zip");
+        // Create a temp ZIP file for the test
+        Path tempZip = tempDir.resolve("test-id_20230101.zip");
+        Files.write(tempZip, "test content".getBytes());
+
+        PackageResult packageResult = new PackageResult("test-id_20230101.zip", tempZip.toString());
         when(testResultPackager.packageResults(any(PerfTestResult.class), anyList(), anyString(), anyString(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
@@ -94,7 +112,7 @@ class PerfControllerTest {
     }
 
     @Test
-    void sendMessagesShouldHandleTimeout() throws InterruptedException {
+    void sendMessagesShouldHandleTimeout() throws InterruptedException, IOException {
         PerfTestResult perfResult = new PerfTestResult(5, 5, 10.0, 0.5, 50.0, 10.0, 100.0);
 
         when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(false);
@@ -106,7 +124,10 @@ class PerfControllerTest {
         PrometheusExportResult prometheusExport = new PrometheusExportResult(null, null, "Connection refused");
         when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
 
-        PackageResult packageResult = new PackageResult("content".getBytes(), "test.zip", "/path/test.zip");
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+
+        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
         when(testResultPackager.packageResults(any(), anyList(), any(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
@@ -116,7 +137,7 @@ class PerfControllerTest {
     }
 
     @Test
-    void sendMessagesShouldApplyDelay() throws InterruptedException {
+    void sendMessagesShouldApplyDelay() throws InterruptedException, IOException {
         PerfTestResult perfResult = new PerfTestResult(2, 0, 0.5, 4.0, 50.0, 10.0, 100.0);
 
         when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
@@ -128,7 +149,10 @@ class PerfControllerTest {
         PrometheusExportResult prometheusExport = new PrometheusExportResult("/path/file.json", "url", null);
         when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
 
-        PackageResult packageResult = new PackageResult("content".getBytes(), "test.zip", "/path/test.zip");
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+
+        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
         when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 

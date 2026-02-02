@@ -4,6 +4,7 @@ import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.grafana.GrafanaExportService.DashboardExportResult;
+import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
@@ -11,7 +12,7 @@ import com.example.perftester.prometheus.PrometheusExportService;
 import com.example.perftester.prometheus.PrometheusExportService.PrometheusExportResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,6 +43,7 @@ public class PerfController {
     private final GrafanaExportService grafanaExportService;
     private final PrometheusExportService prometheusExportService;
     private final TestResultPackager testResultPackager;
+    private final KubernetesService kubernetesService;
 
     @PostMapping("/send")
     public ResponseEntity<Resource> sendMessages(
@@ -55,6 +57,29 @@ public class PerfController {
                 count, timeoutSeconds, delayMs, testId);
 
         long testStartTimeMs = System.currentTimeMillis();
+        PerfTestResult result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
+        long testEndTimeMs = System.currentTimeMillis();
+
+        // Fetch Kubernetes node info and wait for metrics propagation
+        result = result.withKubernetesNodes(kubernetesService.getNodeInfo());
+        Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
+
+        // Export dashboards and metrics
+        ExportContext exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
+
+        // Package and return response
+        PackageResult packageResult = testResultPackager.packageResults(
+                exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
+                testId, testStartTimeMs, testEndTimeMs);
+
+        log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
+        cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile());
+
+        return buildZipResponse(packageResult);
+    }
+
+    private PerfTestResult runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)
+            throws InterruptedException {
         performanceTracker.startTest(count);
 
         for (int i = 0; i < count; i++) {
@@ -65,10 +90,7 @@ public class PerfController {
         }
 
         log.info("All {} messages sent, waiting for responses...", count);
-
         boolean completed = performanceTracker.awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
-        long testEndTimeMs = System.currentTimeMillis();
-
         PerfTestResult result = performanceTracker.getResult();
 
         if (completed) {
@@ -78,64 +100,54 @@ public class PerfController {
         } else {
             log.warn("Test timed out: {}/{} messages completed", result.completedMessages(), count);
         }
+        return result;
+    }
 
-        Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
-
-        // Export Grafana dashboards
+    private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {
         List<String> dashboardFiles = new ArrayList<>();
+
         log.info("Exporting Grafana dashboards...");
-        DashboardExportResult dashboardExport = grafanaExportService.exportDashboards(testStartTimeMs, testEndTimeMs);
+        DashboardExportResult dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
+        dashboardExport.dashboardUrls().forEach(url -> log.info("  Dashboard URL: {}", url));
+        dashboardFiles.addAll(dashboardExport.exportedFiles());
+        PerfTestResult enrichedResult = testResult.withDashboardExports(
+                dashboardExport.dashboardUrls(), dashboardExport.exportedFiles());
 
-        log.info("Dashboard URLs:");
-        dashboardExport.dashboardUrls().forEach(url -> log.info("  {}", url));
-
-        if (!dashboardExport.exportedFiles().isEmpty()) {
-            log.info("Dashboard files:");
-            dashboardExport.exportedFiles().forEach(file -> log.info("  {}", file));
-            dashboardFiles.addAll(dashboardExport.exportedFiles());
-        }
-
-        result = result.withDashboardExports(dashboardExport.dashboardUrls(), dashboardExport.exportedFiles());
-
-        // Export Prometheus metrics
-        String prometheusFile = null;
         log.info("Exporting Prometheus metrics...");
-        PrometheusExportResult prometheusExport = prometheusExportService.exportMetrics(
-                testStartTimeMs, testEndTimeMs, testId);
-
+        PrometheusExportResult prometheusExport = prometheusExportService.exportMetrics(startTime, endTime, testId);
+        String prometheusFile = null;
         if (prometheusExport.isSuccess()) {
             log.info("Prometheus metrics exported to: {}", prometheusExport.filePath());
-            log.info("Query URL pattern: {}", prometheusExport.queryUrl());
             prometheusFile = prometheusExport.filePath();
-            result = result.withPrometheusExport(prometheusFile);
+            enrichedResult = enrichedResult.withPrometheusExport(prometheusFile);
         } else {
             log.warn("Failed to export Prometheus metrics: {}", prometheusExport.error());
         }
 
-        // Package everything into a ZIP file
-        log.info("Packaging test results...");
-        PackageResult packageResult = testResultPackager.packageResults(
-                result,
-                dashboardFiles,
-                prometheusFile,
-                testId,
-                testStartTimeMs,
-                testEndTimeMs
-        );
-
-        log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
-
-        // Clean up exported files after packaging
-        cleanupExportedFiles(dashboardFiles, prometheusFile);
-
-        var resource = new ByteArrayResource(packageResult.zipBytes());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(packageResult.zipBytes().length)
-                .body(resource);
+        return new ExportContext(enrichedResult, dashboardFiles, prometheusFile);
     }
+
+    private ResponseEntity<Resource> buildZipResponse(PackageResult packageResult) {
+        var zipPath = Path.of(packageResult.savedPath());
+        var resource = new FileSystemResource(zipPath);
+
+        try {
+            long fileSize = Files.size(zipPath);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(fileSize)
+                    .body(resource);
+        } catch (IOException e) {
+            log.error("Failed to get file size: {}", e.getMessage());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        }
+    }
+
+    private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {}
 
     private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile) {
         for (String file : dashboardFiles) {

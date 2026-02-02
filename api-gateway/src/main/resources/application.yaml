@@ -9,19 +9,19 @@ spring:
       server:
         webmvc:
           routes:
-            # Grafana - strip /grafana prefix
+            # Grafana - serves from /grafana subpath (GF_SERVER_SERVE_FROM_SUB_PATH=true)
             - id: grafana
               uri: ${GRAFANA_URL:http://localhost:3000}
               predicates:
                 - Path=/grafana,/grafana/**
               filters:
-                - StripPrefix=1
+                - StripPrefix=0
 
-            # Prometheus - supports subpath via --web.external-url
+            # Prometheus - supports subpath via --web.external-url=/prometheus
             - id: prometheus
               uri: ${PROMETHEUS_URL:http://localhost:9090}
               predicates:
-                - Path=/prometheus/**
+                - Path=/prometheus,/prometheus/**
               filters:
                 - StripPrefix=0
 
@@ -122,12 +122,12 @@ spring:
               predicates:
                 - Path=/grafana,/grafana/**
               filters:
-                - StripPrefix=1
+                - StripPrefix=0
 
             - id: prometheus
               uri: http://perf-prometheus:9090
               predicates:
-                - Path=/prometheus/**
+                - Path=/prometheus,/prometheus/**
               filters:
                 - StripPrefix=0
 

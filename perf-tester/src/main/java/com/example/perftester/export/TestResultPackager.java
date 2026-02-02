@@ -1,5 +1,6 @@
 package com.example.perftester.export;
 
+import com.example.perftester.kubernetes.KubernetesNodeInfo;
 import com.example.perftester.perf.PerfTestResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -7,8 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -41,44 +43,46 @@ public class TestResultPackager {
         String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .format(Instant.now().atZone(java.time.ZoneId.systemDefault()));
         String packageName = testId != null ? testId + "_" + timestamp : "perf_test_" + timestamp;
+        String filename = packageName + ".zip";
 
+        Path exportDir = Path.of(exportPath);
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            Files.createDirectories(exportDir);
+        } catch (IOException e) {
+            log.error("Failed to create export directory: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create export directory", e);
+        }
 
-                // Add test summary/statistics file
-                String summaryContent = generateSummary(result, testId, testStartTimeMs, testEndTimeMs);
-                addTextEntry(zos, "summary.txt", summaryContent);
+        Path zipPath = exportDir.resolve(filename);
 
-                // Add dashboard images
-                for (String imageFile : dashboardImageFiles) {
-                    if (imageFile != null) {
-                        addFileEntry(zos, Path.of(imageFile), "dashboards/");
-                    }
-                }
+        // Write ZIP directly to disk to avoid OOM with large exports
+        try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(zipPath)))) {
 
-                // Add Prometheus export
-                if (prometheusExportFile != null) {
-                    addFileEntry(zos, Path.of(prometheusExportFile), "metrics/");
+            // Add test summary/statistics file
+            String summaryContent = generateSummary(result, testId, testStartTimeMs, testEndTimeMs);
+            addTextEntry(zos, "summary.txt", summaryContent);
+
+            // Add dashboard images - stream from disk
+            for (String imageFile : dashboardImageFiles) {
+                if (imageFile != null) {
+                    addFileEntryStreaming(zos, Path.of(imageFile), "dashboards/");
                 }
             }
 
-            byte[] zipBytes = baos.toByteArray();
-            String filename = packageName + ".zip";
-
-            // Also save to disk
-            Path exportDir = Path.of(exportPath);
-            Files.createDirectories(exportDir);
-            Path zipPath = exportDir.resolve(filename);
-            Files.write(zipPath, zipBytes);
-            log.info("Test results packaged to: {}", zipPath.toAbsolutePath());
-
-            return new PackageResult(zipBytes, filename, zipPath.toAbsolutePath().toString());
+            // Add Prometheus export - stream from disk
+            if (prometheusExportFile != null) {
+                addFileEntryStreaming(zos, Path.of(prometheusExportFile), "metrics/");
+            }
 
         } catch (IOException e) {
             log.error("Failed to package test results: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to package test results", e);
         }
+
+        log.info("Test results packaged to: {}", zipPath.toAbsolutePath());
+
+        // Return path-based result - ZIP is streamed from disk via FileSystemResource
+        return new PackageResult(filename, zipPath.toAbsolutePath().toString());
     }
 
     private String generateSummary(PerfTestResult result, String testId, long testStartTimeMs, long testEndTimeMs) {
@@ -111,6 +115,8 @@ public class TestResultPackager {
         sb.append(String.format("Max Latency:          %.2f ms%n", result.maxLatencyMs()));
         sb.append("\n");
 
+        appendKubernetesNodeInfo(sb, result);
+
         sb.append("───────────────────────────────────────────────────────────────\n");
         sb.append("                         ARTIFACTS\n");
         sb.append("───────────────────────────────────────────────────────────────\n");
@@ -140,6 +146,48 @@ public class TestResultPackager {
         return sb.toString();
     }
 
+    private void appendKubernetesNodeInfo(StringBuilder sb, PerfTestResult result) {
+        if (result.kubernetesNodes() == null || result.kubernetesNodes().isEmpty()) {
+            return;
+        }
+
+        sb.append("───────────────────────────────────────────────────────────────\n");
+        sb.append("                    KUBERNETES NODES\n");
+        sb.append("───────────────────────────────────────────────────────────────\n");
+
+        int nodeIndex = 0;
+        for (KubernetesNodeInfo node : result.kubernetesNodes()) {
+            nodeIndex++;
+            if (result.kubernetesNodes().size() > 1) {
+                sb.append(String.format("%nNode %d: %s%n", nodeIndex, node.nodeName()));
+                sb.append("  ─────────────────────────────────────────────────────────\n");
+            }
+
+            sb.append(String.format("  Node Name:          %s%n", node.nodeName()));
+            sb.append(String.format("  Kubelet Version:    %s%n", node.kubeletVersion()));
+            sb.append(String.format("  OS Image:           %s%n", node.osImage()));
+            sb.append(String.format("  Architecture:       %s%n", node.architecture()));
+            sb.append(String.format("  Container Runtime:  %s%n", node.containerRuntime()));
+            sb.append("\n");
+            sb.append("  Resources (Capacity / Allocatable):\n");
+            sb.append(String.format("    CPU:              %s / %s%n",
+                    node.cpuCapacity(), node.cpuAllocatable()));
+            sb.append(String.format("    Memory:           %s / %s%n",
+                    node.memoryCapacity(), node.memoryAllocatable()));
+            sb.append(String.format("    Ephemeral Storage:%s / %s%n",
+                    node.ephemeralStorageCapacity(), node.ephemeralStorageAllocatable()));
+            sb.append(String.format("    Pods:             %s%n", node.podsCapacity()));
+
+            if (!node.conditions().isEmpty()) {
+                sb.append("\n  Conditions:\n");
+                for (String condition : node.conditions()) {
+                    sb.append(String.format("    • %s%n", condition));
+                }
+            }
+        }
+        sb.append("\n");
+    }
+
     private void addTextEntry(ZipOutputStream zos, String entryName, String content) throws IOException {
         ZipEntry entry = new ZipEntry(entryName);
         zos.putNextEntry(entry);
@@ -147,18 +195,21 @@ public class TestResultPackager {
         zos.closeEntry();
     }
 
-    private void addFileEntry(ZipOutputStream zos, Path file, String prefix) throws IOException {
+    private void addFileEntryStreaming(ZipOutputStream zos, Path file, String prefix) throws IOException {
         if (Files.exists(file)) {
             String entryName = prefix + file.getFileName().toString();
             ZipEntry entry = new ZipEntry(entryName);
             zos.putNextEntry(entry);
-            zos.write(Files.readAllBytes(file));
+            // Stream file content to avoid loading entire file into memory
+            try (InputStream is = Files.newInputStream(file)) {
+                is.transferTo(zos);
+            }
             zos.closeEntry();
-            log.debug("Added to ZIP: {}", entryName);
+            log.debug("Added to ZIP (streamed): {}", entryName);
         } else {
             log.warn("File not found, skipping: {}", file);
         }
     }
 
-    public record PackageResult(byte[] zipBytes, String filename, String savedPath) {}
+    public record PackageResult(String filename, String savedPath) {}
 }

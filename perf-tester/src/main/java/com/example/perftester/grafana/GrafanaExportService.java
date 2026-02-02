@@ -2,10 +2,13 @@ package com.example.perftester.grafana;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -106,18 +109,28 @@ public class GrafanaExportService {
         String fullRenderUrl = grafanaUrl + "/" + renderPath;
         log.info("Fetching dashboard image from: {}", fullRenderUrl);
 
-        byte[] imageBytes = restClient.get()
+        String filename = String.format("%s_%s.png", dashboard.uid(), timestamp);
+        Path filePath = exportDir.resolve(filename);
+
+        // Stream directly to file to avoid loading large images into memory
+        Resource resource = restClient.get()
                 .uri(renderPath)
                 .retrieve()
-                .body(byte[].class);
+                .body(Resource.class);
 
-        if (imageBytes == null || imageBytes.length == 0) {
+        if (resource == null) {
             throw new IOException("Empty response from Grafana render API");
         }
 
-        String filename = String.format("%s_%s.png", dashboard.uid(), timestamp);
-        Path filePath = exportDir.resolve(filename);
-        Files.write(filePath, imageBytes);
+        try (InputStream inputStream = resource.getInputStream();
+             OutputStream outputStream = Files.newOutputStream(filePath)) {
+            inputStream.transferTo(outputStream);
+        }
+
+        if (Files.size(filePath) == 0) {
+            Files.deleteIfExists(filePath);
+            throw new IOException("Empty response from Grafana render API");
+        }
 
         String dashboardUrl = buildDashboardUrl(dashboard.uid(), fromMs, toMs);
 

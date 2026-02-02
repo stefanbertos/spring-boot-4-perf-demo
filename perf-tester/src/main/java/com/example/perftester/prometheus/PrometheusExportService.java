@@ -1,16 +1,17 @@
 package com.example.perftester.prometheus;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -54,60 +55,72 @@ public class PrometheusExportService {
         long toSec = (testEndTimeMs / 1000) + 60;
         int step = 15; // 15 second resolution
 
-        ObjectNode exportData = objectMapper.createObjectNode();
-        exportData.put("testId", testId != null ? testId : timestamp);
-        exportData.put("exportTimestamp", Instant.now().toString());
-        exportData.put("testStartTime", Instant.ofEpochMilli(testStartTimeMs).toString());
-        exportData.put("testEndTime", Instant.ofEpochMilli(testEndTimeMs).toString());
-        exportData.put("fromEpochSeconds", fromSec);
-        exportData.put("toEpochSeconds", toSec);
-        exportData.put("stepSeconds", step);
-
-        ArrayNode metricsArray = exportData.putArray("metrics");
+        String filename = String.format("prometheus_export_%s.json", timestamp);
+        Path filePath = exportDir.resolve(filename);
 
         List<String> allMetrics = getAllMetricNames();
         log.info("Found {} metrics to export", allMetrics.size());
 
+        // Stream metrics directly to file to avoid OOM with large metric sets
         int exported = 0;
-        for (String metric : allMetrics) {
-            try {
-                JsonNode metricData = queryMetricRange(metric, fromSec, toSec, step);
-                if (metricData != null && metricData.has("data") && metricData.get("data").has("result")) {
-                    JsonNode result = metricData.get("data").get("result");
-                    if (result.isArray() && !result.isEmpty()) {
-                        ObjectNode metricNode = objectMapper.createObjectNode();
-                        metricNode.put("name", metric);
-                        metricNode.set("data", result);
-                        metricsArray.add(metricNode);
-                        exported++;
-                        log.debug("Exported metric: {}", metric);
+        try (OutputStream os = new BufferedOutputStream(Files.newOutputStream(filePath));
+             JsonGenerator generator = objectMapper.getFactory().createGenerator(os)) {
+
+            generator.useDefaultPrettyPrinter();
+            generator.writeStartObject();
+
+            // Write header fields
+            generator.writeStringField("testId", testId != null ? testId : timestamp);
+            generator.writeStringField("exportTimestamp", Instant.now().toString());
+            generator.writeStringField("testStartTime", Instant.ofEpochMilli(testStartTimeMs).toString());
+            generator.writeStringField("testEndTime", Instant.ofEpochMilli(testEndTimeMs).toString());
+            generator.writeNumberField("fromEpochSeconds", fromSec);
+            generator.writeNumberField("toEpochSeconds", toSec);
+            generator.writeNumberField("stepSeconds", step);
+
+            // Stream metrics array
+            generator.writeArrayFieldStart("metrics");
+
+            for (String metric : allMetrics) {
+                try {
+                    JsonNode metricData = queryMetricRange(metric, fromSec, toSec, step);
+                    if (metricData != null && metricData.has("data") && metricData.get("data").has("result")) {
+                        JsonNode result = metricData.get("data").get("result");
+                        if (result.isArray() && !result.isEmpty()) {
+                            generator.writeStartObject();
+                            generator.writeStringField("name", metric);
+                            generator.writeFieldName("data");
+                            generator.writeTree(result);
+                            generator.writeEndObject();
+                            generator.flush(); // Flush after each metric to free memory
+                            exported++;
+                            log.debug("Exported metric: {}", metric);
+                        }
                     }
+                } catch (Exception e) {
+                    log.warn("Failed to export metric {}: {}", metric, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Failed to export metric {}: {}", metric, e.getMessage());
             }
-        }
-        log.info("Exported {} metrics with data", exported);
 
-        String filename = String.format("prometheus_export_%s.json", timestamp);
-        Path filePath = exportDir.resolve(filename);
+            generator.writeEndArray();
+            generator.writeEndObject();
 
-        try {
-            objectMapper.writeValue(filePath.toFile(), exportData);
-            log.info("Prometheus metrics exported to: {}", filePath.toAbsolutePath());
-
-            String queryUrl = buildQueryRangeUrl(fromSec, toSec);
-            log.info("Prometheus query URL pattern: {}", queryUrl);
-
-            return new PrometheusExportResult(
-                    filePath.toAbsolutePath().toString(),
-                    queryUrl,
-                    null
-            );
         } catch (IOException e) {
             log.error("Failed to write export file: {}", e.getMessage());
             return new PrometheusExportResult(null, null, "Failed to write export file: " + e.getMessage());
         }
+
+        log.info("Exported {} metrics with data", exported);
+        log.info("Prometheus metrics exported to: {}", filePath.toAbsolutePath());
+
+        String queryUrl = buildQueryRangeUrl(fromSec, toSec);
+        log.info("Prometheus query URL pattern: {}", queryUrl);
+
+        return new PrometheusExportResult(
+                filePath.toAbsolutePath().toString(),
+                queryUrl,
+                null
+        );
     }
 
     private List<String> getAllMetricNames() {
