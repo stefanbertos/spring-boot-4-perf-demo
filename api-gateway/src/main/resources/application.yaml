@@ -8,7 +8,7 @@ spring:
     gateway:
       server:
          webflux:
-          routes:
+           routes:
             # Grafana - serves from /grafana subpath (GF_SERVER_SERVE_FROM_SUB_PATH=true)
             - id: grafana
               uri: ${GRAFANA_URL:http://localhost:3000}
@@ -88,6 +88,9 @@ spring:
                 - Path=/sonar,/sonar/**
               filters:
                 - StripPrefix=0
+           httpclient:
+             ssl:
+               use-insecure-trust-manager: true
 
 
 management:
@@ -159,7 +162,7 @@ spring:
               predicates:
                 - Path=/kafdrop,/kafdrop/**
               filters:
-                - StripPrefix=1
+                - StripPrefix=0
 
             - id: perf-tester
               uri: http://perf-perf-tester:8080
@@ -188,3 +191,6 @@ spring:
                 - Path=/sonar,/sonar/**
               filters:
                 - StripPrefix=0
+          httpclient:
+            ssl:
+              use-insecure-trust-manager: true
