@@ -1,0 +1,8 @@
+# Shared Kubernetes profile configuration
+spring:
+  docker:
+    compose:
+      enabled: false
+
+tracing:
+  url: ${TRACING_URL:http://perf-tempo:4318/v1/traces}

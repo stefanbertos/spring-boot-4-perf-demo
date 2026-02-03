@@ -13,7 +13,7 @@ docker compose down
 
 echo.
 echo === Rebuilding Docker images ===
-docker compose build perf-tester ibm-mq-consumer kafka-consumer
+docker compose build config-server perf-tester ibm-mq-consumer kafka-consumer api-gateway
 
 echo.
 echo === Starting all services ===

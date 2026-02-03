@@ -1,0 +1,4 @@
+# kafka-consumer Docker profile configuration
+spring:
+  kafka:
+    bootstrap-servers: kafka:9092

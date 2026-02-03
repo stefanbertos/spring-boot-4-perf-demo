@@ -30,12 +30,22 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall API Gateway
-echo [2/20] Uninstalling API Gateway...
+echo [2/21] Uninstalling API Gateway...
 helm uninstall %RELEASE_PREFIX%-api-gateway --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      API Gateway uninstalled.
 ) else (
     echo      API Gateway not found or already removed.
+)
+echo.
+
+:: Uninstall Config Server
+echo [3/21] Uninstalling Config Server...
+helm uninstall %RELEASE_PREFIX%-config-server --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Config Server uninstalled.
+) else (
+    echo      Config Server not found or already removed.
 )
 echo.
 

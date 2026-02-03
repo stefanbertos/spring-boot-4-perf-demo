@@ -1,0 +1,40 @@
+# Shared configuration for all applications
+spring:
+  threads:
+    virtual:
+      enabled: true
+  task:
+    execution:
+      pool:
+        core-size: 100
+        max-size: 200
+        queue-capacity: 50000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: b3,w3c
+
+# Default tracing URL (localhost for development)
+tracing:
+  url: http://localhost:4318/v1/traces

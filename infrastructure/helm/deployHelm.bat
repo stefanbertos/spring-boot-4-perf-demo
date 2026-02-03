@@ -82,13 +82,22 @@ if %errorlevel% neq 0 (
 echo      kafka-consumer image built.
 echo.
 
-echo [5/23] Building Docker image for api-gateway...
+echo [5/24] Building Docker image for api-gateway...
 docker build -t api-gateway:%IMAGE_TAG% %PROJECT_ROOT%\api-gateway
 if %errorlevel% neq 0 (
     echo ERROR: Failed to build api-gateway image
     exit /b 1
 )
 echo      api-gateway image built.
+echo.
+
+echo [6/24] Building Docker image for config-server...
+docker build -t config-server:%IMAGE_TAG% %PROJECT_ROOT%\config-server
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build config-server image
+    exit /b 1
+)
+echo      config-server image built.
 echo.
 
 :: ============================================
@@ -109,6 +118,7 @@ set PERF_TESTER_IMAGE=perf-tester:%IMAGE_TAG%
 set IBM_MQ_CONSUMER_IMAGE=ibm-mq-consumer:%IMAGE_TAG%
 set KAFKA_CONSUMER_IMAGE=kafka-consumer:%IMAGE_TAG%
 set API_GATEWAY_IMAGE=api-gateway:%IMAGE_TAG%
+set CONFIG_SERVER_IMAGE=config-server:%IMAGE_TAG%
 set IMAGE_PULL_POLICY=IfNotPresent
 
 :: Check for GKE (Google Kubernetes Engine)
@@ -206,6 +216,16 @@ if %errorlevel% equ 0 (
         exit /b 1
     )
 
+    :: Tag and push config-server image
+    set CONFIG_SERVER_IMAGE=!GCP_REGISTRY!/config-server:%IMAGE_TAG%
+    echo      Tagging and pushing config-server to !CONFIG_SERVER_IMAGE!...
+    docker tag config-server:%IMAGE_TAG% !CONFIG_SERVER_IMAGE!
+    docker push !CONFIG_SERVER_IMAGE!
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to push config-server image
+        exit /b 1
+    )
+
     :: For GCP, we need to pull from registry
     set IMAGE_PULL_POLICY=Always
 
@@ -220,6 +240,7 @@ if %errorlevel% equ 0 (
     minikube image load ibm-mq-consumer:%IMAGE_TAG%
     minikube image load kafka-consumer:%IMAGE_TAG%
     minikube image load api-gateway:%IMAGE_TAG%
+    minikube image load config-server:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -231,6 +252,7 @@ if %errorlevel% equ 0 (
     kind load docker-image ibm-mq-consumer:%IMAGE_TAG%
     kind load docker-image kafka-consumer:%IMAGE_TAG%
     kind load docker-image api-gateway:%IMAGE_TAG%
+    kind load docker-image config-server:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -398,9 +420,33 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n %NAMES
 echo.
 
 :: ============================================
+:: Deploy Config Server
+:: ============================================
+echo [14/24] Deploying Config Server...
+:: Extract repository from full image path (remove tag)
+for /f "tokens=1 delims=:" %%a in ("%CONFIG_SERVER_IMAGE%") do set CONFIG_SERVER_REPO=%%a
+helm upgrade --install %RELEASE_PREFIX%-config-server ./config-server ^
+    --namespace %NAMESPACE% ^
+    --set image.repository=%CONFIG_SERVER_REPO% ^
+    --set image.tag=%IMAGE_TAG% ^
+    --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Config Server
+    exit /b 1
+)
+echo      Config Server deployed.
+echo.
+
+:: Wait for Config Server to be ready
+echo      Waiting for Config Server to be ready...
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=config-server -n %NAMESPACE% --timeout=120s
+echo.
+
+:: ============================================
 :: Deploy Applications
 :: ============================================
-echo [14/23] Deploying Applications...
+echo [15/24] Deploying Applications...
 
 echo      Deploying IBM MQ Consumer...
 :: Extract repository from full image path (remove tag)

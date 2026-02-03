@@ -1,0 +1,356 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "config-server.fullname" . }}-config
+  labels:
+    {{- include "config-server.labels" . | nindent 4 }}
+data:
+  application.yml: |
+    # Shared configuration for all applications
+    spring:
+      threads:
+        virtual:
+          enabled: true
+      task:
+        execution:
+          pool:
+            core-size: 100
+            max-size: 200
+            queue-capacity: 50000
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,prometheus
+      endpoint:
+        health:
+          probes:
+            enabled: true
+          show-details: always
+      health:
+        livenessstate:
+          enabled: true
+        readinessstate:
+          enabled: true
+      prometheus:
+        metrics:
+          export:
+            enabled: true
+      tracing:
+        sampling:
+          probability: 1.0
+        propagation:
+          type: b3,w3c
+
+    tracing:
+      url: http://perf-tempo:4318/v1/traces
+
+  application-kubernetes.yml: |
+    spring:
+      docker:
+        compose:
+          enabled: false
+
+    tracing:
+      url: ${TRACING_URL:http://perf-tempo:4318/v1/traces}
+
+  perf-tester.yml: |
+    server:
+      port: 8080
+      address: 0.0.0.0
+
+    spring:
+      datasource:
+        url: jdbc:oracle:thin:@perf-oracle:1521/XEPDB1
+        username: perfuser
+        password: perfpass
+        driver-class-name: oracle.jdbc.OracleDriver
+        hikari:
+          maximum-pool-size: 10
+          minimum-idle: 2
+          connection-timeout: 30000
+      jpa:
+        hibernate:
+          ddl-auto: none
+        show-sql: false
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.OracleDialect
+            format_sql: true
+      liquibase:
+        enabled: true
+        change-log: classpath:db/changelog/db.changelog-master.yaml
+      jms:
+        cache:
+          enabled: true
+          session-cache-size: 50
+      task:
+        execution:
+          thread-name-prefix: mq-sender-
+
+    ibm:
+      mq:
+        queue-manager: QM1
+        channel: DEV.ADMIN.SVRCONN
+        conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+        user: admin
+        password: passw0rd
+
+    app:
+      mq:
+        queue:
+          inbound: DEV.QUEUE.1
+          outbound: DEV.QUEUE.2
+      grafana:
+        url: ${GRAFANA_URL:http://perf-grafana:3000}
+        export-path: ./grafana-exports
+        api-key:
+      prometheus:
+        url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
+        export-path: ./prometheus-exports
+      export:
+        path: ./test-exports
+      healthcheck:
+        enabled: true
+        interval-ms: 60000
+        connection-timeout-ms: 5000
+        kafka:
+          bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        oracle:
+          url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+          user: perfuser
+          password: perfpass
+
+    management:
+      metrics:
+        distribution:
+          percentiles-histogram:
+            http.server.requests: true
+            jms: true
+            mq.e2e.latency: true
+          percentiles:
+            http.server.requests: 0.5,0.95,0.99
+            jms: 0.5,0.95,0.99
+            mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99
+
+    logging:
+      level:
+        org.springframework.jms: INFO
+        com.ibm.mq: INFO
+        com.ibm.msg: INFO
+        com.example.perftester: INFO
+
+  ibm-mq-consumer.yml: |
+    server:
+      port: 8081
+      address: 0.0.0.0
+
+    spring:
+      jms:
+        cache:
+          enabled: true
+          session-cache-size: 50
+      kafka:
+        bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        producer:
+          key-serializer: org.apache.kafka.common.serialization.StringSerializer
+          value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        consumer:
+          group-id: ibm-mq-consumer-group
+          auto-offset-reset: earliest
+          key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+          value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      task:
+        execution:
+          thread-name-prefix: mq-consumer-
+
+    ibm:
+      mq:
+        queue-manager: QM1
+        channel: DEV.ADMIN.SVRCONN
+        conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+        user: admin
+        password: passw0rd
+
+    app:
+      mq:
+        queue:
+          inbound: DEV.QUEUE.2
+          outbound: DEV.QUEUE.1
+      kafka:
+        topic:
+          request: mq-requests
+          response: mq-responses
+
+    management:
+      metrics:
+        distribution:
+          percentiles-histogram:
+            http.server.requests: true
+            jms: true
+            mq.e2e.latency: true
+          percentiles:
+            http.server.requests: 0.95,0.99
+            jms: 0.95,0.99
+            mq.e2e.latency: 0.95,0.99
+
+    logging:
+      level:
+        com.example.ibmmqconsumer: INFO
+
+  kafka-consumer.yml: |
+    server:
+      port: 8082
+      address: 0.0.0.0
+
+    spring:
+      kafka:
+        bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        producer:
+          key-serializer: org.apache.kafka.common.serialization.StringSerializer
+          value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        consumer:
+          group-id: kafka-consumer-group
+          auto-offset-reset: earliest
+          key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+          value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      task:
+        execution:
+          thread-name-prefix: kafka-consumer-
+
+    app:
+      kafka:
+        topic:
+          request: mq-requests
+          response: mq-responses
+
+    management:
+      metrics:
+        distribution:
+          percentiles-histogram:
+            http.server.requests: true
+            kafka: true
+          percentiles:
+            http.server.requests: 0.95,0.99
+            kafka: 0.95,0.99
+
+    logging:
+      level:
+        com.example.kafkaconsumer: INFO
+
+  api-gateway.yml: |
+    server:
+      port: 8090
+
+    spring:
+      cloud:
+        gateway:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                allowCredentials: false
+          server:
+            webflux:
+              routes:
+                - id: grafana
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/grafana,/grafana/**
+                  filters:
+                    - StripPrefix=0
+                    - PreserveHostHeader
+                    - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+                - id: prometheus
+                  uri: http://perf-prometheus:9090
+                  predicates:
+                    - Path=/prometheus,/prometheus/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: loki-root
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/loki
+                  filters:
+                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=loki
+
+                - id: loki-api
+                  uri: http://perf-loki:3100
+                  predicates:
+                    - Path=/loki/**
+                  filters:
+                    - StripPrefix=1
+
+                - id: ibmmq
+                  uri: https://perf-ibm-mq:9443
+                  predicates:
+                    - Path=/ibmmq,/ibmmq/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: kafdrop
+                  uri: http://perf-kafdrop:9000
+                  predicates:
+                    - Path=/kafdrop,/kafdrop/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: perf-tester
+                  uri: http://perf-perf-tester:8080
+                  predicates:
+                    - Path=/api/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: tempo-root
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/tempo
+                  filters:
+                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
+
+                - id: tempo-api
+                  uri: http://perf-tempo:3200
+                  predicates:
+                    - Path=/tempo/**
+                  filters:
+                    - StripPrefix=1
+
+                - id: sonar
+                  uri: http://perf-sonarqube:9000
+                  predicates:
+                    - Path=/sonar,/sonar/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: config-server
+                  uri: http://perf-config-server:8888
+                  predicates:
+                    - Path=/config,/config/**
+                  filters:
+                    - StripPrefix=1
+              httpclient:
+                ssl:
+                  use-insecure-trust-manager: true
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,prometheus,metrics
+      endpoint:
+        health:
+          show-details: always
+      metrics:
+        tags:
+          application: api-gateway
+
+    logging:
+      level:
+        org.springframework.cloud.gateway: DEBUG
+        reactor.netty: DEBUG

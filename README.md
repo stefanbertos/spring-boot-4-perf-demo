@@ -20,11 +20,13 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 | ibm-mq-consumer | Bridges MQ to Kafka and back | 8081 |
 | kafka-consumer | Processes Kafka messages, adds "processed" suffix | 8082 |
 | api-gateway | Routes all services through a single endpoint | 8090 |
+| config-server | Spring Cloud Config Server with filesystem backend | 8888 |
 
 ## Tech Stack
 
 - **Java 25** with virtual threads
 - **Spring Boot 4.0** with Spring Cloud Gateway
+- **Spring Cloud Config Server** with filesystem backend
 - **Gradle** multi-module build with Checkstyle and PMD
 - **IBM MQ** with mq-jms-spring-boot-starter
 - **Apache Kafka** for message streaming
@@ -53,8 +55,9 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
    runLocalDocker.bat
    ```
 
-   Then run each module:
+   Then run each module (start config-server first):
    ```bash
+   ./gradlew :config-server:bootRun
    ./gradlew :perf-tester:bootRun
    ./gradlew :ibm-mq-consumer:bootRun
    ./gradlew :kafka-consumer:bootRun
@@ -87,6 +90,7 @@ cleanup.bat
 | Tempo | http://localhost/tempo | - |
 | IBM MQ Console | http://localhost/ibmmq | admin / passw0rd |
 | SonarQube | http://localhost/sonar | admin / admin |
+| Config Server | http://localhost/config | - |
 | Swagger UI | http://localhost/api/swagger-ui/index.html | - |
 | API Docs | http://localhost/api/v3/api-docs | - |
 
@@ -101,6 +105,7 @@ cleanup.bat
 | Tempo | http://localhost:3200 | - |
 | IBM MQ Console | https://localhost:9443/ibmmq/console | admin / passw0rd |
 | SonarQube | http://localhost:9001 | admin / admin |
+| Config Server | http://localhost:8888 | - |
 | Swagger UI | http://localhost:8080/swagger-ui/index.html | - |
 | Oracle DB | localhost:1521/XEPDB1 | perfuser / perfpass |
 
@@ -148,6 +153,35 @@ app:
 ### Metrics
 ```bash
 curl http://localhost:8080/actuator/prometheus
+```
+
+## Centralized Configuration
+
+All application configuration is centralized via Spring Cloud Config Server with a filesystem backend.
+
+### Config Repository Structure
+
+```
+config-repo/
+├── application.yml              # Shared config (virtual threads, task pool, management)
+├── application-docker.yml       # Shared Docker Compose profile
+├── application-kubernetes.yml   # Shared Kubernetes profile
+├── perf-tester.yml             # perf-tester specific config
+├── perf-tester-docker.yml
+├── perf-tester-kubernetes.yml
+├── ibm-mq-consumer.yml         # ibm-mq-consumer specific config
+├── kafka-consumer.yml          # kafka-consumer specific config
+├── api-gateway.yml             # api-gateway routes and config
+└── ...
+```
+
+### Accessing Config Server
+
+```bash
+# Get config for an application
+curl http://localhost:8888/perf-tester/default
+curl http://localhost:8888/perf-tester/docker
+curl http://localhost:8888/application/default
 ```
 
 ## Queue & Topic Configuration
@@ -245,6 +279,7 @@ Technical documentation is automatically generated as part of the build process 
 | Chart | Description |
 |-------|-------------|
 | api-gateway | Spring Cloud Gateway for routing |
+| config-server | Spring Cloud Config Server with filesystem backend |
 | grafana | Dashboards and visualization |
 | ibm-mq | IBM MQ queue manager |
 | ibm-mq-consumer | MQ to Kafka bridge service |

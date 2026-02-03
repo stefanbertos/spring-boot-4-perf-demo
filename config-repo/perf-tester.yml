@@ -1,0 +1,85 @@
+# perf-tester application configuration
+server:
+  port: 8080
+  address: 0.0.0.0
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: perfuser
+    password: perfpass
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        format_sql: true
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jms:
+    cache:
+      enabled: true
+      session-cache-size: 50
+  task:
+    execution:
+      thread-name-prefix: mq-sender-
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
+app:
+  mq:
+    queue:
+      inbound: DEV.QUEUE.1
+      outbound: DEV.QUEUE.2
+  grafana:
+    url: http://localhost:3000
+    export-path: ./grafana-exports
+    api-key:
+  prometheus:
+    url: http://localhost:9090
+    export-path: ./prometheus-exports
+  export:
+    path: ./test-exports
+  healthcheck:
+    enabled: true
+    interval-ms: 60000
+    connection-timeout-ms: 5000
+    kafka:
+      bootstrap-servers: localhost:9092
+    oracle:
+      url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+      user: perfuser
+      password: perfpass
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        jms: true
+        mq.e2e.latency: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        jms: 0.5,0.95,0.99
+        mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99
+
+logging:
+  level:
+    org.springframework.jms: INFO
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO
+    com.example.perftester: INFO

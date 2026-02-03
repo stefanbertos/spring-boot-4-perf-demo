@@ -1,0 +1,95 @@
+# api-gateway Docker profile configuration
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: false
+      server:
+        webflux:
+          routes:
+            - id: grafana
+              uri: http://grafana:3000
+              predicates:
+                - Path=/grafana,/grafana/**
+              filters:
+                - StripPrefix=0
+                - PreserveHostHeader
+                - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+            - id: prometheus
+              uri: http://prometheus:9090
+              predicates:
+                - Path=/prometheus,/prometheus/**
+              filters:
+                - StripPrefix=0
+
+            - id: loki-root
+              uri: http://grafana:3000
+              predicates:
+                - Path=/loki
+              filters:
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=loki
+
+            - id: loki-api
+              uri: http://loki:3100
+              predicates:
+                - Path=/loki/**
+              filters:
+                - StripPrefix=1
+
+            - id: ibmmq
+              uri: https://ibm-mq:9443
+              predicates:
+                - Path=/ibmmq,/ibmmq/**
+              filters:
+                - StripPrefix=0
+
+            - id: kafdrop
+              uri: http://kafdrop:9000
+              predicates:
+                - Path=/kafdrop,/kafdrop/**
+              filters:
+                - StripPrefix=0
+
+            - id: perf-tester
+              uri: http://perf-tester:8080
+              predicates:
+                - Path=/api/**
+              filters:
+                - StripPrefix=0
+
+            - id: tempo-root
+              uri: http://grafana:3000
+              predicates:
+                - Path=/tempo
+              filters:
+                - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
+
+            - id: tempo-api
+              uri: http://tempo:3200
+              predicates:
+                - Path=/tempo/**
+              filters:
+                - StripPrefix=1
+
+            - id: sonar
+              uri: http://sonarqube:9000
+              predicates:
+                - Path=/sonar,/sonar/**
+              filters:
+                - StripPrefix=0
+
+            - id: config-server
+              uri: http://config-server:8888
+              predicates:
+                - Path=/config,/config/**
+              filters:
+                - StripPrefix=1
+          httpclient:
+            ssl:
+              use-insecure-trust-manager: true

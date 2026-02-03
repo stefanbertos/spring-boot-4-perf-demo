@@ -1,0 +1,4 @@
+# kafka-consumer Kubernetes profile configuration
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}

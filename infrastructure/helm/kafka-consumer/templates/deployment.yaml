@@ -23,6 +23,8 @@ spec:
               value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: kafka-consumer
+            - name: CONFIG_SERVER_URL
+              value: {{ .Values.configServer.url }}
             - name: SPRING_KAFKA_BOOTSTRAPSERVERS
               value: {{ .Values.kafka.bootstrapServers }}
             - name: SPRING_KAFKA_CONSUMER_GROUPID

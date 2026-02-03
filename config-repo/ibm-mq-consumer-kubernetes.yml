@@ -1,0 +1,8 @@
+# ibm-mq-consumer Kubernetes profile configuration
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+
+ibm:
+  mq:
+    conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}

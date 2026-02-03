@@ -1,0 +1,57 @@
+# ibm-mq-consumer application configuration
+server:
+  port: 8081
+  address: 0.0.0.0
+
+spring:
+  jms:
+    cache:
+      enabled: true
+      session-cache-size: 50
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ibm-mq-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  task:
+    execution:
+      thread-name-prefix: mq-consumer-
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
+app:
+  mq:
+    queue:
+      inbound: DEV.QUEUE.2
+      outbound: DEV.QUEUE.1
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        jms: true
+        mq.e2e.latency: true
+      percentiles:
+        http.server.requests: 0.95,0.99
+        jms: 0.95,0.99
+        mq.e2e.latency: 0.95,0.99
+
+logging:
+  level:
+    com.example.ibmmqconsumer: INFO

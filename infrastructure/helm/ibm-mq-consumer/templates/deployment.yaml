@@ -23,6 +23,8 @@ spec:
               value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: ibm-mq-consumer
+            - name: CONFIG_SERVER_URL
+              value: {{ .Values.configServer.url }}
             - name: IBM_MQ_QUEUEMANAGER
               value: {{ .Values.mq.queueManager }}
             - name: IBM_MQ_CHANNEL

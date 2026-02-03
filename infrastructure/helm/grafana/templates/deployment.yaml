@@ -40,10 +40,30 @@ spec:
             {{- end }}
             - name: GF_SECURITY_ALLOW_EMBEDDING
               value: "true"
+            - name: GF_SECURITY_COOKIE_SAMESITE
+              value: "disabled"
+            - name: GF_SECURITY_COOKIE_SECURE
+              value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-              value: "Viewer"
+              value: "Admin"
+            - name: GF_AUTH_ANONYMOUS_ORG_NAME
+              value: "Main Org."
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+            - name: GF_AUTH_BASIC_ENABLED
+              value: "false"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION
+              value: "true"
+            - name: GF_SECURITY_CSRF_TRUSTED_ORIGINS
+              value: "*"
+            - name: GF_SECURITY_CSRF_ALWAYS_CHECK
+              value: "false"
+            - name: GF_SECURITY_CONTENT_SECURITY_POLICY
+              value: "false"
           ports:
             - name: http
               containerPort: 3000

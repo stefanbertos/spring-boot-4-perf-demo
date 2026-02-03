@@ -17,6 +17,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run kafka-consumer module
 ./gradlew :kafka-consumer:bootRun
 
+# Run config-server module
+./gradlew :config-server:bootRun
+
 # Run all tests
 ./gradlew test
 
@@ -24,6 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :perf-tester:test
 ./gradlew :ibm-mq-consumer:test
 ./gradlew :kafka-consumer:test
+./gradlew :config-server:test
 
 # Clean build
 ./gradlew clean build
@@ -34,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing.
 
 - **Java 25** with Gradle multi-module build
+- **Spring Cloud Config Server** with filesystem backend for centralized configuration
 - **Spring Actuator** with Prometheus metrics export
 - **Lombok** for boilerplate reduction
 - **Docker Compose** for IBM MQ, Kafka, Prometheus, Grafana
@@ -42,9 +47,11 @@ Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing.
 
 ### Modules
 
+- **config-server** (port 8888) - Spring Cloud Config Server with filesystem backend
 - **perf-tester** (port 8080) - REST API to send messages, receives processed responses
 - **ibm-mq-consumer** (port 8081) - Bridges MQ to Kafka and back
 - **kafka-consumer** (port 8082) - Processes Kafka messages, adds "processed" suffix
+- **api-gateway** (port 8090) - Spring Cloud Gateway for routing all services
 
 ### Message Flow
 

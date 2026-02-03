@@ -1,0 +1,21 @@
+# perf-tester Kubernetes profile configuration
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+    username: ${SPRING_DATASOURCE_USERNAME:perfuser}
+    password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
+
+ibm:
+  mq:
+    conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+
+app:
+  grafana:
+    url: ${GRAFANA_URL:http://perf-grafana:3000}
+  prometheus:
+    url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
+  healthcheck:
+    kafka:
+      bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+    oracle:
+      url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}

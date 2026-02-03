@@ -1,0 +1,39 @@
+# kafka-consumer application configuration
+server:
+  port: 8082
+  address: 0.0.0.0
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: kafka-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  task:
+    execution:
+      thread-name-prefix: kafka-consumer-
+
+app:
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        kafka: true
+      percentiles:
+        http.server.requests: 0.95,0.99
+        kafka: 0.95,0.99
+
+logging:
+  level:
+    com.example.kafkaconsumer: INFO

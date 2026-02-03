@@ -1,13 +1,8 @@
+# ibm-mq-consumer Docker profile configuration
 spring:
-  docker:
-    compose:
-      enabled: false
   kafka:
     bootstrap-servers: kafka:9092
 
 ibm:
   mq:
     conn-name: ibm-mq(1414)
-
-tracing:
-  url: http://tempo:4318/v1/traces

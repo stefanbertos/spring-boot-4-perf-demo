@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "api-gateway.fullname" . }}
+  name: {{ include "config-server.fullname" . }}
   labels:
-    {{- include "api-gateway.labels" . | nindent 4 }}
+    {{- include "config-server.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "api-gateway.selectorLabels" . | nindent 6 }}
+      {{- include "config-server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "api-gateway.selectorLabels" . | nindent 8 }}
+        {{- include "config-server.selectorLabels" . | nindent 8 }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
@@ -20,17 +20,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: docker
+              value: native
             - name: SPRING_APPLICATION_NAME
-              value: api-gateway
-            - name: CONFIG_SERVER_URL
-              value: {{ .Values.configServer.url }}
-            - name: TRACING_URL
-              value: {{ .Values.tracing.url }}
+              value: config-server
+            - name: CONFIG_REPO_PATH
+              value: {{ .Values.config.repoPath }}
           ports:
             - name: http
-              containerPort: 8090
+              containerPort: 8888
               protocol: TCP
+          volumeMounts:
+            - name: config-repo
+              mountPath: {{ .Values.config.repoPath }}
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -45,3 +47,7 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 5
+      volumes:
+        - name: config-repo
+          configMap:
+            name: {{ include "config-server.fullname" . }}-config
