@@ -351,13 +351,27 @@ Build enforces **Checkstyle** and **PMD 7.20.0**:
 
 ## SonarQube Integration
 
+### Exposing SonarQube
+
+**Docker Compose** — SonarQube is available at `http://localhost:9001/sonar` (mapped from container port 9000).
+
+**Kubernetes** — Port-forward the SonarQube pod to access it locally:
+
+```bash
+kubectl port-forward svc/perf-sonarqube 9001:9000 -n perf-demo
+```
+
+SonarQube is then available at `http://localhost:9001/sonar`.
+
+Via Ingress / API Gateway: `http://localhost/sonar`
+
 ### Running SonarQube Analysis
 
 ```bash
 # With Docker Compose (default)
 ./gradlew sonar
 
-# With Kubernetes
+# With Kubernetes (port-forward SonarQube first, then run)
 ./gradlew sonar -Pprofile=kubernetes
 
 # With custom URL and token

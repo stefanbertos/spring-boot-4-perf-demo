@@ -400,6 +400,17 @@ if %errorlevel% neq 0 (
 echo      SonarQube deployed.
 echo.
 
+echo [12c/23] Deploying Redis...
+helm upgrade --install %RELEASE_PREFIX%-redis ./redis ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Redis
+    exit /b 1
+)
+echo      Redis deployed.
+echo.
+
 :: ============================================
 :: Deploy Kafka
 :: ============================================

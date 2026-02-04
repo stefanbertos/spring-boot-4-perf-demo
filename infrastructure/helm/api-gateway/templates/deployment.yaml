@@ -20,7 +20,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: docker
+              value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: api-gateway
             - name: CONFIG_SERVER_URL
