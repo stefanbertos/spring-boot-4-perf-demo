@@ -63,6 +63,14 @@ spec:
               value: "{{ .Values.task.execution.maxSize }}"
             - name: SPRING_TASK_EXECUTION_POOL_QUEUECAPACITY
               value: "{{ .Values.task.execution.queueCapacity }}"
+            - name: SPRING_DATA_REDIS_HOST
+              value: {{ .Values.redis.host }}
+            - name: SPRING_DATA_REDIS_PORT
+              value: "{{ .Values.redis.port }}"
+            - name: APP_HEALTHCHECK_REDIS_HOST
+              value: {{ .Values.redis.host }}
+            - name: APP_HEALTHCHECK_REDIS_PORT
+              value: "{{ .Values.redis.port }}"
             - name: TRACING_URL
               value: {{ .Values.tracing.url }}
           ports:

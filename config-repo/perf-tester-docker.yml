@@ -2,6 +2,9 @@
 spring:
   datasource:
     url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+  data:
+    redis:
+      host: redis
 
 ibm:
   mq:
@@ -15,5 +18,7 @@ app:
   healthcheck:
     kafka:
       bootstrap-servers: kafka:9092
+    redis:
+      host: redis
     oracle:
       url: jdbc:oracle:thin:@oracle:1521/XEPDB1

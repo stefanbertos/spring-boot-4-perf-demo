@@ -8,6 +8,7 @@ public record HealthCheckProperties(
         @DefaultValue ServiceEndpoint kafka,
         @DefaultValue ServiceEndpoint mq,
         @DefaultValue ServiceEndpoint oracle,
+        @DefaultValue ServiceEndpoint redis,
         @DefaultValue("5000") int connectionTimeoutMs,
         @DefaultValue("60000") int intervalMs
 ) {

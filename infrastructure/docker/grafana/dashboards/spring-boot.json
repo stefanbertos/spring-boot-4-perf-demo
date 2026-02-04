@@ -429,6 +429,10 @@
         {
           "expr": "health_oracle_status{job=\"perf-tester\"}",
           "legendFormat": "Oracle"
+        },
+        {
+          "expr": "health_redis_status{job=\"perf-tester\"}",
+          "legendFormat": "Redis"
         }
       ],
       "fieldConfig": {

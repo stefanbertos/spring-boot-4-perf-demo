@@ -4,6 +4,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
     username: ${SPRING_DATASOURCE_USERNAME:perfuser}
     password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:perf-redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 ibm:
   mq:
@@ -17,5 +21,8 @@ app:
   healthcheck:
     kafka:
       bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+    redis:
+      host: ${REDIS_HOST:perf-redis}
+      port: ${REDIS_PORT:6379}
     oracle:
       url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}

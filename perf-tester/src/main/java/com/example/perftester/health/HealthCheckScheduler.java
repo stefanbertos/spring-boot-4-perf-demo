@@ -24,10 +24,12 @@ public class HealthCheckScheduler {
     private final AtomicInteger kafkaStatus = new AtomicInteger(0);
     private final AtomicInteger mqStatus = new AtomicInteger(0);
     private final AtomicInteger oracleStatus = new AtomicInteger(0);
+    private final AtomicInteger redisStatus = new AtomicInteger(0);
 
     private final Timer kafkaPingTimer;
     private final Timer mqPingTimer;
     private final Timer oraclePingTimer;
+    private final Timer redisPingTimer;
 
     public HealthCheckScheduler(HealthCheckProperties properties, MeterRegistry meterRegistry) {
         this.properties = properties;
@@ -47,6 +49,11 @@ public class HealthCheckScheduler {
                 .tag("service", "oracle")
                 .register(meterRegistry);
 
+        Gauge.builder("health.infra.status", redisStatus, AtomicInteger::get)
+                .description("Infrastructure health status (1=up, 0=down)")
+                .tag("service", "redis")
+                .register(meterRegistry);
+
         this.kafkaPingTimer = Timer.builder("health.ping.duration")
                 .description("Health check ping duration")
                 .tag("service", "kafka")
@@ -62,10 +69,16 @@ public class HealthCheckScheduler {
                 .tag("service", "oracle")
                 .register(meterRegistry);
 
-        log.info("Health check scheduler initialized - Kafka: {}:{}, MQ: {}:{}, Oracle: {}:{}",
+        this.redisPingTimer = Timer.builder("health.ping.duration")
+                .description("Health check ping duration")
+                .tag("service", "redis")
+                .register(meterRegistry);
+
+        log.info("Health check scheduler initialized - Kafka: {}:{}, MQ: {}:{}, Oracle: {}:{}, Redis: {}:{}",
                 properties.kafka().host(), properties.kafka().port(),
                 properties.mq().host(), properties.mq().port(),
-                properties.oracle().host(), properties.oracle().port());
+                properties.oracle().host(), properties.oracle().port(),
+                properties.redis().host(), properties.redis().port());
     }
 
     @Scheduled(fixedRateString = "${app.healthcheck.interval-ms:60000}")
@@ -74,6 +87,7 @@ public class HealthCheckScheduler {
         checkKafka();
         checkMq();
         checkOracle();
+        checkRedis();
     }
 
     private void checkKafka() {
@@ -86,6 +100,10 @@ public class HealthCheckScheduler {
 
     private void checkOracle() {
         checkTcpPort("Oracle", properties.oracle(), oracleStatus, oraclePingTimer);
+    }
+
+    private void checkRedis() {
+        checkTcpPort("Redis", properties.redis(), redisStatus, redisPingTimer);
     }
 
     private void checkTcpPort(String serviceName, HealthCheckProperties.ServiceEndpoint endpoint,

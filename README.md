@@ -31,6 +31,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 - **IBM MQ** with mq-jms-spring-boot-starter
 - **Apache Kafka** for message streaming
 - **Oracle Database** for persistence
+- **Redis** for in-memory data store
 - **Observability**: Prometheus, Grafana, Loki, Tempo
 - **Code Quality**: SonarQube
 
@@ -107,6 +108,7 @@ cleanup.bat
 | SonarQube | http://localhost:9001 | admin / admin |
 | Config Server | http://localhost:8888 | - |
 | Swagger UI | http://localhost:8080/swagger-ui/index.html | - |
+| Redis | localhost:6379 | - |
 | Oracle DB | localhost:1521/XEPDB1 | perfuser / perfpass |
 
 ## API Endpoints
@@ -130,6 +132,7 @@ The perf-tester module performs TCP port health checks on infrastructure service
 | Kafka | 9092 | `health.infra.status{service="kafka"}` |
 | IBM MQ | 1414 | `health.infra.status{service="ibm-mq"}` |
 | Oracle | 1521 | `health.infra.status{service="oracle"}` |
+| Redis | 6379 | `health.infra.status{service="redis"}` |
 
 Health check timing is exposed via `health.ping.duration` metric.
 
@@ -143,6 +146,9 @@ app:
     mq:
       host: ibm-mq
       port: 1414
+    redis:
+      host: redis
+      port: 6379
     oracle:
       host: oracle
       port: 1521
@@ -291,6 +297,7 @@ Technical documentation is automatically generated as part of the build process 
 | loki | Log aggregation |
 | oracle | Oracle XE database |
 | oracle-exporter | Oracle metrics for Prometheus |
+| redis | Redis in-memory data store |
 | perf-tester | Main REST API service |
 | prometheus | Metrics collection |
 | promtail | Log shipping to Loki |
@@ -388,3 +395,6 @@ deployHelm.bat
 ```
 
 Images are automatically pushed to Google Artifact Registry.
+
+
+ollama launch claude --config

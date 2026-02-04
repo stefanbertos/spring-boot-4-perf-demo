@@ -27,6 +27,10 @@ prometheus:
   url: http://perf-prometheus:9090/prometheus
   exportPath: /tmp/prometheus-exports
 
+redis:
+  host: perf-redis
+  port: 6379
+
 configServer:
   url: http://perf-config-server:8888
 

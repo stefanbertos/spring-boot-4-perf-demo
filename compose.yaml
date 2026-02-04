@@ -23,6 +23,7 @@ services:
     depends_on:
       - config-server
       - ibm-mq
+      - redis
 
   ibm-mq-consumer:
     build:
@@ -77,6 +78,13 @@ services:
       - grafana
       - prometheus
       - perf-tester
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
 
   kafka:
     image: apache/kafka:3.9.0
@@ -235,6 +243,7 @@ services:
       - sonarqube-db-data:/var/lib/postgresql/data
 
 volumes:
+  redis-data:
   grafana-data:
   tempo-data:
   loki-data:
