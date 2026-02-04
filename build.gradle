@@ -228,8 +228,8 @@ tasks.register('jacocoAggregatedReport', JacocoReport) {
 //   kubernetes: http://perf-sonarqube:9000/sonar (Kubernetes service)
 ext {
     sonarUrlDocker = 'http://localhost:9001'
-    sonarUrlKubernetes = 'http://perf-sonarqube:9000/sonar'
-    sonarDefaultUrl = isKubernetesProfile ? sonarUrlKubernetes : sonarUrlDocker
+    sonarUrlKubernetes = 'http://localhost/sonar'
+    sonarDefaultUrl = sonarUrlKubernetes
 }
 
 sonar {

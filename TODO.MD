@@ -268,8 +268,7 @@ Tell me what you want to tackle nex
 
 
 add avro schema format for messages
-check sonar reports, why the projects dont run sonar scan as part of the build?
-fix grafana dashboards in helm
+
 add ui with react which would call rest service in bff
 add some violation scanning of vulnerabilities
 add component spring test with compose and spring docker support and run test e2e, the component test should use the gherkin language and steps implemented in java
@@ -278,6 +277,12 @@ add smoke tests to check that all services are working
 add deployment with argocd
 add some image violation check
 
-change grafa helm to use file references - corrupted dashboards
-
-
+create new specification for the project
+fix redis commander http://localhost/redis-commander Whitelabel Error Page
+fix grafana dashboards in helm
+check sonar reports, why the projects dont run sonar scan as part of the build?
+add
+plugins {
+id "org.owasp.dependencycheck" version "9.0.9"
+}
+for security check

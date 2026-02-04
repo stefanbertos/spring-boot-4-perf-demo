@@ -14,7 +14,7 @@ service:
 sonar:
   # Token used by Gradle/Maven to authenticate with SonarQube
   # Set via --set sonar.token=<your-token> or in values override
-  token: ""
+  token: "squ_7a86924abe599c2217d7e29b5b55f44767aeaad1"
   # Project key for analysis
   projectKey: "spring-boot-4-perf-demo"
   # External URL for Gradle to reach SonarQube (from outside cluster)
