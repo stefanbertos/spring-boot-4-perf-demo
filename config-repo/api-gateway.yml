@@ -65,6 +65,14 @@ spring:
               filters:
                 - StripPrefix=0
 
+            # Redis Commander - serves from /redis-commander subpath (URL_PREFIX=/redis-commander)
+            - id: redis-commander
+              uri: ${REDIS_COMMANDER_URL:http://localhost:8083}
+              predicates:
+                - Path=/redis-commander,/redis-commander/**
+              filters:
+                - StripPrefix=0
+
             # Perf-Tester API
             - id: perf-tester
               uri: ${PERF_TESTER_URL:http://localhost:8080}

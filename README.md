@@ -87,6 +87,7 @@ cleanup.bat
 | Grafana | http://localhost/grafana | admin / admin |
 | Prometheus | http://localhost/prometheus | - |
 | Kafdrop | http://localhost/kafdrop | - |
+| Redis Commander | http://localhost/redis-commander | - |
 | Loki | http://localhost/loki | - |
 | Tempo | http://localhost/tempo | - |
 | IBM MQ Console | http://localhost/ibmmq | admin / passw0rd |
@@ -102,6 +103,7 @@ cleanup.bat
 | Grafana | http://localhost:3000 | admin / admin |
 | Prometheus | http://localhost:9090 | - |
 | Kafdrop | http://localhost:9000/kafdrop | - |
+| Redis Commander | http://localhost:8083/redis-commander | - |
 | Loki | http://localhost:3100 | - |
 | Tempo | http://localhost:3200 | - |
 | IBM MQ Console | https://localhost:9443/ibmmq/console | admin / passw0rd |
@@ -298,6 +300,7 @@ Technical documentation is automatically generated as part of the build process 
 | oracle | Oracle XE database |
 | oracle-exporter | Oracle metrics for Prometheus |
 | redis | Redis in-memory data store |
+| redis-commander | Redis web UI |
 | perf-tester | Main REST API service |
 | prometheus | Metrics collection |
 | promtail | Log shipping to Loki |

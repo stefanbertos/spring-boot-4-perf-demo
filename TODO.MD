@@ -278,4 +278,6 @@ add smoke tests to check that all services are working
 add deployment with argocd
 add some image violation check
 
+change grafa helm to use file references - corrupted dashboards
+
 

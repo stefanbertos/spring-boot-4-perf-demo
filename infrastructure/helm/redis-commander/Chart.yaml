@@ -1,0 +1,6 @@
+apiVersion: v2
+name: redis-commander
+description: Redis Commander - Redis Web UI
+type: application
+version: 1.0.0
+appVersion: "latest"

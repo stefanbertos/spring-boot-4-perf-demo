@@ -520,6 +520,20 @@ echo      Kafdrop deployed.
 echo.
 
 :: ============================================
+:: Deploy Redis Commander
+:: ============================================
+echo [15b/23] Deploying Redis Commander...
+helm upgrade --install %RELEASE_PREFIX%-redis-commander ./redis-commander ^
+    --namespace %NAMESPACE% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Redis Commander
+    exit /b 1
+)
+echo      Redis Commander deployed.
+echo.
+
+:: ============================================
 :: Deploy Kafka Exporter
 :: ============================================
 echo [16/23] Deploying Kafka Exporter...
@@ -584,6 +598,7 @@ echo   - Grafana:     http://localhost/grafana (admin/admin)
 echo   - Swagger UI:  http://localhost/api/swagger-ui/index.html
 echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
+echo   - Redis Commander: http://localhost/redis-commander
 echo   - Loki:        http://localhost/loki
 echo   - Tempo:        http://localhost/tempo
 echo   - MQ Console:  http://localhost/ibmmq (admin/passw0rd)

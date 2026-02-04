@@ -70,6 +70,7 @@ services:
       LOKI_URL: http://loki:3100
       IBMMQ_URL: https://ibm-mq:9443
       KAFDROP_URL: http://kafdrop:9000
+      REDIS_COMMANDER_URL: http://redis-commander:8081
       PERF_TESTER_URL: http://perf-tester:8080
       TEMPO_URL: http://tempo:3200
       SONAR_URL: http://sonarqube:9000
@@ -85,6 +86,16 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    ports:
+      - "8083:8081"
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+      URL_PREFIX: /redis-commander
+    depends_on:
+      - redis
 
   kafka:
     image: apache/kafka:3.9.0
