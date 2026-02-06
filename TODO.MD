@@ -1,8 +1,7 @@
+refactor KubernetesService so it doesnt use KubernetesNodeInfo but exports everything into file which is available from KubernetesClient and adds it into the zip package
+fix places in the code where we dont use var keyword and we can  fix the places in the code where we dont use @RequiredArgsConstructor and add it to CLAUDE.md as new rule and check the CLAUDE.md if all files are matching the rules and fix it
 add owasp scanner for java code as part of the build, add report etc
 fix redis commander http://localhost/redis-commander Whitelabel Error Page
-fix places in the code where we dont use var keyword and we can  fix the places in the code where we dont use @RequiredArgsConstructor and add it to CLAUDE.md as new rule
-check the CLAUDE.md if all files are matching the rules and fix it
-refactor KubernetesService so it doesnt use KubernetesNodeInfo but exports everything into file which is available from KubernetesClient and adds it into the zip package
 check sonar reports, why the projects dont run sonar scan as part of the build?
 add deployment with argocd instead of deploy script, but keep helm charts if possible
 add component spring test with compose and spring docker support and run test e2e, the component test should use the gherkin language and steps implemented in java

@@ -1,7 +1,6 @@
 package com.example.perftester.messaging;
 
 import com.example.perftester.perf.PerformanceTracker;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
