@@ -1,0 +1,9 @@
+{
+  "namespace": "com.example.avro",
+  "type": "record",
+  "name": "MqMessage",
+  "fields": [
+    { "name": "content", "type": "string" },
+    { "name": "timestamp", "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ]
+}

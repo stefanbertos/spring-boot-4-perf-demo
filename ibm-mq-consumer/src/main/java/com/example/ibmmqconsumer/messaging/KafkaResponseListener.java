@@ -1,5 +1,6 @@
 package com.example.ibmmqconsumer.messaging;
 
+import com.example.avro.MqMessage;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -47,10 +48,10 @@ public class KafkaResponseListener {
            histogram = true,
            percentiles = {0.95, 0.99})
     @KafkaListener(topics = "${app.kafka.topic.response}", groupId = "${spring.kafka.consumer.group-id}", concurrency = "10")
-    public void onMessage(ConsumerRecord<String, String> record) {
+    public void onMessage(ConsumerRecord<String, MqMessage> record) {
         messagesReceived.increment();
 
-        String message = record.value();
+        String message = record.value().getContent();
         String replyTo = getHeader(record, "mq-reply-to");
         String correlationId = getHeader(record, "correlationId");
         String parentTraceId = getHeader(record, "traceId");
@@ -96,7 +97,7 @@ public class KafkaResponseListener {
         }
     }
 
-    private String getHeader(ConsumerRecord<String, String> record, String headerName) {
+    private String getHeader(ConsumerRecord<String, MqMessage> record, String headerName) {
         var header = record.headers().lastHeader(headerName);
         return header != null ? new String(header.value(), java.nio.charset.StandardCharsets.UTF_8) : null;
     }

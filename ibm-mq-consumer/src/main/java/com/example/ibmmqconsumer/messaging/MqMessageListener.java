@@ -7,10 +7,12 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import com.example.avro.MqMessage;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.TextMessage;
+import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
@@ -23,14 +25,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class MqMessageListener {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<String, MqMessage> kafkaTemplate;
     private final Counter messagesReceived;
     private final Counter messagesForwarded;
     private final Counter messagesDropped;
     private final Tracer tracer;
     private final String kafkaRequestTopic;
 
-    public MqMessageListener(KafkaTemplate<String, String> kafkaTemplate,
+    public MqMessageListener(KafkaTemplate<String, MqMessage> kafkaTemplate,
                             MeterRegistry meterRegistry,
                             Tracer tracer,
                             @Value("${app.kafka.topic.request}") String kafkaRequestTopic) {
@@ -84,8 +86,13 @@ public class MqMessageListener {
                 log.debug("Publishing to Kafka topic {}, replyTo: {}, traceId: {}",
                         kafkaRequestTopic, replyToString, newTraceId);
 
-                org.springframework.messaging.Message<String> kafkaMessage = MessageBuilder
-                        .withPayload(body)
+                MqMessage mqMessage = MqMessage.newBuilder()
+                        .setContent(body)
+                        .setTimestamp(Instant.now())
+                        .build();
+
+                org.springframework.messaging.Message<MqMessage> kafkaMessage = MessageBuilder
+                        .withPayload(mqMessage)
                         .setHeader(KafkaHeaders.TOPIC, kafkaRequestTopic)
                         .setHeader("mq-reply-to", replyToString)
                         .setHeader("traceId", newTraceId)

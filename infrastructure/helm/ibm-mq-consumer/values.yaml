@@ -27,6 +27,9 @@ kafka:
   consumer:
     groupId: ibm-mq-consumer-group
 
+schemaRegistry:
+  url: http://perf-schema-registry:8081
+
 configServer:
   url: http://perf-config-server:8888
 

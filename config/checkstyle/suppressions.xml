@@ -17,4 +17,7 @@
 
     <!-- Suppress TooManyFields for JPA entity classes -->
     <suppress checks="TooManyFields" files=".*/persistence/entity/.*\.java$"/>
+
+    <!-- Suppress all checks for Avro-generated code -->
+    <suppress checks=".*" files=".*/com/example/avro/.*"/>
 </suppressions>

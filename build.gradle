@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '4.0.1' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1' apply false
     id 'org.sonarqube' version '7.2.2.6593'
     id 'jacoco'
     id 'jacoco-report-aggregation'
@@ -10,6 +11,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven { url 'https://packages.confluent.io/maven/' }
 }
 
 // ==================== Build Profile Configuration ====================
@@ -62,6 +64,7 @@ subprojects {
     }
 
     tasks.withType(Checkstyle).configureEach {
+        exclude '**/com/example/avro/**'
         reports {
             xml.required = true
             html.required = true
@@ -78,6 +81,7 @@ subprojects {
     }
 
     tasks.withType(Pmd).configureEach {
+        exclude '**/com/example/avro/**'
         reports {
             xml.required = true
             html.required = true
@@ -116,7 +120,8 @@ subprojects {
                     '*.prometheus.*',
                     '*.export.*',
                     '*.apigateway.*',
-                    '*.persistence.*'
+                    '*.persistence.*',
+                    '*.avro.*'
                 ]
                 limit {
                     minimum = 0.8  // 80% coverage required per class
@@ -148,6 +153,7 @@ subprojects {
 
     repositories {
         mavenCentral()
+        maven { url 'https://packages.confluent.io/maven/' }
     }
 
     dependencies {

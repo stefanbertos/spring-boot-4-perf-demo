@@ -1,5 +1,6 @@
 package com.example.ibmmqconsumer.messaging;
 
+import com.example.avro.MqMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -20,6 +21,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,7 +35,7 @@ import static org.mockito.Mockito.when;
 class MqMessageListenerTest {
 
     @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaTemplate<String, MqMessage> kafkaTemplate;
 
     @Mock
     private Tracer tracer;
@@ -80,11 +82,12 @@ class MqMessageListenerTest {
 
         listener.onMessage(jmsMessage);
 
-        ArgumentCaptor<Message<String>> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        ArgumentCaptor<Message<MqMessage>> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(kafkaTemplate).send(messageCaptor.capture());
 
-        Message<String> sentMessage = messageCaptor.getValue();
-        assertEquals("test message", sentMessage.getPayload());
+        Message<MqMessage> sentMessage = messageCaptor.getValue();
+        assertEquals("test message", sentMessage.getPayload().getContent());
+        assertNotNull(sentMessage.getPayload().getTimestamp());
         assertEquals("mq-requests", sentMessage.getHeaders().get("kafka_topic"));
         assertEquals("queue:///DEV.QUEUE.1", sentMessage.getHeaders().get("mq-reply-to"));
         assertEquals("corr-123", sentMessage.getHeaders().get("correlationId"));

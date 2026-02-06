@@ -1,5 +1,6 @@
 package com.example.ibmmqconsumer.messaging;
 
+import com.example.avro.MqMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -9,6 +10,8 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +21,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
-
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,7 +71,7 @@ class KafkaResponseListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = createRecord("test message processed",
+        ConsumerRecord<String, MqMessage> record = createRecord("test message processed",
                 "queue:///DEV.QUEUE.1", "corr-123", "parent-trace", "parent-span");
 
         listener.onMessage(record);
@@ -98,7 +99,7 @@ class KafkaResponseListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = createRecord("test message", "DEV.QUEUE.1", null, null, null);
+        ConsumerRecord<String, MqMessage> record = createRecord("test message", "DEV.QUEUE.1", null, null, null);
 
         listener.onMessage(record);
 
@@ -120,7 +121,11 @@ class KafkaResponseListenerTest {
     void onMessageShouldDropMessageWhenNoReplyTo() {
         setupTracerMocksWithoutSpanContext();
 
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mq-responses", 0, 0, "key", "test message");
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent("test message")
+                .setTimestamp(Instant.now())
+                .build();
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>("mq-responses", 0, 0, "key", mqMessage);
 
         listener.onMessage(record);
 
@@ -137,7 +142,7 @@ class KafkaResponseListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = createRecord("test message", "queue:///DEV.QUEUE.1", null, null, null);
+        ConsumerRecord<String, MqMessage> record = createRecord("test message", "queue:///DEV.QUEUE.1", null, null, null);
 
         RuntimeException exception = new RuntimeException("JMS send failed");
         doThrow(exception).when(jmsTemplate).convertAndSend(anyString(), anyString(), any(MessagePostProcessor.class));
@@ -154,7 +159,7 @@ class KafkaResponseListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = createRecord("test message", "queue:///DEV.QUEUE.1", null, null, null);
+        ConsumerRecord<String, MqMessage> record = createRecord("test message", "queue:///DEV.QUEUE.1", null, null, null);
 
         listener.onMessage(record);
 
@@ -165,9 +170,13 @@ class KafkaResponseListenerTest {
         assertTrue(sent >= 1.0);
     }
 
-    private ConsumerRecord<String, String> createRecord(String message, String replyTo, String correlationId,
+    private ConsumerRecord<String, MqMessage> createRecord(String message, String replyTo, String correlationId,
                                                         String traceId, String spanId) {
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mq-responses", 0, 0, "key", message);
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent(message)
+                .setTimestamp(Instant.now())
+                .build();
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>("mq-responses", 0, 0, "key", mqMessage);
         if (replyTo != null) {
             record.headers().add("mq-reply-to", replyTo.getBytes(StandardCharsets.UTF_8));
         }

@@ -52,6 +52,8 @@ spec:
               value: {{ .Values.kafka.topic.request }}
             - name: APP_KAFKA_TOPIC_RESPONSE
               value: {{ .Values.kafka.topic.response }}
+            - name: SCHEMA_REGISTRY_URL
+              value: {{ .Values.schemaRegistry.url }}
             - name: TRACING_URL
               value: {{ .Values.tracing.url }}
           ports:

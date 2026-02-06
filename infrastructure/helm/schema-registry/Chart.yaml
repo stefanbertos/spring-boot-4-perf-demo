@@ -1,0 +1,6 @@
+apiVersion: v2
+name: schema-registry
+description: Confluent Schema Registry for Avro schema management
+type: application
+version: 1.0.0
+appVersion: "7.7.1"

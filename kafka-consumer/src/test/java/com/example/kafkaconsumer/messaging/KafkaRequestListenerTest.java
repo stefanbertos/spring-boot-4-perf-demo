@@ -1,5 +1,6 @@
 package com.example.kafkaconsumer.messaging;
 
+import com.example.avro.MqMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.trace.Span;
@@ -7,8 +8,9 @@ import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,9 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
 
-import java.nio.charset.StandardCharsets;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.when;
 class KafkaRequestListenerTest {
 
     @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaTemplate<String, MqMessage> kafkaTemplate;
 
     @Mock
     private Tracer tracer;
@@ -64,14 +65,13 @@ class KafkaRequestListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        RecordHeaders headers = new RecordHeaders();
-        headers.add("mq-reply-to", "queue:///DEV.QUEUE.1".getBytes(StandardCharsets.UTF_8));
-        headers.add("correlationId", "corr-123".getBytes(StandardCharsets.UTF_8));
-        headers.add("traceId", "parent-trace".getBytes(StandardCharsets.UTF_8));
-        headers.add("spanId", "parent-span".getBytes(StandardCharsets.UTF_8));
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent("test message")
+                .setTimestamp(Instant.now())
+                .build();
 
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(
-                "mq-requests", 0, 0, "key", "test message");
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>(
+                "mq-requests", 0, 0, "key", mqMessage);
         record.headers().add("mq-reply-to", "queue:///DEV.QUEUE.1".getBytes(StandardCharsets.UTF_8));
         record.headers().add("correlationId", "corr-123".getBytes(StandardCharsets.UTF_8));
         record.headers().add("traceId", "parent-trace".getBytes(StandardCharsets.UTF_8));
@@ -79,11 +79,12 @@ class KafkaRequestListenerTest {
 
         listener.onMessage(record);
 
-        ArgumentCaptor<Message<String>> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        ArgumentCaptor<Message<MqMessage>> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(kafkaTemplate).send(messageCaptor.capture());
 
-        Message<String> sentMessage = messageCaptor.getValue();
-        assertEquals("test message processed", sentMessage.getPayload());
+        Message<MqMessage> sentMessage = messageCaptor.getValue();
+        assertEquals("test message processed", sentMessage.getPayload().getContent());
+        assertNotNull(sentMessage.getPayload().getTimestamp());
         assertEquals("mq-responses", sentMessage.getHeaders().get("kafka_topic"));
         assertEquals("queue:///DEV.QUEUE.1", sentMessage.getHeaders().get("mq-reply-to"));
         verify(span).end();
@@ -95,16 +96,21 @@ class KafkaRequestListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(
-                "mq-requests", 0, 0, "key", "test message");
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent("test message")
+                .setTimestamp(Instant.now())
+                .build();
+
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>(
+                "mq-requests", 0, 0, "key", mqMessage);
 
         listener.onMessage(record);
 
-        ArgumentCaptor<Message<String>> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        ArgumentCaptor<Message<MqMessage>> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(kafkaTemplate).send(messageCaptor.capture());
 
-        Message<String> sentMessage = messageCaptor.getValue();
-        assertEquals("test message processed", sentMessage.getPayload());
+        Message<MqMessage> sentMessage = messageCaptor.getValue();
+        assertEquals("test message processed", sentMessage.getPayload().getContent());
         verify(span).end();
     }
 
@@ -117,8 +123,13 @@ class KafkaRequestListenerTest {
         RuntimeException exception = new RuntimeException("Send failed");
         doThrow(exception).when(kafkaTemplate).send(any(Message.class));
 
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(
-                "mq-requests", 0, 0, "key", "test message");
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent("test message")
+                .setTimestamp(Instant.now())
+                .build();
+
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>(
+                "mq-requests", 0, 0, "key", mqMessage);
 
         try {
             listener.onMessage(record);
@@ -136,8 +147,13 @@ class KafkaRequestListenerTest {
         when(spanContext.getTraceId()).thenReturn("trace-123");
         when(spanContext.getSpanId()).thenReturn("span-456");
 
-        ConsumerRecord<String, String> record = new ConsumerRecord<>(
-                "mq-requests", 0, 0, "key", "test message");
+        MqMessage mqMessage = MqMessage.newBuilder()
+                .setContent("test message")
+                .setTimestamp(Instant.now())
+                .build();
+
+        ConsumerRecord<String, MqMessage> record = new ConsumerRecord<>(
+                "mq-requests", 0, 0, "key", mqMessage);
 
         listener.onMessage(record);
 

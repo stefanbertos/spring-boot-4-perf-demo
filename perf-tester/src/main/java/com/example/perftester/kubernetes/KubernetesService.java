@@ -5,6 +5,7 @@ import io.fabric8.kubernetes.api.model.NodeCondition;
 import io.fabric8.kubernetes.api.model.NodeStatus;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -14,13 +15,10 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class KubernetesService {
 
     private final KubernetesClient client;
-
-    public KubernetesService(KubernetesClient client) {
-        this.client = client;
-    }
 
     public List<KubernetesNodeInfo> getNodeInfo() {
         List<KubernetesNodeInfo> nodeInfoList = new ArrayList<>();
