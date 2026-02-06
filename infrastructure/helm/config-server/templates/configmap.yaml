@@ -300,6 +300,14 @@ data:
                   filters:
                     - StripPrefix=0
 
+                - id: redis-commander
+                  uri: http://perf-redis-commander:8081
+                  predicates:
+                    - Path=/redis-commander,/redis-commander/**
+                  filters:
+                    - StripPrefix=0
+                    - PreserveHostHeader
+
                 - id: perf-tester
                   uri: http://perf-perf-tester:8080
                   predicates:

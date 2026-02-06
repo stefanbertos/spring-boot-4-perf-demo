@@ -3,6 +3,7 @@ package com.example.perftester.redis;
 import java.time.Instant;
 import java.util.UUID;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,13 +11,10 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RedisService {
 
     private final StringRedisTemplate redisTemplate;
-
-    public RedisService(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     @Scheduled(fixedRate = 30000)
     public void pushDummyValues() {

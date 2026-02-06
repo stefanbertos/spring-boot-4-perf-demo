@@ -57,7 +57,7 @@ public class PerfController {
                 count, timeoutSeconds, delayMs, testId);
 
         long testStartTimeMs = System.currentTimeMillis();
-        PerfTestResult result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
+        var result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
         long testEndTimeMs = System.currentTimeMillis();
 
         // Fetch Kubernetes node info and wait for metrics propagation
@@ -65,10 +65,10 @@ public class PerfController {
         Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
 
         // Export dashboards and metrics
-        ExportContext exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
+        var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
 
         // Package and return response
-        PackageResult packageResult = testResultPackager.packageResults(
+        var packageResult = testResultPackager.packageResults(
                 exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
                 testId, testStartTimeMs, testEndTimeMs);
 
@@ -91,7 +91,7 @@ public class PerfController {
 
         log.info("All {} messages sent, waiting for responses...", count);
         boolean completed = performanceTracker.awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
-        PerfTestResult result = performanceTracker.getResult();
+        var result = performanceTracker.getResult();
 
         if (completed) {
             log.info("Test completed: {} messages, TPS={}, avgLatency={}ms",
@@ -104,17 +104,17 @@ public class PerfController {
     }
 
     private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {
-        List<String> dashboardFiles = new ArrayList<>();
+        var dashboardFiles = new ArrayList<String>();
 
         log.info("Exporting Grafana dashboards...");
-        DashboardExportResult dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
+        var dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
         dashboardExport.dashboardUrls().forEach(url -> log.info("  Dashboard URL: {}", url));
         dashboardFiles.addAll(dashboardExport.exportedFiles());
-        PerfTestResult enrichedResult = testResult.withDashboardExports(
+        var enrichedResult = testResult.withDashboardExports(
                 dashboardExport.dashboardUrls(), dashboardExport.exportedFiles());
 
         log.info("Exporting Prometheus metrics...");
-        PrometheusExportResult prometheusExport = prometheusExportService.exportMetrics(startTime, endTime, testId);
+        var prometheusExport = prometheusExportService.exportMetrics(startTime, endTime, testId);
         String prometheusFile = null;
         if (prometheusExport.isSuccess()) {
             log.info("Prometheus metrics exported to: {}", prometheusExport.filePath());

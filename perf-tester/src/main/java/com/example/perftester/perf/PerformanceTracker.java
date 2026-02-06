@@ -54,7 +54,7 @@ public class PerformanceTracker {
     }
 
     public void recordReceive(String messageId) {
-        Long sendTime = inFlightMessages.remove(messageId);
+        var sendTime = inFlightMessages.remove(messageId);
         if (sendTime != null) {
             long latencyNanos = System.nanoTime() - sendTime;
             long currentTimeMs = System.currentTimeMillis();
@@ -145,7 +145,7 @@ public class PerformanceTracker {
 
         // Remove timestamps older than the window
         while (!completionTimestamps.isEmpty()) {
-            Long oldest = completionTimestamps.peekFirst();
+            var oldest = completionTimestamps.peekFirst();
             if (oldest != null && oldest < windowStartMs) {
                 completionTimestamps.pollFirst();
             } else {
@@ -160,8 +160,8 @@ public class PerformanceTracker {
         }
 
         // Find actual time span of messages in window
-        Long firstTimestamp = completionTimestamps.peekFirst();
-        Long lastTimestamp = completionTimestamps.peekLast();
+        var firstTimestamp = completionTimestamps.peekFirst();
+        var lastTimestamp = completionTimestamps.peekLast();
 
         if (firstTimestamp == null || lastTimestamp == null) {
             return 0.0;

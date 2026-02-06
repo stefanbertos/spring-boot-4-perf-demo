@@ -39,10 +39,10 @@ public class PrometheusExportService {
     }
 
     public PrometheusExportResult exportMetrics(long testStartTimeMs, long testEndTimeMs, String testId) {
-        String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+        var timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .format(Instant.now().atZone(java.time.ZoneId.systemDefault()));
 
-        Path exportDir = Path.of(exportPath);
+        var exportDir = Path.of(exportPath);
         try {
             Files.createDirectories(exportDir);
         } catch (IOException e) {
@@ -55,10 +55,10 @@ public class PrometheusExportService {
         long toSec = (testEndTimeMs / 1000) + 60;
         int step = 15; // 15 second resolution
 
-        String filename = String.format("prometheus_export_%s.json", timestamp);
-        Path filePath = exportDir.resolve(filename);
+        var filename = String.format("prometheus_export_%s.json", timestamp);
+        var filePath = exportDir.resolve(filename);
 
-        List<String> allMetrics = getAllMetricNames();
+        var allMetrics = getAllMetricNames();
         log.info("Found {} metrics to export", allMetrics.size());
 
         // Stream metrics directly to file to avoid OOM with large metric sets
@@ -83,9 +83,9 @@ public class PrometheusExportService {
 
             for (String metric : allMetrics) {
                 try {
-                    JsonNode metricData = queryMetricRange(metric, fromSec, toSec, step);
+                    var metricData = queryMetricRange(metric, fromSec, toSec, step);
                     if (metricData != null && metricData.has("data") && metricData.get("data").has("result")) {
-                        JsonNode result = metricData.get("data").get("result");
+                        var result = metricData.get("data").get("result");
                         if (result.isArray() && !result.isEmpty()) {
                             generator.writeStartObject();
                             generator.writeStringField("name", metric);
@@ -113,7 +113,7 @@ public class PrometheusExportService {
         log.info("Exported {} metrics with data", exported);
         log.info("Prometheus metrics exported to: {}", filePath.toAbsolutePath());
 
-        String queryUrl = buildQueryRangeUrl(fromSec, toSec);
+        var queryUrl = buildQueryRangeUrl(fromSec, toSec);
         log.info("Prometheus query URL pattern: {}", queryUrl);
 
         return new PrometheusExportResult(
@@ -125,14 +125,14 @@ public class PrometheusExportService {
 
     private List<String> getAllMetricNames() {
         try {
-            String response = restClient.get()
+            var response = restClient.get()
                     .uri("/api/v1/label/__name__/values")
                     .retrieve()
                     .body(String.class);
 
-            JsonNode root = objectMapper.readTree(response);
+            var root = objectMapper.readTree(response);
             if (root.has("status") && "success".equals(root.get("status").asText()) && root.has("data")) {
-                List<String> metrics = new ArrayList<>();
+                var metrics = new ArrayList<String>();
                 for (JsonNode metricName : root.get("data")) {
                     metrics.add(metricName.asText());
                 }

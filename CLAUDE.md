@@ -211,7 +211,7 @@ public ProblemDetail handleNotFound(MessageNotFoundException ex) {
 - Prefer `List.of()`, `Set.of()`, `Map.of()` for immutable collections
 - Use `@Nullable` and `@NonNull` annotations from Spring for null safety
 - Avoid Lombok `@Data` - prefer records or explicit getters for mutable classes
-- Use `@RequiredArgsConstructor` from Lombok only when constructor injection with many dependencies
+- Use `@RequiredArgsConstructor` from Lombok for constructor injection when the constructor only assigns parameters to final fields. Do NOT use it when the constructor has `@Value` annotations, builds objects, or contains any logic beyond simple field assignment.
 
 ## Static Analysis
 

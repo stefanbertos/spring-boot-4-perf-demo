@@ -19,13 +19,24 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.springframework.core.ParameterizedTypeReference;
+
+import java.util.List;
+import java.util.Map;
+
 @ExtendWith(MockitoExtension.class)
 class GrafanaExportServiceTest {
+
+    private static final List<Map<String, Object>> MOCK_SEARCH_RESULTS = List.of(
+            Map.of("uid", "dash-1", "title", "Dashboard 1"),
+            Map.of("uid", "dash-2", "title", "Dashboard 2")
+    );
 
     @TempDir
     Path tempDir;
@@ -119,9 +130,9 @@ class GrafanaExportServiceTest {
 
         GrafanaExportService.DashboardExportResult result = service.exportDashboards(startTime, endTime);
 
-        // Should return empty files but still have URLs
+        // Should return empty result when Grafana is unreachable
         assertNotNull(result);
-        assertFalse(result.dashboardUrls().isEmpty());
+        assertTrue(result.dashboardUrls().isEmpty());
         assertTrue(result.exportedFiles().isEmpty());
     }
 
@@ -200,6 +211,8 @@ class GrafanaExportServiceTest {
 
     @Test
     void exportDashboardsShouldHandleDirectoryCreationFailure() throws Exception {
+        setupRestClientMock(new byte[]{1, 2, 3, 4});
+
         // Create a file where the directory should be created
         Path blockingFile = tempDir.resolve("blocking-file");
         Files.write(blockingFile, "blocking content".getBytes());
@@ -210,6 +223,7 @@ class GrafanaExportServiceTest {
                 blockingFile.resolve("subdir").toString(),
                 "test-api-key"
         );
+        ReflectionTestUtils.setField(invalidPathService, "restClient", restClient);
 
         long startTime = System.currentTimeMillis() - 10000;
         long endTime = System.currentTimeMillis();
@@ -221,6 +235,7 @@ class GrafanaExportServiceTest {
         assertTrue(result.exportedFiles().isEmpty());
     }
 
+    @SuppressWarnings("unchecked")
     private void setupRestClientMock(byte[] responseBody) {
         var requestHeadersUriSpec = mock(RestClient.RequestHeadersUriSpec.class);
         var responseSpec = mock(RestClient.ResponseSpec.class);
@@ -229,7 +244,11 @@ class GrafanaExportServiceTest {
         lenient().when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersUriSpec);
         lenient().when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
-        // Return Resource instead of byte[] for streaming support
+        // Mock search API response for fetchAllDashboards
+        lenient().when(responseSpec.body(any(ParameterizedTypeReference.class)))
+                .thenReturn(MOCK_SEARCH_RESULTS);
+
+        // Mock render API response for dashboard export
         Resource resource = responseBody != null && responseBody.length > 0
                 ? new ByteArrayResource(responseBody)
                 : null;

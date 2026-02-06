@@ -1,8 +1,6 @@
 add owasp scanner for java code as part of the build, add report etc
 fix redis commander http://localhost/redis-commander Whitelabel Error Page
-refactor GrafanaExportService to export all dashboards not having DASHBOARDS constant
-fix places in the code where we dont use var keywork and we can
-fix the places in the code where we dont use @@RequiredArgsConstructor and add it to CLAUDE.md as new rule
+fix places in the code where we dont use var keyword and we can  fix the places in the code where we dont use @RequiredArgsConstructor and add it to CLAUDE.md as new rule
 check the CLAUDE.md if all files are matching the rules and fix it
 refactor KubernetesService so it doesnt use KubernetesNodeInfo but exports everything into file which is available from KubernetesClient and adds it into the zip package
 check sonar reports, why the projects dont run sonar scan as part of the build?

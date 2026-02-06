@@ -96,6 +96,7 @@ services:
     environment:
       REDIS_HOSTS: "local:redis:6379"
       URL_PREFIX: /redis-commander
+      TRUST_PROXY: "true"
     depends_on:
       - redis
 

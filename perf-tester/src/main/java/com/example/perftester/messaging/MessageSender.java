@@ -42,10 +42,10 @@ public class MessageSender {
     }
 
     public void sendMessage(String payload) {
-        String messageId = UUID.randomUUID().toString();
-        String message = PerformanceTracker.createMessage(messageId, payload);
+        var messageId = UUID.randomUUID().toString();
+        var message = PerformanceTracker.createMessage(messageId, payload);
 
-        Span span = tracer.spanBuilder("mq-send")
+        var span = tracer.spanBuilder("mq-send")
                 .setSpanKind(SpanKind.PRODUCER)
                 .setAttribute("messaging.system", "ibm-mq")
                 .setAttribute("messaging.destination", outboundQueue)
@@ -53,8 +53,8 @@ public class MessageSender {
                 .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
-            String traceId = span.getSpanContext().getTraceId();
-            String spanId = span.getSpanContext().getSpanId();
+            var traceId = span.getSpanContext().getTraceId();
+            var spanId = span.getSpanContext().getSpanId();
 
             performanceTracker.recordSend(messageId);
             jmsTemplate.convertAndSend(outboundQueue, message, m -> {

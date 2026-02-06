@@ -72,6 +72,7 @@ spring:
                 - Path=/redis-commander,/redis-commander/**
               filters:
                 - StripPrefix=0
+                - PreserveHostHeader
 
             # Perf-Tester API
             - id: perf-tester

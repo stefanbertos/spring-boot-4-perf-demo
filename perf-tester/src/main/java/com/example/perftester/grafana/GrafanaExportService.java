@@ -6,6 +6,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import org.springframework.core.ParameterizedTypeReference;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +17,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -28,19 +31,6 @@ public class GrafanaExportService {
     private final String grafanaUrl;
     private final String exportPath;
 
-    private static final List<DashboardInfo> DASHBOARDS = List.of(
-            new DashboardInfo("perf-tester", "Perf-tester"),
-            new DashboardInfo("ibm-mq", "IBM MQ"),
-            new DashboardInfo("kafka", "Kafka"),
-            new DashboardInfo("ibm-mq-consumer", "IBM Mq Consumer"),
-            new DashboardInfo("kafka-consumer", "Kafka Consumer"),
-            new DashboardInfo("k8s", "K8S Dashboard"),
-            new DashboardInfo("node-exporter", "Node Exporter"),
-            new DashboardInfo("tempo-tracing", "Tempo Tracing"),
-            new DashboardInfo("kafka-exporter", "Kafka Exporter"),
-            new DashboardInfo("oracle", "Oracle Database")
-    );
-
     public GrafanaExportService(
             @Value("${app.grafana.url:http://localhost:3000}") String grafanaUrl,
             @Value("${app.grafana.export-path:./grafana-exports}") String exportPath,
@@ -48,7 +38,7 @@ public class GrafanaExportService {
         this.grafanaUrl = grafanaUrl;
         this.exportPath = exportPath;
 
-        RestClient.Builder builder = RestClient.builder()
+        var builder = RestClient.builder()
                 .baseUrl(grafanaUrl);
 
         if (apiKey != null && !apiKey.isEmpty()) {
@@ -62,11 +52,11 @@ public class GrafanaExportService {
     }
 
     public DashboardExportResult exportDashboards(long testStartTimeMs, long testEndTimeMs) {
-        List<ExportedDashboard> exported = new ArrayList<>();
-        String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+        var exported = new ArrayList<ExportedDashboard>();
+        var timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .format(Instant.now().atZone(java.time.ZoneId.systemDefault()));
 
-        Path exportDir = Path.of(exportPath);
+        var exportDir = Path.of(exportPath);
         try {
             Files.createDirectories(exportDir);
         } catch (IOException e) {
@@ -77,22 +67,23 @@ public class GrafanaExportService {
         long fromMs = testStartTimeMs - BUFFER_BEFORE_MS;
         long toMs = testEndTimeMs + BUFFER_AFTER_MS;
 
-        for (DashboardInfo dashboard : DASHBOARDS) {
+        var dashboards = fetchAllDashboards();
+        for (DashboardInfo dashboard : dashboards) {
             try {
-                ExportedDashboard result = exportDashboard(dashboard, fromMs, toMs, timestamp, exportDir);
+                var result = exportDashboard(dashboard, fromMs, toMs, timestamp, exportDir);
                 exported.add(result);
                 log.info("Exported dashboard '{}' to: {}", dashboard.title(), result.filePath());
                 log.info("Dashboard URL: {}", result.url());
             } catch (Exception e) {
                 log.error("Failed to export dashboard '{}': {}", dashboard.title(), e.getMessage());
                 // Add entry with URL only (no file)
-                String url = buildDashboardUrl(dashboard.uid(), fromMs, toMs);
+                var url = buildDashboardUrl(dashboard.uid(), fromMs, toMs);
                 exported.add(new ExportedDashboard(dashboard.uid(), dashboard.title(), url, null));
             }
         }
 
-        List<String> urls = exported.stream().map(ExportedDashboard::url).toList();
-        List<String> files = exported.stream()
+        var urls = exported.stream().map(ExportedDashboard::url).toList();
+        var files = exported.stream()
                 .map(ExportedDashboard::filePath)
                 .filter(Objects::nonNull)
                 .toList();
@@ -100,17 +91,41 @@ public class GrafanaExportService {
         return new DashboardExportResult(urls, files);
     }
 
+    private List<DashboardInfo> fetchAllDashboards() {
+        try {
+            var response = restClient.get()
+                    .uri("api/search?type=dash-db")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+
+            if (response == null) {
+                return List.of();
+            }
+
+            var dashboards = response.stream()
+                    .filter(d -> d.get("uid") != null && d.get("title") != null)
+                    .map(d -> new DashboardInfo((String) d.get("uid"), (String) d.get("title")))
+                    .toList();
+
+            log.info("Found {} dashboards in Grafana", dashboards.size());
+            return dashboards;
+        } catch (Exception e) {
+            log.error("Failed to fetch dashboard list from Grafana: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     private ExportedDashboard exportDashboard(DashboardInfo dashboard, long fromMs, long toMs,
                                                String timestamp, Path exportDir) throws IOException {
         // Use relative path (no leading slash) so it appends to baseUrl path
-        String renderPath = String.format("render/d/%s/%s?from=%d&to=%d&width=2500&height=2500&tz=UTC",
+        var renderPath = String.format("render/d/%s/%s?from=%d&to=%d&width=2500&height=2500&tz=UTC",
                 dashboard.uid(), dashboard.uid(), fromMs, toMs);
 
-        String fullRenderUrl = grafanaUrl + "/" + renderPath;
+        var fullRenderUrl = grafanaUrl + "/" + renderPath;
         log.info("Fetching dashboard image from: {}", fullRenderUrl);
 
-        String filename = String.format("%s_%s.png", dashboard.uid(), timestamp);
-        Path filePath = exportDir.resolve(filename);
+        var filename = String.format("%s_%s.png", dashboard.uid(), timestamp);
+        var filePath = exportDir.resolve(filename);
 
         // Stream directly to file to avoid loading large images into memory
         Resource resource = restClient.get()
@@ -132,7 +147,7 @@ public class GrafanaExportService {
             throw new IOException("Empty response from Grafana render API");
         }
 
-        String dashboardUrl = buildDashboardUrl(dashboard.uid(), fromMs, toMs);
+        var dashboardUrl = buildDashboardUrl(dashboard.uid(), fromMs, toMs);
 
         return new ExportedDashboard(dashboard.uid(), dashboard.title(), dashboardUrl, filePath.toAbsolutePath().toString());
     }
