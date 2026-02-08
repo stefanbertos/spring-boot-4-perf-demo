@@ -20,6 +20,9 @@ spec:
         {{- if .Values.prometheus.interval }}
         prometheus.io/interval: {{ .Values.prometheus.interval | quote }}
         {{- end }}
+        {{- if .Values.prometheus.timeout }}
+        prometheus.io/timeout: {{ .Values.prometheus.timeout | quote }}
+        {{- end }}
         prometheus.io/job: {{ .Values.prometheus.job | quote }}
     spec:
       containers:

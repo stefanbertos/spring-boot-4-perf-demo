@@ -142,7 +142,6 @@ public class TestResultPackager {
 
         sb.append("Exported Files:\n");
         sb.append("  • summary.txt (this file)\n");
-        sb.append("  • result.json\n");
         if (result.dashboardExportFiles() != null) {
             for (var file : result.dashboardExportFiles()) {
                 sb.append(String.format("  • dashboards/%s%n", Path.of(file).getFileName()));

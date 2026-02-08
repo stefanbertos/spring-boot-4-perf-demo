@@ -20,6 +20,9 @@ spec:
         {{- if .Values.prometheus.scrape.interval }}
         prometheus.io/interval: {{ .Values.prometheus.scrape.interval | quote }}
         {{- end }}
+        {{- if .Values.prometheus.scrape.timeout }}
+        prometheus.io/timeout: {{ .Values.prometheus.scrape.timeout | quote }}
+        {{- end }}
         prometheus.io/job: {{ .Values.prometheus.scrape.job | quote }}
     spec:
       serviceAccountName: {{ include "perf-tester.fullname" . }}

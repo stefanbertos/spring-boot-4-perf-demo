@@ -31,6 +31,7 @@ prometheus:
   path: /actuator/prometheus
   port: "8082"
   interval: "1s"
+  timeout: "1s"
   job: kafka-consumer
 
 jvm:
