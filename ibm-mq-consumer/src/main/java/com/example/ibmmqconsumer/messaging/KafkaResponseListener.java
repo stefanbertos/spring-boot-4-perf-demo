@@ -6,7 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.jms.core.JmsTemplate;
@@ -54,7 +54,6 @@ public class KafkaResponseListener {
         var replyTo = getHeader(record, "mq-reply-to");
         var correlationId = getHeader(record, "correlationId");
         var parentTraceId = getHeader(record, "traceId");
-        var parentSpanId = getHeader(record, "spanId");
 
         var span = tracer.spanBuilder("kafka-receive-forward-mq")
                 .setSpanKind(SpanKind.PRODUCER)
@@ -63,7 +62,7 @@ public class KafkaResponseListener {
                 .setAttribute("traceId.parent", parentTraceId != null ? parentTraceId : "")
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        try (var _ = span.makeCurrent()) {
             log.debug("Received Kafka response: {}, replyTo: {}, traceId=[{}], correlationId=[{}]",
                     message, replyTo, parentTraceId, correlationId);
 

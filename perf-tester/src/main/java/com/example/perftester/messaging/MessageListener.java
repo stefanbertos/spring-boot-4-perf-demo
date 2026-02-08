@@ -3,7 +3,7 @@ package com.example.perftester.messaging;
 import com.example.perftester.perf.PerformanceTracker;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
+
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.TextMessage;
@@ -33,7 +33,7 @@ public class MessageListener {
                 .setAttribute("traceId.parent", traceId != null ? traceId : "")
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        try (var _ = span.makeCurrent()) {
             var messageId = PerformanceTracker.extractMessageId(message);
             if (messageId != null) {
                 performanceTracker.recordReceive(messageId);

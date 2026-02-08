@@ -118,6 +118,7 @@ subprojects {
                     '*.config.*',
                     '*.grafana.*',
                     '*.prometheus.*',
+                    '*.kubernetes.*',
                     '*.export.*',
                     '*.apigateway.*',
                     '*.persistence.*',

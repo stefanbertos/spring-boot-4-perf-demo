@@ -15,8 +15,6 @@
     <!-- ==================== Best Practices ==================== -->
     <rule ref="category/java/bestpractices.xml">
         <exclude name="GuardLogStatement"/>
-        <exclude name="UnusedLocalVariable"/>
-        <exclude name="UnusedPrivateMethod"/>
         <exclude name="LooseCoupling"/>
     </rule>
 

@@ -6,7 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
+
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -56,7 +56,6 @@ public class KafkaRequestListener {
         var replyTo = getHeader(record, "mq-reply-to");
         var correlationId = getHeader(record, "correlationId");
         var parentTraceId = getHeader(record, "traceId");
-        var parentSpanId = getHeader(record, "spanId");
 
         var span = tracer.spanBuilder("kafka-process-request")
                 .setSpanKind(SpanKind.CONSUMER)
@@ -66,7 +65,7 @@ public class KafkaRequestListener {
                 .setAttribute("traceId.parent", parentTraceId != null ? parentTraceId : "")
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        try (var _ = span.makeCurrent()) {
             log.debug("Received Kafka request: {} traceId=[{}] correlationId=[{}]",
                     body, parentTraceId, correlationId);
 

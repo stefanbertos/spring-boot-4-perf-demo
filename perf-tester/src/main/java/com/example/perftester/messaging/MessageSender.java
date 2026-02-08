@@ -4,7 +4,7 @@ import com.example.perftester.perf.PerformanceTracker;
 import com.ibm.mq.jakarta.jms.MQQueue;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
+
 import jakarta.jms.JMSException;
 import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +51,7 @@ public class MessageSender {
                 .setAttribute("messaging.message_id", messageId)
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        try (var _ = span.makeCurrent()) {
             var traceId = span.getSpanContext().getTraceId();
             var spanId = span.getSpanContext().getSpanId();
 

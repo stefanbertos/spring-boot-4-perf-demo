@@ -270,11 +270,13 @@ The following rules are enforced (build fails on violations):
 
 - **No wildcard imports** - Import specific classes
 - **No unused imports** - Remove unused imports
-- **No field injection** - Use constructor injection (see Spring Boot 4 section)
+- **No field injection** - `@Autowired`, `@Inject`, and `@Resource` on fields are forbidden; use constructor injection
+- **No Lombok `@Data`** - Use records for DTOs or explicit getters for mutable classes
 - **Naming conventions** - Classes: `UpperCamelCase`, methods/variables: `lowerCamelCase`, constants: `UPPER_SNAKE_CASE`
 - **Braces required** - All `if`, `for`, `while` blocks must use braces
 - **Method length** - Maximum 100 lines per method
 - **Parameter count** - Maximum 7 parameters per method
+- **File length** - Maximum 500 lines per file
 - **@Override required** - Always annotate overridden methods
 - **Equals/hashCode** - Must override together
 - **No trailing whitespace** - Lines must not end with whitespace
@@ -284,19 +286,24 @@ The following rules are enforced (build fails on violations):
 
 PMD 7.20.0 provides additional code analysis:
 
-- **Best Practices** - Guard statements, unused variables/methods
+- **Best Practices** - Unused variables/methods, method argument checks
 - **Code Style** - Naming conventions, unnecessary code
-- **Design** - Complexity limits, coupling analysis
+- **Design** - Coupling analysis, exception handling patterns
 - **Error Prone** - Common programming mistakes, resource management
 - **Performance** - StringBuilder usage, loop optimizations
 - **Security** - Security vulnerability detection
 - **Multithreading** - Thread safety issues
+- **Documentation** - Comment placement
 
-**Excluded rules** (aligned with CLAUDE.md standards):
+**Excluded rules** (aligned with project standards):
 - `UseExplicitTypes` - Allow `var` keyword (Java 25 feature)
 - `AvoidCatchingGenericException` - Allow for observability/span recording
 - `LooseCoupling` - Spring beans often use concrete types
 - `DoNotUseThreads` - Not a J2EE application
+- `GuardLogStatement` - SLF4J parameterized logging handles this
+- `AvoidThrowingRawExceptionTypes` - Allowed for infrastructure error wrapping
+- `DataClass` - Records and Lombok classes trigger false positives
+- `LawOfDemeter` - Fluent APIs and builder patterns require method chaining
 
 ### Project Structure
 

@@ -68,9 +68,24 @@ public class TestResultPackager {
                 addFileEntryStreaming(zos, Path.of(prometheusExportFile), "metrics/");
             }
 
-            // Add Kubernetes node info - stream from disk
+            // Add Kubernetes cluster info - stream from disk
             if (result.kubernetesExportFile() != null) {
-                addFileEntryStreaming(zos, Path.of(result.kubernetesExportFile()), "kubernetes/");
+                var kubernetesPath = Path.of(result.kubernetesExportFile());
+                if (Files.isDirectory(kubernetesPath)) {
+                    try (var kubernetesFiles = Files.list(kubernetesPath)) {
+                        kubernetesFiles.filter(Files::isRegularFile)
+                                .sorted()
+                                .forEach(file -> {
+                                    try {
+                                        addFileEntryStreaming(zos, file, "kubernetes/");
+                                    } catch (IOException ex) {
+                                        log.warn("Failed to add kubernetes file {}: {}", file, ex.getMessage());
+                                    }
+                                });
+                    }
+                } else {
+                    addFileEntryStreaming(zos, kubernetesPath, "kubernetes/");
+                }
             }
 
         } catch (IOException e) {
@@ -137,7 +152,18 @@ public class TestResultPackager {
             sb.append(String.format("  • metrics/%s%n", Path.of(result.prometheusExportFile()).getFileName()));
         }
         if (result.kubernetesExportFile() != null) {
-            sb.append(String.format("  • kubernetes/%s%n", Path.of(result.kubernetesExportFile()).getFileName()));
+            var kubernetesPath = Path.of(result.kubernetesExportFile());
+            if (Files.isDirectory(kubernetesPath)) {
+                try (var kubernetesFiles = Files.list(kubernetesPath)) {
+                    kubernetesFiles.filter(Files::isRegularFile)
+                            .sorted()
+                            .forEach(file -> sb.append(String.format("  • kubernetes/%s%n", file.getFileName())));
+                } catch (IOException e) {
+                    sb.append("  • kubernetes/ (failed to list files)\n");
+                }
+            } else {
+                sb.append(String.format("  • kubernetes/%s%n", kubernetesPath.getFileName()));
+            }
         }
 
         sb.append("\n═══════════════════════════════════════════════════════════════\n");

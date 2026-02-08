@@ -58,8 +58,8 @@ public class PerfController {
         var result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
         long testEndTimeMs = System.currentTimeMillis();
 
-        // Export Kubernetes node info and wait for metrics propagation
-        result = result.withKubernetesExport(kubernetesService.exportNodeInfo());
+        // Export Kubernetes cluster info and wait for metrics propagation
+        result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
         Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
 
         // Export dashboards and metrics
@@ -170,7 +170,21 @@ public class PerfController {
 
         if (kubernetesFile != null) {
             try {
-                Files.deleteIfExists(Path.of(kubernetesFile));
+                var kubernetesPath = Path.of(kubernetesFile);
+                if (Files.isDirectory(kubernetesPath)) {
+                    try (var dirFiles = Files.list(kubernetesPath)) {
+                        dirFiles.forEach(file -> {
+                            try {
+                                Files.deleteIfExists(file);
+                            } catch (IOException ex) {
+                                log.warn("Failed to delete kubernetes file {}: {}", file, ex.getMessage());
+                            }
+                        });
+                    }
+                    Files.deleteIfExists(kubernetesPath);
+                } else {
+                    Files.deleteIfExists(kubernetesPath);
+                }
                 log.debug("Deleted kubernetes export: {}", kubernetesFile);
             } catch (IOException e) {
                 log.warn("Failed to delete kubernetes export {}: {}", kubernetesFile, e.getMessage());

@@ -20,10 +20,17 @@
 
         <!-- ==================== Spring Boot 4 / DI Rules ==================== -->
 
-        <!-- Disallow field injection (@Autowired on fields) -->
+        <!-- Disallow field injection (@Autowired, @Inject, @Resource on fields) -->
         <module name="Regexp">
-            <property name="format" value="@Autowired\s*\n\s*(private|protected)"/>
+            <property name="format" value="@(Autowired|Inject|Resource)\s*\n\s*(private|protected)"/>
             <property name="message" value="Field injection is not allowed. Use constructor injection instead."/>
+            <property name="illegalPattern" value="true"/>
+        </module>
+
+        <!-- Disallow Lombok @Data (use records or explicit getters) -->
+        <module name="Regexp">
+            <property name="format" value="^\s*@Data\b"/>
+            <property name="message" value="Lombok @Data is not allowed. Use records for DTOs or explicit getters for mutable classes."/>
             <property name="illegalPattern" value="true"/>
         </module>
 

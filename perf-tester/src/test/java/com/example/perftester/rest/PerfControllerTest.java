@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +70,7 @@ class PerfControllerTest {
                 grafanaExportService, prometheusExportService, testResultPackager, kubernetesService);
 
         // Default mock for Kubernetes service
-        when(kubernetesService.exportNodeInfo()).thenReturn(null);
+        when(kubernetesService.exportClusterInfo()).thenReturn(null);
     }
 
     @Test
@@ -162,5 +163,41 @@ class PerfControllerTest {
         // Should take at least 10ms delay between 2 messages (10ms delay)
         // Note: the test also has a 16 second sleep, so we check it completed
         verify(messageSender, times(2)).sendMessage(anyString());
+    }
+
+    @Test
+    void sendMessagesShouldCleanupKubernetesDirectory() throws InterruptedException, IOException {
+        var kubeDir = tempDir.resolve("kubernetes-export");
+        Files.createDirectories(kubeDir);
+        Files.writeString(kubeDir.resolve("nodes.json"), "{}");
+        Files.writeString(kubeDir.resolve("pods.json"), "{}");
+        when(kubernetesService.exportClusterInfo()).thenReturn(kubeDir.toString());
+
+        PerfTestResult perfResult = new PerfTestResult(1, 0, 0.1, 10.0, 50.0, 10.0, 100.0);
+        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(performanceTracker.getResult()).thenReturn(perfResult);
+
+        var dashFile = tempDir.resolve("dashboard.png");
+        Files.write(dashFile, "image".getBytes());
+
+        DashboardExportResult dashboardExport = new DashboardExportResult(
+                List.of("http://grafana/d/1"), List.of(dashFile.toString()));
+        when(grafanaExportService.exportDashboards(anyLong(), anyLong())).thenReturn(dashboardExport);
+
+        var promFile = tempDir.resolve("prom.json");
+        Files.writeString(promFile, "{}");
+        PrometheusExportResult prometheusExport = new PrometheusExportResult(
+                promFile.toString(), "http://prometheus/query", null);
+        when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
+
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
+        when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
+                .thenReturn(packageResult);
+
+        controller.sendMessages("test", 1, 1, 0, "test-id");
+
+        assertFalse(Files.exists(kubeDir));
     }
 }

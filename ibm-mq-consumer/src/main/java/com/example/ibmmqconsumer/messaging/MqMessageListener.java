@@ -5,7 +5,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
+
 import com.example.avro.MqMessage;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
@@ -63,7 +63,6 @@ public class MqMessageListener {
         var replyTo = message.getJMSReplyTo();
         var correlationId = message.getJMSCorrelationID();
         var traceId = message.getStringProperty("traceId");
-        var spanId = message.getStringProperty("spanId");
 
         var span = tracer.spanBuilder("mq-receive-forward-kafka")
                 .setSpanKind(SpanKind.CONSUMER)
@@ -73,7 +72,7 @@ public class MqMessageListener {
                 .setAttribute("traceId.parent", traceId != null ? traceId : "")
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        try (var _ = span.makeCurrent()) {
             log.debug("Received MQ message: {} traceId=[{}] correlationId=[{}]", body, traceId, correlationId);
 
             if (replyTo != null) {

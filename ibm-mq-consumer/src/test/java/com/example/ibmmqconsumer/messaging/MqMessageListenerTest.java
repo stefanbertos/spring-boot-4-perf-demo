@@ -77,7 +77,6 @@ class MqMessageListenerTest {
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn("corr-123");
         when(jmsMessage.getStringProperty("traceId")).thenReturn("parent-trace");
-        when(jmsMessage.getStringProperty("spanId")).thenReturn("parent-span");
         when(replyToDestination.toString()).thenReturn("queue:///DEV.QUEUE.1");
 
         listener.onMessage(jmsMessage);
@@ -120,7 +119,6 @@ class MqMessageListenerTest {
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
         when(jmsMessage.getStringProperty("traceId")).thenReturn(null);
-        when(jmsMessage.getStringProperty("spanId")).thenReturn(null);
         when(replyToDestination.toString()).thenReturn("DEV.QUEUE.1");
 
         RuntimeException exception = new RuntimeException("Kafka send failed");
@@ -142,7 +140,6 @@ class MqMessageListenerTest {
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
         when(jmsMessage.getStringProperty("traceId")).thenReturn(null);
-        when(jmsMessage.getStringProperty("spanId")).thenReturn(null);
         when(replyToDestination.toString()).thenReturn("DEV.QUEUE.1");
 
         listener.onMessage(jmsMessage);

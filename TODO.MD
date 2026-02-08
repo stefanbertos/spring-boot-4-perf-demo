@@ -7,4 +7,4 @@ add some docker image violation check as part of the pipeline
 fix grafana dashboards in helm
 add ui with react which would call rest service in bff
 
-check the CLAUDE.md rules and make sure those rules are as well in checkstyle and pmd, then rebuild the code and fix violations if found
+
