@@ -7,6 +7,7 @@ plugins {
     id 'jacoco-report-aggregation'
     id 'org.asciidoctor.jvm.convert' version '4.0.4'
     id 'org.asciidoctor.jvm.pdf' version '4.0.4'
+    id 'org.owasp.dependencycheck' version '12.1.1' apply false
 }
 
 repositories {
@@ -36,6 +37,7 @@ subprojects {
     apply plugin: 'checkstyle'
     apply plugin: 'pmd'
     apply plugin: 'jacoco'
+    apply plugin: 'org.owasp.dependencycheck'
 
     group = 'com.example'
     version = '0.0.1-SNAPSHOT'
@@ -131,6 +133,17 @@ subprojects {
         }
     }
 
+    // ==================== OWASP Dependency-Check Configuration ====================
+    dependencyCheck {
+        formats = ['HTML', 'JSON']
+        failBuildOnCVSS = 7.0f
+        suppressionFile = rootProject.file('config/owasp/suppressions.xml').toString()
+        nvd {
+            apiKey = System.getenv('NVD_API_KEY') ?: ''
+        }
+        scanConfigurations = ['runtimeClasspath', 'compileClasspath']
+    }
+
     // ==================== Build Order ====================
     tasks.named('jar') {
         dependsOn tasks.named('checkstyleMain')
@@ -144,6 +157,7 @@ subprojects {
 
     tasks.named('check') {
         dependsOn jacocoTestCoverageVerification
+        dependsOn tasks.named('dependencyCheckAnalyze')
     }
 
     configurations {
@@ -229,6 +243,19 @@ tasks.register('jacocoAggregatedReport', JacocoReport) {
     }
 }
 
+// ==================== Aggregated OWASP Dependency-Check Report ====================
+apply plugin: 'org.owasp.dependencycheck'
+
+dependencyCheck {
+    formats = ['HTML', 'JSON']
+    failBuildOnCVSS = 7.0f
+    suppressionFile = file('config/owasp/suppressions.xml').toString()
+    nvd {
+        apiKey = System.getenv('NVD_API_KEY') ?: ''
+    }
+    scanConfigurations = ['runtimeClasspath', 'compileClasspath']
+}
+
 // ==================== SonarQube Configuration ====================
 // URLs differ based on profile:
 //   docker:     http://localhost:9001 (port-forwarded or docker-compose)
@@ -263,13 +290,23 @@ tasks.named('sonar') {
 
 // ==================== Documentation Generation ====================
 asciidoctorj {
+    jrubyVersion = '9.4.9.0'
     modules {
         diagram.use()
         diagram.version '2.3.1'
     }
 }
 
+// JRuby (used by AsciidoctorJ) requires open access to JDK IO subsystem on Java 17+
+def asciidoctorJvmArgs = [
+    '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+    '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+]
+
 tasks.named('asciidoctor') {
+    jvm {
+        jvmArgs.addAll(asciidoctorJvmArgs)
+    }
     sourceDir = file('docs/asciidoc')
     sources {
         include 'index.adoc'
@@ -293,6 +330,9 @@ tasks.named('asciidoctor') {
 }
 
 tasks.named('asciidoctorPdf') {
+    jvm {
+        jvmArgs.addAll(asciidoctorJvmArgs)
+    }
     sourceDir = file('docs/asciidoc')
     sources {
         include 'index.adoc'

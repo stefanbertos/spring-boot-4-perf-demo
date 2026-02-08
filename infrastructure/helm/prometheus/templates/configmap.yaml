@@ -12,6 +12,9 @@ data:
     scrape_configs:
       {{- if .Values.targets.perfTester.enabled }}
       - job_name: 'perf-tester'
+        {{- if .Values.targets.perfTester.scrapeInterval }}
+        scrape_interval: {{ .Values.targets.perfTester.scrapeInterval }}
+        {{- end }}
         metrics_path: '{{ .Values.targets.perfTester.metricsPath }}'
         static_configs:
           - targets: ['{{ .Values.targets.perfTester.serviceName }}:{{ .Values.targets.perfTester.port }}']
@@ -19,6 +22,9 @@ data:
 
       {{- if .Values.targets.ibmMqConsumer.enabled }}
       - job_name: 'ibm-mq-consumer'
+        {{- if .Values.targets.ibmMqConsumer.scrapeInterval }}
+        scrape_interval: {{ .Values.targets.ibmMqConsumer.scrapeInterval }}
+        {{- end }}
         metrics_path: '{{ .Values.targets.ibmMqConsumer.metricsPath }}'
         static_configs:
           - targets: ['{{ .Values.targets.ibmMqConsumer.serviceName }}:{{ .Values.targets.ibmMqConsumer.port }}']
@@ -26,6 +32,9 @@ data:
 
       {{- if .Values.targets.kafkaConsumer.enabled }}
       - job_name: 'kafka-consumer'
+        {{- if .Values.targets.kafkaConsumer.scrapeInterval }}
+        scrape_interval: {{ .Values.targets.kafkaConsumer.scrapeInterval }}
+        {{- end }}
         metrics_path: '{{ .Values.targets.kafkaConsumer.metricsPath }}'
         static_configs:
           - targets: ['{{ .Values.targets.kafkaConsumer.serviceName }}:{{ .Values.targets.kafkaConsumer.port }}']

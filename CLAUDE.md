@@ -248,21 +248,28 @@ public class EmailService {
 
 ## Static Analysis
 
-The build enforces coding standards using **Checkstyle** (source-level) and **PMD 7.20.0** (code analysis).
+The build enforces coding standards using **Checkstyle** (source-level), **PMD 7.20.0** (code analysis), and **OWASP Dependency-Check** (dependency vulnerability scanning).
 
 ```bash
-# Build runs both checkstyle and PMD automatically (fails before JAR on violations)
+# Build runs checkstyle, PMD, and OWASP automatically
 ./gradlew build
 
 # Run only static analysis
 ./gradlew checkstyleMain pmdMain
 
+# Run only dependency vulnerability scan
+./gradlew dependencyCheckAnalyze
+
+# Aggregated multi-module vulnerability report
+./gradlew dependencyCheckAggregate
+
 # View reports after build
 # Checkstyle: build/reports/checkstyle/main.html
 # PMD: build/reports/pmd/main.html
+# OWASP: build/reports/dependency-check-report.html
 ```
 
-**Build Order:** Compile → Checkstyle → PMD → JAR (no artifacts if checks fail)
+**Build Order:** Compile → Checkstyle → PMD → JAR → Test → JaCoCo → OWASP Dependency-Check → Check
 
 ### Checkstyle Rules Enforced
 
@@ -304,6 +311,39 @@ PMD 7.20.0 provides additional code analysis:
 - `AvoidThrowingRawExceptionTypes` - Allowed for infrastructure error wrapping
 - `DataClass` - Records and Lombok classes trigger false positives
 - `LawOfDemeter` - Fluent APIs and builder patterns require method chaining
+
+### OWASP Dependency-Check
+
+OWASP Dependency-Check (v12.1.1) scans project dependencies against the National Vulnerability Database (NVD) to detect known CVEs.
+
+**Configuration:**
+- **CVSS fail threshold: 7.0** — HIGH and CRITICAL vulnerabilities (CVSS >= 7) fail the build; MEDIUM and below are warnings
+- **Reports:** HTML + JSON per module, plus aggregated report at root
+- **Suppressions:** `config/owasp/suppressions.xml` — add entries for known false positives
+- **Scanned configurations:** `runtimeClasspath` and `compileClasspath` (test dependencies excluded)
+
+**NVD API key (recommended):** Set the `NVD_API_KEY` environment variable to speed up NVD database downloads from ~15min to ~30sec:
+```bash
+export NVD_API_KEY=your-api-key-here
+./gradlew dependencyCheckAnalyze
+```
+Request a free API key at https://nvd.nist.gov/developers/request-an-api-key
+
+**Report locations:**
+
+| Report | Location |
+|--------|----------|
+| Per-module HTML | `{module}/build/reports/dependency-check-report.html` |
+| Per-module JSON | `{module}/build/reports/dependency-check-report.json` |
+| Aggregated HTML | `build/reports/dependency-check-report.html` |
+
+**Suppressing false positives:** Add entries to `config/owasp/suppressions.xml`:
+```xml
+<suppress>
+    <notes><![CDATA[False positive - applies to different product]]></notes>
+    <cve>CVE-2023-XXXXX</cve>
+</suppress>
+```
 
 ### Project Structure
 

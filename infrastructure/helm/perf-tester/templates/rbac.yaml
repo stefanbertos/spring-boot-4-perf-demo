@@ -8,24 +8,45 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "perf-tester.fullname" . }}-node-reader
+  name: {{ include "perf-tester.fullname" . }}-cluster-reader
   labels:
     {{- include "perf-tester.labels" . | nindent 4 }}
 rules:
+  # Cluster-scoped resources
   - apiGroups: [""]
-    resources: ["nodes"]
+    resources: ["nodes", "namespaces", "persistentvolumes"]
+    verbs: ["get", "list"]
+  # Core namespaced resources
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims", "endpoints", "serviceaccounts"]
+    verbs: ["get", "list"]
+  # Apps API group
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list"]
+  # Networking API group
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list"]
+  # Batch API group
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list"]
+  # Autoscaling API group
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
     verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "perf-tester.fullname" . }}-node-reader
+  name: {{ include "perf-tester.fullname" . }}-cluster-reader
   labels:
     {{- include "perf-tester.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "perf-tester.fullname" . }}-node-reader
+  name: {{ include "perf-tester.fullname" . }}-cluster-reader
 subjects:
   - kind: ServiceAccount
     name: {{ include "perf-tester.fullname" . }}
