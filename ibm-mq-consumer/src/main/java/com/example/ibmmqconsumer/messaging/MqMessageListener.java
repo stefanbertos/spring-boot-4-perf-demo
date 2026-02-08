@@ -3,12 +3,10 @@ package com.example.ibmmqconsumer.messaging;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import com.example.avro.MqMessage;
-import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.TextMessage;
@@ -61,13 +59,13 @@ public class MqMessageListener {
     public void onMessage(Message message) throws JMSException {
         messagesReceived.increment();
 
-        String body = ((TextMessage) message).getText();
-        Destination replyTo = message.getJMSReplyTo();
-        String correlationId = message.getJMSCorrelationID();
-        String traceId = message.getStringProperty("traceId");
-        String spanId = message.getStringProperty("spanId");
+        var body = ((TextMessage) message).getText();
+        var replyTo = message.getJMSReplyTo();
+        var correlationId = message.getJMSCorrelationID();
+        var traceId = message.getStringProperty("traceId");
+        var spanId = message.getStringProperty("spanId");
 
-        Span span = tracer.spanBuilder("mq-receive-forward-kafka")
+        var span = tracer.spanBuilder("mq-receive-forward-kafka")
                 .setSpanKind(SpanKind.CONSUMER)
                 .setAttribute("messaging.system", "ibm-mq")
                 .setAttribute("messaging.destination", kafkaRequestTopic)
@@ -79,19 +77,19 @@ public class MqMessageListener {
             log.debug("Received MQ message: {} traceId=[{}] correlationId=[{}]", body, traceId, correlationId);
 
             if (replyTo != null) {
-                String replyToString = replyTo.toString();
-                String newTraceId = span.getSpanContext().getTraceId();
-                String newSpanId = span.getSpanContext().getSpanId();
+                var replyToString = replyTo.toString();
+                var newTraceId = span.getSpanContext().getTraceId();
+                var newSpanId = span.getSpanContext().getSpanId();
 
                 log.debug("Publishing to Kafka topic {}, replyTo: {}, traceId: {}",
                         kafkaRequestTopic, replyToString, newTraceId);
 
-                MqMessage mqMessage = MqMessage.newBuilder()
+                var mqMessage = MqMessage.newBuilder()
                         .setContent(body)
                         .setTimestamp(Instant.now())
                         .build();
 
-                org.springframework.messaging.Message<MqMessage> kafkaMessage = MessageBuilder
+                var kafkaMessage = MessageBuilder
                         .withPayload(mqMessage)
                         .setHeader(KafkaHeaders.TOPIC, kafkaRequestTopic)
                         .setHeader("mq-reply-to", replyToString)

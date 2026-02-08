@@ -4,7 +4,6 @@ import com.example.avro.MqMessage;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
@@ -51,13 +50,13 @@ public class KafkaResponseListener {
     public void onMessage(ConsumerRecord<String, MqMessage> record) {
         messagesReceived.increment();
 
-        String message = record.value().getContent();
-        String replyTo = getHeader(record, "mq-reply-to");
-        String correlationId = getHeader(record, "correlationId");
-        String parentTraceId = getHeader(record, "traceId");
-        String parentSpanId = getHeader(record, "spanId");
+        var message = record.value().getContent();
+        var replyTo = getHeader(record, "mq-reply-to");
+        var correlationId = getHeader(record, "correlationId");
+        var parentTraceId = getHeader(record, "traceId");
+        var parentSpanId = getHeader(record, "spanId");
 
-        Span span = tracer.spanBuilder("kafka-receive-forward-mq")
+        var span = tracer.spanBuilder("kafka-receive-forward-mq")
                 .setSpanKind(SpanKind.PRODUCER)
                 .setAttribute("messaging.system", "ibm-mq")
                 .setAttribute("messaging.correlation_id", correlationId != null ? correlationId : "")
@@ -69,9 +68,9 @@ public class KafkaResponseListener {
                     message, replyTo, parentTraceId, correlationId);
 
             if (replyTo != null) {
-                String queueName = extractQueueName(replyTo);
-                String newTraceId = span.getSpanContext().getTraceId();
-                String newSpanId = span.getSpanContext().getSpanId();
+                var queueName = extractQueueName(replyTo);
+                var newTraceId = span.getSpanContext().getTraceId();
+                var newSpanId = span.getSpanContext().getSpanId();
 
                 span.setAttribute("messaging.destination", queueName);
 

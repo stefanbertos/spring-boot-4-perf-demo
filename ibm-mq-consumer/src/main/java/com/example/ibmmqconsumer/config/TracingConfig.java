@@ -17,24 +17,27 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class TracingConfig {
 
-    @Value("${spring.application.name}")
-    private String applicationName;
+    private final String applicationName;
+    private final String tracingUrl;
 
-    @Value("${tracing.url:http://localhost:4318/v1/traces}")
-    private String tracingUrl;
+    public TracingConfig(@Value("${spring.application.name}") String applicationName,
+                         @Value("${tracing.url:http://localhost:4318/v1/traces}") String tracingUrl) {
+        this.applicationName = applicationName;
+        this.tracingUrl = tracingUrl;
+    }
 
     @Bean
     public OpenTelemetry openTelemetry() {
-        Resource resource = Resource.getDefault()
+        var resource = Resource.getDefault()
                 .merge(Resource.builder()
                         .put(ServiceAttributes.SERVICE_NAME, applicationName)
                         .build());
 
-        OtlpHttpSpanExporter spanExporter = OtlpHttpSpanExporter.builder()
+        var spanExporter = OtlpHttpSpanExporter.builder()
                 .setEndpoint(tracingUrl)
                 .build();
 
-        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+        var tracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
                 .setResource(resource)
                 .build();

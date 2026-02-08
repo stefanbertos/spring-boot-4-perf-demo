@@ -1,13 +1,11 @@
 package com.example.perftester.perf;
 
-import com.example.perftester.kubernetes.KubernetesNodeInfo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PerfTestResultTest {
 
@@ -25,7 +23,7 @@ class PerfTestResultTest {
         assertEquals(List.of(), result.dashboardUrls());
         assertEquals(List.of(), result.dashboardExportFiles());
         assertNull(result.prometheusExportFile());
-        assertEquals(List.of(), result.kubernetesNodes());
+        assertNull(result.kubernetesExportFile());
     }
 
     @Test
@@ -33,17 +31,17 @@ class PerfTestResultTest {
         List<String> urls = List.of("http://grafana/d/1", "http://grafana/d/2");
         List<String> files = List.of("/path/to/file1.png", "/path/to/file2.png");
         String prometheusFile = "/path/to/prometheus.json";
-        List<KubernetesNodeInfo> nodes = List.of(createSampleNodeInfo());
+        String kubernetesFile = "/path/to/kubernetes-nodes.json";
 
         PerfTestResult result = new PerfTestResult(
                 100, 5, 10.5, 9.52, 50.0, 10.0, 200.0,
-                urls, files, prometheusFile, nodes
+                urls, files, prometheusFile, kubernetesFile
         );
 
         assertEquals(urls, result.dashboardUrls());
         assertEquals(files, result.dashboardExportFiles());
         assertEquals(prometheusFile, result.prometheusExportFile());
-        assertEquals(nodes, result.kubernetesNodes());
+        assertEquals(kubernetesFile, result.kubernetesExportFile());
     }
 
     @Test
@@ -73,7 +71,7 @@ class PerfTestResultTest {
         List<String> files = List.of("/path/to/export.png");
         PerfTestResult original = new PerfTestResult(
                 100, 5, 10.5, 9.52, 50.0, 10.0, 200.0,
-                urls, files, null, List.of()
+                urls, files, null, null
         );
 
         String prometheusFile = "/path/to/prometheus.json";
@@ -91,49 +89,32 @@ class PerfTestResultTest {
     }
 
     @Test
-    void withKubernetesNodesShouldReturnNewInstanceWithNodes() {
+    void withKubernetesExportShouldReturnNewInstanceWithFile() {
         PerfTestResult original = new PerfTestResult(100, 5, 10.5, 9.52, 50.0, 10.0, 200.0);
-        List<KubernetesNodeInfo> nodes = List.of(createSampleNodeInfo());
 
-        PerfTestResult updated = original.withKubernetesNodes(nodes);
+        PerfTestResult updated = original.withKubernetesExport("/path/to/kubernetes-nodes.json");
 
         // Original should be unchanged
-        assertTrue(original.kubernetesNodes().isEmpty());
+        assertNull(original.kubernetesExportFile());
 
-        // New instance should have the nodes
-        assertEquals(nodes, updated.kubernetesNodes());
+        // New instance should have the file
+        assertEquals("/path/to/kubernetes-nodes.json", updated.kubernetesExportFile());
 
         // Other fields should be preserved
         assertEquals(original.completedMessages(), updated.completedMessages());
         assertEquals(original.tps(), updated.tps());
     }
 
-    private KubernetesNodeInfo createSampleNodeInfo() {
-        return new KubernetesNodeInfo(
-                "node-1",
-                "v1.28.0",
-                "Ubuntu 22.04",
-                "amd64",
-                "containerd://1.6.20",
-                "4",
-                "3800m",
-                "16Gi",
-                "15Gi",
-                "100Gi",
-                "90Gi",
-                "110",
-                List.of("Ready=True", "MemoryPressure=False")
-        );
-    }
-
     @Test
     void chainedWithMethodsShouldWork() {
         PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0)
                 .withDashboardExports(List.of("url1"), List.of("file1"))
-                .withPrometheusExport("prometheus.json");
+                .withPrometheusExport("prometheus.json")
+                .withKubernetesExport("kubernetes-nodes.json");
 
         assertEquals(List.of("url1"), result.dashboardUrls());
         assertEquals(List.of("file1"), result.dashboardExportFiles());
         assertEquals("prometheus.json", result.prometheusExportFile());
+        assertEquals("kubernetes-nodes.json", result.kubernetesExportFile());
     }
 }

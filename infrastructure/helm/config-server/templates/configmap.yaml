@@ -153,14 +153,18 @@ data:
           session-cache-size: 50
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        properties:
+          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: org.apache.kafka.common.serialization.StringSerializer
+          value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
         consumer:
           group-id: ibm-mq-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+          value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+          properties:
+            specific.avro.reader: true
       task:
         execution:
           thread-name-prefix: mq-consumer-
@@ -207,14 +211,18 @@ data:
     spring:
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        properties:
+          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: org.apache.kafka.common.serialization.StringSerializer
+          value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
         consumer:
           group-id: kafka-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+          value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+          properties:
+            specific.avro.reader: true
       task:
         execution:
           thread-name-prefix: kafka-consumer-
@@ -362,3 +370,158 @@ data:
       level:
         org.springframework.cloud.gateway: DEBUG
         reactor.netty: DEBUG
+
+  ibm-mq-consumer-kubernetes.yml: |
+    # ibm-mq-consumer Kubernetes profile configuration
+    spring:
+      kafka:
+        bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        properties:
+          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
+
+    ibm:
+      mq:
+        conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+
+  kafka-consumer-kubernetes.yml: |
+    # kafka-consumer Kubernetes profile configuration
+    spring:
+      kafka:
+        bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        properties:
+          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
+
+  perf-tester-kubernetes.yml: |
+    # perf-tester Kubernetes profile configuration
+    spring:
+      datasource:
+        url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+        username: ${SPRING_DATASOURCE_USERNAME:perfuser}
+        password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
+      data:
+        redis:
+          host: ${SPRING_DATA_REDIS_HOST:perf-redis}
+          port: ${SPRING_DATA_REDIS_PORT:6379}
+
+    ibm:
+      mq:
+        conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+
+    app:
+      grafana:
+        url: ${GRAFANA_URL:http://perf-grafana:3000}
+      prometheus:
+        url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
+      healthcheck:
+        kafka:
+          bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+        redis:
+          host: ${REDIS_HOST:perf-redis}
+          port: ${REDIS_PORT:6379}
+        oracle:
+          url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+
+  api-gateway-kubernetes.yml: |
+    # api-gateway Kubernetes profile configuration
+    spring:
+      cloud:
+        gateway:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                allowCredentials: false
+          server:
+            webflux:
+              routes:
+                - id: grafana
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/grafana,/grafana/**
+                  filters:
+                    - StripPrefix=0
+                    - PreserveHostHeader
+                    - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+                - id: prometheus
+                  uri: http://perf-prometheus:9090
+                  predicates:
+                    - Path=/prometheus,/prometheus/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: loki-root
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/loki
+                  filters:
+                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=loki
+
+                - id: loki-api
+                  uri: http://perf-loki:3100
+                  predicates:
+                    - Path=/loki/**
+                  filters:
+                    - StripPrefix=1
+
+                - id: ibmmq
+                  uri: https://perf-ibm-mq:9443
+                  predicates:
+                    - Path=/ibmmq,/ibmmq/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: kafdrop
+                  uri: http://perf-kafdrop:9000
+                  predicates:
+                    - Path=/kafdrop,/kafdrop/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: redis-commander
+                  uri: http://perf-redis-commander:8081
+                  predicates:
+                    - Path=/redis-commander,/redis-commander/**
+                  filters:
+                    - StripPrefix=0
+                    - PreserveHostHeader
+
+                - id: perf-tester
+                  uri: http://perf-perf-tester:8080
+                  predicates:
+                    - Path=/api/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: tempo-root
+                  uri: http://perf-grafana:3000
+                  predicates:
+                    - Path=/tempo
+                  filters:
+                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
+
+                - id: tempo-api
+                  uri: http://perf-tempo:3200
+                  predicates:
+                    - Path=/tempo/**
+                  filters:
+                    - StripPrefix=1
+
+                - id: sonar
+                  uri: http://perf-sonarqube:9000
+                  predicates:
+                    - Path=/sonar,/sonar/**
+                  filters:
+                    - StripPrefix=0
+
+                - id: config-server
+                  uri: http://perf-config-server:8888
+                  predicates:
+                    - Path=/config,/config/**
+                  filters:
+                    - StripPrefix=1
+              httpclient:
+                ssl:
+                  use-insecure-trust-manager: true

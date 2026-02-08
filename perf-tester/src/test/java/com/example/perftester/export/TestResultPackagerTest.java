@@ -87,6 +87,26 @@ class TestResultPackagerTest {
     }
 
     @Test
+    void packageResultsShouldIncludeKubernetesFile() throws IOException {
+        Path kubernetesFile = tempDir.resolve("kubernetes-nodes.json");
+        Files.write(kubernetesFile, "{\"kind\":\"NodeList\"}".getBytes());
+
+        PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0)
+                .withKubernetesExport(kubernetesFile.toString());
+
+        TestResultPackager.PackageResult packageResult = packager.packageResults(
+                result,
+                List.of(),
+                null,
+                "test",
+                System.currentTimeMillis(),
+                System.currentTimeMillis()
+        );
+
+        assertTrue(zipContainsEntry(packageResult.savedPath(), "kubernetes/kubernetes-nodes.json"));
+    }
+
+    @Test
     void packageResultsShouldIncludePrometheusFile() throws IOException {
         // Create a temp prometheus file
         Path prometheusFile = tempDir.resolve("prometheus.json");

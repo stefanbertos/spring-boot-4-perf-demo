@@ -20,6 +20,8 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ .Values.jvm.options | quote }}
             - name: SPRING_PROFILES_ACTIVE
               value: kubernetes
             - name: SPRING_APPLICATION_NAME

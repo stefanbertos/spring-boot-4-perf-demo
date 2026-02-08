@@ -107,12 +107,12 @@ public class PerformanceTracker {
     }
 
     public PerfTestResult getResult() {
-        long completed = completedCount.get();
-        long testDurationNanos = System.nanoTime() - testStartTime;
-        double testDurationSeconds = testDurationNanos / 1_000_000_000.0;
+        var completed = completedCount.get();
+        var testDurationNanos = System.nanoTime() - testStartTime;
+        var testDurationSeconds = testDurationNanos / 1_000_000_000.0;
 
         // Calculate TPS over 1-minute window (same as Grafana rate[1m])
-        double tps = calculateWindowedTps();
+        var tps = calculateWindowedTps();
 
         double avgLatencyMs = completed > 0
                 ? (totalLatencyNanos.get() / completed) / 1_000_000.0
@@ -177,7 +177,7 @@ public class PerformanceTracker {
     }
 
     public static String extractMessageId(String message) {
-        int separatorIndex = message.indexOf('|');
+        var separatorIndex = message.indexOf('|');
         if (separatorIndex > 0) {
             return message.substring(0, separatorIndex);
         }

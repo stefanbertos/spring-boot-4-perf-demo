@@ -4,19 +4,16 @@ import com.example.avro.MqMessage;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.header.Header;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 
@@ -55,13 +52,13 @@ public class KafkaRequestListener {
     public void onMessage(ConsumerRecord<String, MqMessage> record) {
         messagesReceived.increment();
 
-        String body = record.value().getContent();
-        String replyTo = getHeader(record, "mq-reply-to");
-        String correlationId = getHeader(record, "correlationId");
-        String parentTraceId = getHeader(record, "traceId");
-        String parentSpanId = getHeader(record, "spanId");
+        var body = record.value().getContent();
+        var replyTo = getHeader(record, "mq-reply-to");
+        var correlationId = getHeader(record, "correlationId");
+        var parentTraceId = getHeader(record, "traceId");
+        var parentSpanId = getHeader(record, "spanId");
 
-        Span span = tracer.spanBuilder("kafka-process-request")
+        var span = tracer.spanBuilder("kafka-process-request")
                 .setSpanKind(SpanKind.CONSUMER)
                 .setAttribute("messaging.system", "kafka")
                 .setAttribute("messaging.destination", kafkaResponseTopic)
@@ -73,19 +70,19 @@ public class KafkaRequestListener {
             log.debug("Received Kafka request: {} traceId=[{}] correlationId=[{}]",
                     body, parentTraceId, correlationId);
 
-            String processedContent = body + " processed";
-            String newTraceId = span.getSpanContext().getTraceId();
-            String newSpanId = span.getSpanContext().getSpanId();
+            var processedContent = body + " processed";
+            var newTraceId = span.getSpanContext().getTraceId();
+            var newSpanId = span.getSpanContext().getSpanId();
 
             log.debug("Publishing response to Kafka topic {}: {} traceId=[{}]",
                     kafkaResponseTopic, processedContent, newTraceId);
 
-            MqMessage responsePayload = MqMessage.newBuilder()
+            var responsePayload = MqMessage.newBuilder()
                     .setContent(processedContent)
                     .setTimestamp(Instant.now())
                     .build();
 
-            MessageBuilder<MqMessage> builder = MessageBuilder
+            var builder = MessageBuilder
                     .withPayload(responsePayload)
                     .setHeader(KafkaHeaders.TOPIC, kafkaResponseTopic)
                     .setHeader("traceId", newTraceId)
@@ -97,7 +94,7 @@ public class KafkaRequestListener {
                 builder.setHeader("mq-reply-to", replyTo);
             }
 
-            Message<MqMessage> responseMessage = builder.build();
+            var responseMessage = builder.build();
             kafkaTemplate.send(responseMessage);
             messagesProcessed.increment();
         } catch (Exception e) {
@@ -109,7 +106,7 @@ public class KafkaRequestListener {
     }
 
     private String getHeader(ConsumerRecord<String, MqMessage> record, String headerName) {
-        Header header = record.headers().lastHeader(headerName);
+        var header = record.headers().lastHeader(headerName);
         return header != null ? new String(header.value(), java.nio.charset.StandardCharsets.UTF_8) : null;
     }
 }

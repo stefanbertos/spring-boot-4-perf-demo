@@ -68,7 +68,7 @@ public class GrafanaExportService {
         long toMs = testEndTimeMs + BUFFER_AFTER_MS;
 
         var dashboards = fetchAllDashboards();
-        for (DashboardInfo dashboard : dashboards) {
+        for (var dashboard : dashboards) {
             try {
                 var result = exportDashboard(dashboard, fromMs, toMs, timestamp, exportDir);
                 exported.add(result);
@@ -128,7 +128,7 @@ public class GrafanaExportService {
         var filePath = exportDir.resolve(filename);
 
         // Stream directly to file to avoid loading large images into memory
-        Resource resource = restClient.get()
+        var resource = restClient.get()
                 .uri(renderPath)
                 .retrieve()
                 .body(Resource.class);

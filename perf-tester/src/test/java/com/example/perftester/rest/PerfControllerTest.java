@@ -4,7 +4,6 @@ import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.grafana.GrafanaExportService.DashboardExportResult;
-import com.example.perftester.kubernetes.KubernetesNodeInfo;
 import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
@@ -70,7 +69,7 @@ class PerfControllerTest {
                 grafanaExportService, prometheusExportService, testResultPackager, kubernetesService);
 
         // Default mock for Kubernetes service
-        when(kubernetesService.getNodeInfo()).thenReturn(List.of(KubernetesNodeInfo.unavailable()));
+        when(kubernetesService.exportNodeInfo()).thenReturn(null);
     }
 
     @Test

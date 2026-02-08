@@ -81,7 +81,7 @@ public class PrometheusExportService {
             // Stream metrics array
             generator.writeArrayFieldStart("metrics");
 
-            for (String metric : allMetrics) {
+            for (var metric : allMetrics) {
                 try {
                     var metricData = queryMetricRange(metric, fromSec, toSec, step);
                     if (metricData != null && metricData.has("data") && metricData.get("data").has("result")) {
@@ -145,10 +145,10 @@ public class PrometheusExportService {
     }
 
     private JsonNode queryMetricRange(String metric, long fromSec, long toSec, int step) {
-        String uri = String.format("/api/v1/query_range?query=%s&start=%d&end=%d&step=%d",
+        var uri = String.format("/api/v1/query_range?query=%s&start=%d&end=%d&step=%d",
                 metric, fromSec, toSec, step);
 
-        String response = restClient.get()
+        var response = restClient.get()
                 .uri(uri)
                 .retrieve()
                 .body(String.class);

@@ -1,7 +1,5 @@
 package com.example.perftester.perf;
 
-import com.example.perftester.kubernetes.KubernetesNodeInfo;
-
 import java.util.List;
 
 public record PerfTestResult(
@@ -15,29 +13,29 @@ public record PerfTestResult(
         List<String> dashboardUrls,
         List<String> dashboardExportFiles,
         String prometheusExportFile,
-        List<KubernetesNodeInfo> kubernetesNodes
+        String kubernetesExportFile
 ) {
     public PerfTestResult(long completedMessages, long pendingMessages, double testDurationSeconds,
                           double tps, double avgLatencyMs, double minLatencyMs, double maxLatencyMs) {
         this(completedMessages, pendingMessages, testDurationSeconds, tps, avgLatencyMs,
-                minLatencyMs, maxLatencyMs, List.of(), List.of(), null, List.of());
+                minLatencyMs, maxLatencyMs, List.of(), List.of(), null, null);
     }
 
     public PerfTestResult withDashboardExports(List<String> urls, List<String> files) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs, urls, files, prometheusExportFile,
-                kubernetesNodes);
+                kubernetesExportFile);
     }
 
     public PerfTestResult withPrometheusExport(String exportFile) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs, dashboardUrls, dashboardExportFiles,
-                exportFile, kubernetesNodes);
+                exportFile, kubernetesExportFile);
     }
 
-    public PerfTestResult withKubernetesNodes(List<KubernetesNodeInfo> nodes) {
+    public PerfTestResult withKubernetesExport(String exportFile) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs, dashboardUrls, dashboardExportFiles,
-                prometheusExportFile, nodes);
+                prometheusExportFile, exportFile);
     }
 }

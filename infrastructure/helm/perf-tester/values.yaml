@@ -49,10 +49,13 @@ task:
     maxSize: 200
     queueCapacity: 50000
 
+jvm:
+  options: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
+
 resources:
   requests:
     memory: "512Mi"
     cpu: "250m"
   limits:
-    memory: "1Gi"
+    memory: "2Gi"
     cpu: "1000m"

@@ -35,7 +35,9 @@
       "Bash(gh api repos/OWNER/REPO/actions/workflows --method POST --body '{\"\"name\"\":\"\"Build Spring Boot App\"\",\"\"on\"\":{\"\"push\"\":{\"\"branches\"\":[\"\"main\"\"]}},\"\"jobs\"\":[{\"\"name\"\":\"\"Build\"\",\"\"runs-on\"\":\"\"ubuntu-latest\"\",\"\"steps\"\":[{\"\"name\"\":\"\"Checkout\"\",\"\"uses\"\":\"\"actions/checkout@v4\"\"},{\"\"name\"\":\"\"Build\"\",\"\"run\"\":\"\"./gradlew build\"\"}]}')",
       "Bash(ls -la \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\build\\\\docs\\\\pdf\"\" && ls -la \"C:UsersstefaIdeaProjectsspring-boot-4-perf-demobuilddocshtml\"\")",
       "WebSearch",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(del \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\perf-tester\\\\src\\\\main\\\\java\\\\com\\\\example\\\\perftester\\\\kubernetes\\\\KubernetesNodeInfo.java\")",
+      "Bash(ls:*)"
     ]
   }
 }

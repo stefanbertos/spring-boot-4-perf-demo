@@ -58,8 +58,8 @@ public class PerfController {
         var result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
         long testEndTimeMs = System.currentTimeMillis();
 
-        // Fetch Kubernetes node info and wait for metrics propagation
-        result = result.withKubernetesNodes(kubernetesService.getNodeInfo());
+        // Export Kubernetes node info and wait for metrics propagation
+        result = result.withKubernetesExport(kubernetesService.exportNodeInfo());
         Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
 
         // Export dashboards and metrics
@@ -71,7 +71,8 @@ public class PerfController {
                 testId, testStartTimeMs, testEndTimeMs);
 
         log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
-        cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile());
+        cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
+                exports.result().kubernetesExportFile());
 
         return buildZipResponse(packageResult);
     }
@@ -88,7 +89,7 @@ public class PerfController {
         }
 
         log.info("All {} messages sent, waiting for responses...", count);
-        boolean completed = performanceTracker.awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
+        var completed = performanceTracker.awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
         var result = performanceTracker.getResult();
 
         if (completed) {
@@ -147,8 +148,9 @@ public class PerfController {
 
     private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {}
 
-    private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile) {
-        for (String file : dashboardFiles) {
+    private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile,
+                                       String kubernetesFile) {
+        for (var file : dashboardFiles) {
             try {
                 Files.deleteIfExists(Path.of(file));
                 log.debug("Deleted dashboard export: {}", file);
@@ -166,6 +168,16 @@ public class PerfController {
             }
         }
 
-        log.info("Cleaned up {} exported files", dashboardFiles.size() + (prometheusFile != null ? 1 : 0));
+        if (kubernetesFile != null) {
+            try {
+                Files.deleteIfExists(Path.of(kubernetesFile));
+                log.debug("Deleted kubernetes export: {}", kubernetesFile);
+            } catch (IOException e) {
+                log.warn("Failed to delete kubernetes export {}: {}", kubernetesFile, e.getMessage());
+            }
+        }
+
+        int fileCount = dashboardFiles.size() + (prometheusFile != null ? 1 : 0) + (kubernetesFile != null ? 1 : 0);
+        log.info("Cleaned up {} exported files", fileCount);
     }
 }
