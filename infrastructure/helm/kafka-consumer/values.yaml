@@ -26,6 +26,13 @@ configServer:
 tracing:
   url: http://perf-tempo:4318/v1/traces
 
+prometheus:
+  scrape: "true"
+  path: /actuator/prometheus
+  port: "8082"
+  interval: "1s"
+  job: kafka-consumer
+
 jvm:
   options: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
 

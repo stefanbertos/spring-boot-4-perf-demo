@@ -12,6 +12,12 @@ service:
 kafka:
   server: "perf-kafka:9092"
 
+prometheus:
+  scrape: "true"
+  path: /metrics
+  port: "9308"
+  job: kafka
+
 resources:
   requests:
     memory: "64Mi"

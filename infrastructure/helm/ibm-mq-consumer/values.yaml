@@ -39,6 +39,13 @@ tracing:
 jms:
   sessionCacheSize: 50
 
+prometheus:
+  scrape: "true"
+  path: /actuator/prometheus
+  port: "8081"
+  interval: "1s"
+  job: ibm-mq-consumer
+
 jvm:
   options: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
 

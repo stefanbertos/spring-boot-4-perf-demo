@@ -23,39 +23,3 @@ persistence:
   storageClass: ""
 
 scrapeInterval: 15s
-
-# Service discovery targets
-targets:
-  perfTester:
-    enabled: true
-    serviceName: perf-perf-tester
-    port: 8080
-    metricsPath: /api/actuator/prometheus
-    scrapeInterval: 1s
-  ibmMq:
-    enabled: true
-    serviceName: perf-ibm-mq
-    port: 9157
-    metricsPath: /metrics
-  kafkaExporter:
-    enabled: true
-    serviceName: perf-kafka-exporter
-    port: 9308
-    metricsPath: /metrics
-  ibmMqConsumer:
-    enabled: true
-    serviceName: perf-ibm-mq-consumer
-    port: 8081
-    metricsPath: /actuator/prometheus
-    scrapeInterval: 1s
-  kafkaConsumer:
-    enabled: true
-    serviceName: perf-kafka-consumer
-    port: 8082
-    metricsPath: /actuator/prometheus
-    scrapeInterval: 1s
-  oracleExporter:
-    enabled: true
-    serviceName: perf-oracle-exporter
-    port: 9161
-    metricsPath: /metrics

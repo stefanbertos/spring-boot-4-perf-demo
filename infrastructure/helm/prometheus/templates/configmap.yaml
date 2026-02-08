@@ -10,53 +10,35 @@ data:
       scrape_interval: {{ .Values.scrapeInterval }}
 
     scrape_configs:
-      {{- if .Values.targets.perfTester.enabled }}
-      - job_name: 'perf-tester'
-        {{- if .Values.targets.perfTester.scrapeInterval }}
-        scrape_interval: {{ .Values.targets.perfTester.scrapeInterval }}
-        {{- end }}
-        metrics_path: '{{ .Values.targets.perfTester.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.perfTester.serviceName }}:{{ .Values.targets.perfTester.port }}']
-      {{- end }}
-
-      {{- if .Values.targets.ibmMqConsumer.enabled }}
-      - job_name: 'ibm-mq-consumer'
-        {{- if .Values.targets.ibmMqConsumer.scrapeInterval }}
-        scrape_interval: {{ .Values.targets.ibmMqConsumer.scrapeInterval }}
-        {{- end }}
-        metrics_path: '{{ .Values.targets.ibmMqConsumer.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.ibmMqConsumer.serviceName }}:{{ .Values.targets.ibmMqConsumer.port }}']
-      {{- end }}
-
-      {{- if .Values.targets.kafkaConsumer.enabled }}
-      - job_name: 'kafka-consumer'
-        {{- if .Values.targets.kafkaConsumer.scrapeInterval }}
-        scrape_interval: {{ .Values.targets.kafkaConsumer.scrapeInterval }}
-        {{- end }}
-        metrics_path: '{{ .Values.targets.kafkaConsumer.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.kafkaConsumer.serviceName }}:{{ .Values.targets.kafkaConsumer.port }}']
-      {{- end }}
-
-      {{- if .Values.targets.ibmMq.enabled }}
-      - job_name: 'ibm-mq'
-        metrics_path: '{{ .Values.targets.ibmMq.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.ibmMq.serviceName }}:{{ .Values.targets.ibmMq.port }}']
-      {{- end }}
-
-      {{- if .Values.targets.kafkaExporter.enabled }}
-      - job_name: 'kafka'
-        metrics_path: '{{ .Values.targets.kafkaExporter.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.kafkaExporter.serviceName }}:{{ .Values.targets.kafkaExporter.port }}']
-      {{- end }}
-
-      {{- if .Values.targets.oracleExporter.enabled }}
-      - job_name: 'oracle'
-        metrics_path: '{{ .Values.targets.oracleExporter.metricsPath }}'
-        static_configs:
-          - targets: ['{{ .Values.targets.oracleExporter.serviceName }}:{{ .Values.targets.oracleExporter.port }}']
-      {{- end }}
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_interval]
+            action: replace
+            target_label: __scrape_interval__
+            regex: (.+)
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_job]
+            action: replace
+            target_label: job
+            regex: (.+)
+          - source_labels: [job, __meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: replace
+            regex: ;(.+)
+            replacement: $1
+            target_label: job
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace

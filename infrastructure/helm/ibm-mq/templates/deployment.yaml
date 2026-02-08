@@ -13,6 +13,14 @@ spec:
     metadata:
       labels:
         {{- include "ibm-mq.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: {{ .Values.prometheus.scrape | quote }}
+        prometheus.io/path: {{ .Values.prometheus.path | quote }}
+        prometheus.io/port: {{ .Values.prometheus.port | quote }}
+        {{- if .Values.prometheus.interval }}
+        prometheus.io/interval: {{ .Values.prometheus.interval | quote }}
+        {{- end }}
+        prometheus.io/job: {{ .Values.prometheus.job | quote }}
     spec:
       containers:
         - name: {{ .Chart.Name }}

@@ -16,6 +16,12 @@ oracle:
   user: perfuser
   password: perfpass
 
+prometheus:
+  scrape: "true"
+  path: /metrics
+  port: "9161"
+  job: oracle
+
 resources:
   requests:
     memory: "64Mi"

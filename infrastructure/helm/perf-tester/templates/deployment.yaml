@@ -13,6 +13,14 @@ spec:
     metadata:
       labels:
         {{- include "perf-tester.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: {{ .Values.prometheus.scrape.enabled | quote }}
+        prometheus.io/path: {{ .Values.prometheus.scrape.path | quote }}
+        prometheus.io/port: {{ .Values.prometheus.scrape.port | quote }}
+        {{- if .Values.prometheus.scrape.interval }}
+        prometheus.io/interval: {{ .Values.prometheus.scrape.interval | quote }}
+        {{- end }}
+        prometheus.io/job: {{ .Values.prometheus.scrape.job | quote }}
     spec:
       serviceAccountName: {{ include "perf-tester.fullname" . }}
       containers:

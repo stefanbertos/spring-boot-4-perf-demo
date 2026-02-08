@@ -25,6 +25,12 @@ resources:
     memory: "1Gi"
     cpu: "1000m"
 
+prometheus:
+  scrape: "true"
+  path: /metrics
+  port: "9157"
+  job: ibm-mq
+
 persistence:
   enabled: true
   size: 2Gi

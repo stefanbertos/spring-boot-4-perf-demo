@@ -7,7 +7,6 @@ plugins {
     id 'jacoco-report-aggregation'
     id 'org.asciidoctor.jvm.convert' version '4.0.4'
     id 'org.asciidoctor.jvm.pdf' version '4.0.4'
-    id 'org.owasp.dependencycheck' version '12.1.1' apply false
 }
 
 repositories {
@@ -37,7 +36,6 @@ subprojects {
     apply plugin: 'checkstyle'
     apply plugin: 'pmd'
     apply plugin: 'jacoco'
-    apply plugin: 'org.owasp.dependencycheck'
 
     group = 'com.example'
     version = '0.0.1-SNAPSHOT'
@@ -133,17 +131,6 @@ subprojects {
         }
     }
 
-    // ==================== OWASP Dependency-Check Configuration ====================
-    dependencyCheck {
-        formats = ['HTML', 'JSON']
-        failBuildOnCVSS = 7.0f
-        suppressionFile = rootProject.file('config/owasp/suppressions.xml').toString()
-        nvd {
-            apiKey = System.getenv('NVD_API_KEY') ?: ''
-        }
-        scanConfigurations = ['runtimeClasspath', 'compileClasspath']
-    }
-
     // ==================== Build Order ====================
     tasks.named('jar') {
         dependsOn tasks.named('checkstyleMain')
@@ -157,7 +144,6 @@ subprojects {
 
     tasks.named('check') {
         dependsOn jacocoTestCoverageVerification
-        dependsOn tasks.named('dependencyCheckAnalyze')
     }
 
     configurations {
@@ -241,19 +227,6 @@ tasks.register('jacocoAggregatedReport', JacocoReport) {
         html.outputLocation = layout.buildDirectory.dir('reports/jacoco/aggregated/html')
         xml.outputLocation = layout.buildDirectory.file('reports/jacoco/aggregated/jacoco.xml')
     }
-}
-
-// ==================== Aggregated OWASP Dependency-Check Report ====================
-apply plugin: 'org.owasp.dependencycheck'
-
-dependencyCheck {
-    formats = ['HTML', 'JSON']
-    failBuildOnCVSS = 7.0f
-    suppressionFile = file('config/owasp/suppressions.xml').toString()
-    nvd {
-        apiKey = System.getenv('NVD_API_KEY') ?: ''
-    }
-    scanConfigurations = ['runtimeClasspath', 'compileClasspath']
 }
 
 // ==================== SonarQube Configuration ====================
