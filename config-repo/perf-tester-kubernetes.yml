@@ -20,9 +20,14 @@ app:
     url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
   healthcheck:
     kafka:
-      bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-    redis:
-      host: ${REDIS_HOST:perf-redis}
-      port: ${REDIS_PORT:6379}
+      host: perf-kafka
+      port: 9092
+    mq:
+      host: perf-ibm-mq
+      port: 1414
     oracle:
-      url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+      host: perf-oracle
+      port: 1521
+    redis:
+      host: perf-redis
+      port: 6379

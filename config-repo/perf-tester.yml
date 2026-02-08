@@ -63,14 +63,17 @@ app:
     interval-ms: 60000
     connection-timeout-ms: 5000
     kafka:
-      bootstrap-servers: localhost:9092
+      host: localhost
+      port: 9092
+    mq:
+      host: localhost
+      port: 1414
+    oracle:
+      host: localhost
+      port: 1521
     redis:
       host: localhost
       port: 6379
-    oracle:
-      url: jdbc:oracle:thin:@localhost:1521/XEPDB1
-      user: perfuser
-      password: perfpass
 
 management:
   metrics:

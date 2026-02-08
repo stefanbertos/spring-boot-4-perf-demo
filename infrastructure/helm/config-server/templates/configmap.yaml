@@ -43,6 +43,20 @@ data:
         propagation:
           type: b3,w3c
 
+    # Default logging levels for all applications
+    logging:
+      level:
+        root: INFO
+        com.example: INFO
+        org.springframework: INFO
+        org.springframework.web: INFO
+        org.apache.kafka: WARN
+        io.confluent: WARN
+        com.ibm.mq: INFO
+        com.ibm.msg: INFO
+        io.micrometer: WARN
+        org.hibernate: WARN
+
     tracing:
       url: http://perf-tempo:4318/v1/traces
 
@@ -116,11 +130,17 @@ data:
         interval-ms: 60000
         connection-timeout-ms: 5000
         kafka:
-          bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
+          host: perf-kafka
+          port: 9092
+        mq:
+          host: perf-ibm-mq
+          port: 1414
         oracle:
-          url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
-          user: perfuser
-          password: perfpass
+          host: perf-oracle
+          port: 1521
+        redis:
+          host: perf-redis
+          port: 6379
 
     management:
       metrics:
@@ -186,6 +206,8 @@ data:
         topic:
           request: mq-requests
           response: mq-responses
+        consumer:
+          concurrency: 20
 
     management:
       metrics:
@@ -232,6 +254,8 @@ data:
         topic:
           request: mq-requests
           response: mq-responses
+        consumer:
+          concurrency: 20
 
     management:
       metrics:
@@ -414,12 +438,17 @@ data:
         url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
       healthcheck:
         kafka:
-          bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-        redis:
-          host: ${REDIS_HOST:perf-redis}
-          port: ${REDIS_PORT:6379}
+          host: perf-kafka
+          port: 9092
+        mq:
+          host: perf-ibm-mq
+          port: 1414
         oracle:
-          url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+          host: perf-oracle
+          port: 1521
+        redis:
+          host: perf-redis
+          port: 6379
 
   api-gateway-kubernetes.yml: |
     # api-gateway Kubernetes profile configuration

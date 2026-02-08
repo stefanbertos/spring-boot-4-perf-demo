@@ -48,7 +48,7 @@ public class KafkaRequestListener {
            description = "Time to process Kafka request and send response",
            histogram = true,
            percentiles = {0.95, 0.99})
-    @KafkaListener(topics = "${app.kafka.topic.request}", groupId = "${spring.kafka.consumer.group-id}", concurrency = "10")
+    @KafkaListener(topics = "${app.kafka.topic.request}", groupId = "${spring.kafka.consumer.group-id}", concurrency = "${app.kafka.consumer.concurrency:20}")
     public void onMessage(ConsumerRecord<String, MqMessage> record) {
         messagesReceived.increment();
 

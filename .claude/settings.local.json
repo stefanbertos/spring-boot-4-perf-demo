@@ -37,7 +37,10 @@
       "WebSearch",
       "Bash(python:*)",
       "Bash(del \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\perf-tester\\\\src\\\\main\\\\java\\\\com\\\\example\\\\perftester\\\\kubernetes\\\\KubernetesNodeInfo.java\")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(.\\\\gradlew build:*)",
+      "Bash(.\\\\gradlew.bat build:*)",
+      "Bash(cmd /c:*)"
     ]
   }
 }

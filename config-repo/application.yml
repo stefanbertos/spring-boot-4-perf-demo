@@ -35,6 +35,20 @@ management:
     propagation:
       type: b3,w3c
 
+# Default logging levels for all applications
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.apache.kafka: WARN
+    io.confluent: WARN
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO
+    io.micrometer: WARN
+    org.hibernate: WARN
+
 # Default tracing URL (localhost for development)
 tracing:
   url: http://localhost:4318/v1/traces

@@ -587,6 +587,58 @@ This project uses **Spring Cloud Config Server** for centralized configuration. 
 
 Profile-specific overrides (`config-repo/<service>-kubernetes.yml`) handle Kubernetes-specific values like service hostnames and environment variable references.
 
+### Logging Configuration (Required)
+
+Default logging levels are configured in the shared `application.yml` (config-repo and Helm ConfigMap) so all apps inherit them:
+
+```yaml
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.apache.kafka: WARN
+    io.confluent: WARN
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO
+    io.micrometer: WARN
+    org.hibernate: WARN
+```
+
+**Rules:**
+- Default logging is in `config-repo/application.yml` (shared by all apps) and mirrored in the Helm ConfigMap
+- Each module's local `application.yml` also has logging as a fallback for running without config-server
+- Service-specific overrides go in `config-repo/<service>.yml` (e.g., `com.example.perftester: DEBUG`)
+- To enable debug for all apps, change `com.example: DEBUG` in the shared `application.yml`
+- To enable debug for one app, change its level in the service-specific config file
+- Noisy libraries (Kafka, Confluent, Hibernate, Micrometer) default to WARN to reduce log volume
+- When changing log levels, follow the Configuration Consistency Checklist (update all 3 layers)
+
+### Configuration Property Naming (Required)
+
+Configuration properties bound to `@ConfigurationProperties` records **must match the record field names exactly**. Spring Boot uses relaxed binding, but the YAML keys must correspond to the Java field names:
+
+```java
+// Record expects host + port
+public record ServiceEndpoint(String host, int port) {}
+```
+
+```yaml
+# Correct - matches field names
+app:
+  healthcheck:
+    kafka:
+      host: perf-kafka
+      port: 9092
+
+# Wrong - Spring cannot bind these to ServiceEndpoint
+app:
+  healthcheck:
+    kafka:
+      bootstrap-servers: perf-kafka:9092  # No matching field
+```
+
 ### Configuration Consistency Checklist
 
 Before considering a configuration change complete, verify:

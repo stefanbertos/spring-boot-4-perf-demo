@@ -27,6 +27,8 @@ app:
     topic:
       request: mq-requests
       response: mq-responses
+    consumer:
+      concurrency: 20
 
 management:
   metrics:

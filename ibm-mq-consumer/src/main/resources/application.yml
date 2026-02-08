@@ -20,3 +20,12 @@ spring:
       value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
       properties:
         specific.avro.reader: true
+
+logging:
+  level:
+    root: INFO
+    com.example.ibmmqconsumer: INFO
+    org.springframework: INFO
+    org.apache.kafka: WARN
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO

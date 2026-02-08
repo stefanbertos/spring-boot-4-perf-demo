@@ -20,3 +20,11 @@ spring:
       value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
       properties:
         specific.avro.reader: true
+
+logging:
+  level:
+    root: INFO
+    com.example.kafkaconsumer: INFO
+    org.springframework: INFO
+    org.apache.kafka: WARN
+    io.confluent: WARN

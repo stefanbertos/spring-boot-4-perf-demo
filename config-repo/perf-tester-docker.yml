@@ -17,8 +17,14 @@ app:
     url: http://prometheus:9090
   healthcheck:
     kafka:
-      bootstrap-servers: kafka:9092
+      host: kafka
+      port: 9092
+    mq:
+      host: ibm-mq
+      port: 1414
+    oracle:
+      host: oracle
+      port: 1521
     redis:
       host: redis
-    oracle:
-      url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+      port: 6379
