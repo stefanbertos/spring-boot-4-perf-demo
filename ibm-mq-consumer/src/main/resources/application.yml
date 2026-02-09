@@ -26,6 +26,12 @@ spring:
       properties:
         specific.avro.reader: true
 
+app:
+  mq:
+    pool:
+      max-connections: 20
+      max-sessions-per-connection: 10
+
 logging:
   level:
     root: INFO
