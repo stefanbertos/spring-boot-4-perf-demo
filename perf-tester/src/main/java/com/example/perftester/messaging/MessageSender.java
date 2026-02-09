@@ -8,11 +8,9 @@ import jakarta.jms.Queue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -37,8 +35,7 @@ public class MessageSender {
         return new MQQueue(queueName);
     }
 
-    @Async
-    public CompletableFuture<Void> sendMessage(String payload) {
+    public void sendMessage(String payload) {
         var messageId = UUID.randomUUID().toString();
         var message = PerformanceTracker.createMessage(messageId, payload);
 
@@ -51,6 +48,5 @@ public class MessageSender {
 
         log.debug("Sent message [{}] to {} with replyTo {}",
                 messageId, outboundQueue, replyToQueue);
-        return CompletableFuture.completedFuture(null);
     }
 }
