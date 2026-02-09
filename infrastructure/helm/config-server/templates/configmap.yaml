@@ -210,6 +210,9 @@ data:
         queue:
           inbound: DEV.QUEUE.2
           outbound: DEV.QUEUE.1
+        pool:
+          max-connections: 20
+          max-sessions-per-connection: 10
       kafka:
         topic:
           request: mq-requests
