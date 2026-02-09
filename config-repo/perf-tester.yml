@@ -49,6 +49,9 @@ app:
     queue:
       inbound: DEV.QUEUE.1
       outbound: DEV.QUEUE.2
+    pool:
+      max-connections: 20
+      max-sessions-per-connection: 10
   grafana:
     url: http://localhost:3000
     export-path: ./grafana-exports
