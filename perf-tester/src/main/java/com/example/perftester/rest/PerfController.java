@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -85,13 +86,16 @@ public class PerfController {
             throws InterruptedException {
         performanceTracker.startTest(count);
 
+        var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             var payload = message + "-" + i;
-            messageSender.sendMessage(payload);
+            futures[i] = messageSender.sendMessage(payload);
             if (delayMs > 0) {
                 Thread.sleep(delayMs);
             }
         }
+        // this is here to wait untill all messages are send
+        CompletableFuture.allOf(futures).join();
 
         log.info("All {} messages sent, waiting for responses...", count);
         var completed = performanceTracker.awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
