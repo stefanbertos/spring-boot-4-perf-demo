@@ -178,6 +178,11 @@ data:
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
           value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+          acks: 1
+          compression-type: lz4
+          properties:
+            linger.ms: 5
+            batch.size: 65536
         consumer:
           group-id: ibm-mq-consumer-group
           auto-offset-reset: earliest
@@ -238,6 +243,11 @@ data:
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
           value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+          acks: 1
+          compression-type: lz4
+          properties:
+            linger.ms: 5
+            batch.size: 65536
         consumer:
           group-id: kafka-consumer-group
           auto-offset-reset: earliest
