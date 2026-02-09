@@ -101,7 +101,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(PerfTestResult.class), anyList(), anyString(), anyString(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        ResponseEntity<Resource> response = controller.sendMessages("test message", 10, 1, 0, "test-id");
+        ResponseEntity<Resource> response = controller.sendMessages("test message", 10, 1, 0, "test-id", true);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -131,7 +131,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        ResponseEntity<Resource> response = controller.sendMessages("test", 10, 1, 0, null);
+        ResponseEntity<Resource> response = controller.sendMessages("test", 10, 1, 0, null, true);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
@@ -157,7 +157,7 @@ class PerfControllerTest {
                 .thenReturn(packageResult);
 
         long startTime = System.currentTimeMillis();
-        controller.sendMessages("test", 2, 1, 10, "test-id");
+        controller.sendMessages("test", 2, 1, 10, "test-id", true);
         long elapsed = System.currentTimeMillis() - startTime;
 
         // Should take at least 10ms delay between 2 messages (10ms delay)
@@ -196,7 +196,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        controller.sendMessages("test", 1, 1, 0, "test-id");
+        controller.sendMessages("test", 1, 1, 0, "test-id", true);
 
         assertFalse(Files.exists(kubeDir));
     }

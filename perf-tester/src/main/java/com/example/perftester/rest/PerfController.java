@@ -49,7 +49,8 @@ public class PerfController {
             @RequestParam(defaultValue = "1000") int count,
             @RequestParam(defaultValue = "60") int timeoutSeconds,
             @RequestParam(defaultValue = "0") int delayMs,
-            @RequestParam(required = false) String testId) throws InterruptedException {
+            @RequestParam(required = false) String testId,
+            @RequestParam(defaultValue = "false") boolean exportStatistics) throws InterruptedException {
 
         log.info("Starting performance test: {} messages, timeout {}s, delay {}ms, testId={}",
                 count, timeoutSeconds, delayMs, testId);
@@ -58,23 +59,26 @@ public class PerfController {
         var result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
         long testEndTimeMs = System.currentTimeMillis();
 
-        // Export Kubernetes cluster info and wait for metrics propagation
-        result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
-        Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
+        if (exportStatistics) {
+            // Export Kubernetes cluster info and wait for metrics propagation
+            result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
+            Thread.sleep(METRICS_PROPAGATION_DELAY_MS);
 
-        // Export dashboards and metrics
-        var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
+            // Export dashboards and metrics
+            var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
 
-        // Package and return response
-        var packageResult = testResultPackager.packageResults(
-                exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
-                testId, testStartTimeMs, testEndTimeMs);
+            // Package and return response
+            var packageResult = testResultPackager.packageResults(
+                    exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
+                    testId, testStartTimeMs, testEndTimeMs);
 
-        log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
-        cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
-                exports.result().kubernetesExportFile());
+            log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
+            cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
+                    exports.result().kubernetesExportFile());
 
-        return buildZipResponse(packageResult);
+            return buildZipResponse(packageResult);
+        }
+        return ResponseEntity.ok().build();
     }
 
     private PerfTestResult runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)
@@ -103,12 +107,11 @@ public class PerfController {
     }
 
     private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {
-        var dashboardFiles = new ArrayList<String>();
 
         log.info("Exporting Grafana dashboards...");
         var dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
         dashboardExport.dashboardUrls().forEach(url -> log.info("  Dashboard URL: {}", url));
-        dashboardFiles.addAll(dashboardExport.exportedFiles());
+        var dashboardFiles = new ArrayList<>(dashboardExport.exportedFiles());
         var enrichedResult = testResult.withDashboardExports(
                 dashboardExport.dashboardUrls(), dashboardExport.exportedFiles());
 
@@ -146,10 +149,11 @@ public class PerfController {
         }
     }
 
-    private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {}
+    private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {
+    }
 
     private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile,
-                                       String kubernetesFile) {
+                                      String kubernetesFile) {
         for (var file : dashboardFiles) {
             try {
                 Files.deleteIfExists(Path.of(file));

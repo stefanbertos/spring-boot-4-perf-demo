@@ -41,7 +41,9 @@
       "Bash(.\\\\gradlew build:*)",
       "Bash(.\\\\gradlew.bat build:*)",
       "Bash(cmd /c:*)",
-      "Bash(kubectl exec:*)"
+      "Bash(kubectl exec:*)",
+      "Bash(git checkout:*)",
+      "Bash(del \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\infrastructure\\\\helm\\\\grafana\\\\gen_dashboards.py\")"
     ]
   }
 }
