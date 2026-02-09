@@ -3,11 +3,6 @@ package com.example.kafkaconsumer.messaging;
 import com.example.avro.MqMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanBuilder;
-import io.opentelemetry.api.trace.SpanContext;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -24,10 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class KafkaRequestListenerTest {
@@ -35,36 +28,17 @@ class KafkaRequestListenerTest {
     @Mock
     private KafkaTemplate<String, MqMessage> kafkaTemplate;
 
-    @Mock
-    private Tracer tracer;
-
-    @Mock
-    private SpanBuilder spanBuilder;
-
-    @Mock
-    private Span span;
-
-    @Mock
-    private Scope scope;
-
-    @Mock
-    private SpanContext spanContext;
-
     private MeterRegistry meterRegistry;
     private KafkaRequestListener listener;
 
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        listener = new KafkaRequestListener(kafkaTemplate, meterRegistry, tracer, "mq-responses");
+        listener = new KafkaRequestListener(kafkaTemplate, meterRegistry, "mq-responses");
     }
 
     @Test
     void onMessageShouldProcessAndSendResponse() {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         MqMessage mqMessage = MqMessage.newBuilder()
                 .setContent("test message")
                 .setTimestamp(Instant.now())
@@ -74,8 +48,6 @@ class KafkaRequestListenerTest {
                 "mq-requests", 0, 0, "key", mqMessage);
         record.headers().add("mq-reply-to", "queue:///DEV.QUEUE.1".getBytes(StandardCharsets.UTF_8));
         record.headers().add("correlationId", "corr-123".getBytes(StandardCharsets.UTF_8));
-        record.headers().add("traceId", "parent-trace".getBytes(StandardCharsets.UTF_8));
-        record.headers().add("spanId", "parent-span".getBytes(StandardCharsets.UTF_8));
 
         listener.onMessage(record);
 
@@ -87,15 +59,10 @@ class KafkaRequestListenerTest {
         assertNotNull(sentMessage.getPayload().getTimestamp());
         assertEquals("mq-responses", sentMessage.getHeaders().get("kafka_topic"));
         assertEquals("queue:///DEV.QUEUE.1", sentMessage.getHeaders().get("mq-reply-to"));
-        verify(span).end();
     }
 
     @Test
     void onMessageShouldHandleNullHeaders() {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         MqMessage mqMessage = MqMessage.newBuilder()
                 .setContent("test message")
                 .setTimestamp(Instant.now())
@@ -111,15 +78,10 @@ class KafkaRequestListenerTest {
 
         Message<MqMessage> sentMessage = messageCaptor.getValue();
         assertEquals("test message processed", sentMessage.getPayload().getContent());
-        verify(span).end();
     }
 
     @Test
     void onMessageShouldRecordExceptionOnError() {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         RuntimeException exception = new RuntimeException("Send failed");
         doThrow(exception).when(kafkaTemplate).send(any(Message.class));
 
@@ -136,17 +98,10 @@ class KafkaRequestListenerTest {
         } catch (RuntimeException e) {
             assertEquals("Send failed", e.getMessage());
         }
-
-        verify(span).recordException(exception);
-        verify(span).end();
     }
 
     @Test
     void countersShouldIncrement() {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         MqMessage mqMessage = MqMessage.newBuilder()
                 .setContent("test message")
                 .setTimestamp(Instant.now())
@@ -162,14 +117,5 @@ class KafkaRequestListenerTest {
 
         assertTrue(received >= 1.0);
         assertTrue(processed >= 1.0);
-    }
-
-    private void setupTracerMocks() {
-        when(tracer.spanBuilder(anyString())).thenReturn(spanBuilder);
-        when(spanBuilder.setSpanKind(any())).thenReturn(spanBuilder);
-        when(spanBuilder.setAttribute(anyString(), anyString())).thenReturn(spanBuilder);
-        when(spanBuilder.startSpan()).thenReturn(span);
-        when(span.makeCurrent()).thenReturn(scope);
-        when(span.getSpanContext()).thenReturn(spanContext);
     }
 }

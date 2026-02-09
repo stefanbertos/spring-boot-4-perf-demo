@@ -4,8 +4,6 @@ import com.example.avro.MqMessage;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.Tracer;
 
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
@@ -24,15 +22,12 @@ public class KafkaRequestListener {
     private final KafkaTemplate<String, MqMessage> kafkaTemplate;
     private final Counter messagesReceived;
     private final Counter messagesProcessed;
-    private final Tracer tracer;
     private final String kafkaResponseTopic;
 
     public KafkaRequestListener(KafkaTemplate<String, MqMessage> kafkaTemplate,
                                 MeterRegistry meterRegistry,
-                                Tracer tracer,
                                 @Value("${app.kafka.topic.response}") String kafkaResponseTopic) {
         this.kafkaTemplate = kafkaTemplate;
-        this.tracer = tracer;
         this.kafkaResponseTopic = kafkaResponseTopic;
         this.messagesReceived = Counter.builder("kafka.request.messages.received")
                 .description("Total Kafka request messages received")
@@ -47,7 +42,7 @@ public class KafkaRequestListener {
     @Timed(value = "kafka.request.process.time",
            description = "Time to process Kafka request and send response",
            histogram = true,
-           percentiles = {0.95, 0.99})
+           percentiles = {0.25, 0.5, 0.75, 0.9, 0.95, 0.99})
     @KafkaListener(topics = "${app.kafka.topic.request}", groupId = "${spring.kafka.consumer.group-id}", concurrency = "${app.kafka.consumer.concurrency:20}")
     public void onMessage(ConsumerRecord<String, MqMessage> record) {
         messagesReceived.increment();
@@ -55,26 +50,14 @@ public class KafkaRequestListener {
         var body = record.value().getContent();
         var replyTo = getHeader(record, "mq-reply-to");
         var correlationId = getHeader(record, "correlationId");
-        var parentTraceId = getHeader(record, "traceId");
 
-        var span = tracer.spanBuilder("kafka-process-request")
-                .setSpanKind(SpanKind.CONSUMER)
-                .setAttribute("messaging.system", "kafka")
-                .setAttribute("messaging.destination", kafkaResponseTopic)
-                .setAttribute("messaging.correlation_id", correlationId != null ? correlationId : "")
-                .setAttribute("traceId.parent", parentTraceId != null ? parentTraceId : "")
-                .startSpan();
-
-        try (var _ = span.makeCurrent()) {
-            log.debug("Received Kafka request: {} traceId=[{}] correlationId=[{}]",
-                    body, parentTraceId, correlationId);
+            log.debug("Received Kafka request: {} correlationId=[{}]",
+                    body, correlationId);
 
             var processedContent = body + " processed";
-            var newTraceId = span.getSpanContext().getTraceId();
-            var newSpanId = span.getSpanContext().getSpanId();
 
-            log.debug("Publishing response to Kafka topic {}: {} traceId=[{}]",
-                    kafkaResponseTopic, processedContent, newTraceId);
+            log.debug("Publishing response to Kafka topic {}: {}",
+                    kafkaResponseTopic, processedContent);
 
             var responsePayload = MqMessage.newBuilder()
                     .setContent(processedContent)
@@ -83,11 +66,7 @@ public class KafkaRequestListener {
 
             var builder = MessageBuilder
                     .withPayload(responsePayload)
-                    .setHeader(KafkaHeaders.TOPIC, kafkaResponseTopic)
-                    .setHeader("traceId", newTraceId)
-                    .setHeader("spanId", newSpanId)
-                    .setHeader("correlationId", correlationId)
-                    .setHeader("parentTraceId", parentTraceId);
+                    .setHeader(KafkaHeaders.TOPIC, kafkaResponseTopic);
 
             if (replyTo != null) {
                 builder.setHeader("mq-reply-to", replyTo);
@@ -96,12 +75,6 @@ public class KafkaRequestListener {
             var responseMessage = builder.build();
             kafkaTemplate.send(responseMessage);
             messagesProcessed.increment();
-        } catch (Exception e) {
-            span.recordException(e);
-            throw e;
-        } finally {
-            span.end();
-        }
     }
 
     private String getHeader(ConsumerRecord<String, MqMessage> record, String headerName) {

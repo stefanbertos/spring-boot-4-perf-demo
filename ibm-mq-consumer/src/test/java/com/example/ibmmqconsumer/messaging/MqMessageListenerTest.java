@@ -3,11 +3,6 @@ package com.example.ibmmqconsumer.messaging;
 import com.example.avro.MqMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanBuilder;
-import io.opentelemetry.api.trace.SpanContext;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
 import jakarta.jms.TextMessage;
@@ -25,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,21 +30,6 @@ class MqMessageListenerTest {
 
     @Mock
     private KafkaTemplate<String, MqMessage> kafkaTemplate;
-
-    @Mock
-    private Tracer tracer;
-
-    @Mock
-    private SpanBuilder spanBuilder;
-
-    @Mock
-    private Span span;
-
-    @Mock
-    private Scope scope;
-
-    @Mock
-    private SpanContext spanContext;
 
     @Mock
     private TextMessage jmsMessage;
@@ -64,19 +43,14 @@ class MqMessageListenerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        listener = new MqMessageListener(kafkaTemplate, meterRegistry, tracer, "mq-requests");
+        listener = new MqMessageListener(kafkaTemplate, meterRegistry, "mq-requests");
     }
 
     @Test
     void onMessageShouldForwardToKafkaWhenReplyToIsSet() throws JMSException {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         when(jmsMessage.getText()).thenReturn("test message");
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn("corr-123");
-        when(jmsMessage.getStringProperty("traceId")).thenReturn("parent-trace");
         when(replyToDestination.toString()).thenReturn("queue:///DEV.QUEUE.1");
 
         listener.onMessage(jmsMessage);
@@ -90,20 +64,16 @@ class MqMessageListenerTest {
         assertEquals("mq-requests", sentMessage.getHeaders().get("kafka_topic"));
         assertEquals("queue:///DEV.QUEUE.1", sentMessage.getHeaders().get("mq-reply-to"));
         assertEquals("corr-123", sentMessage.getHeaders().get("correlationId"));
-        verify(span).end();
     }
 
     @Test
     void onMessageShouldDropMessageWhenNoReplyTo() throws JMSException {
-        setupTracerMocksWithoutSpanContext();
-
         when(jmsMessage.getText()).thenReturn("test message");
         when(jmsMessage.getJMSReplyTo()).thenReturn(null);
 
         listener.onMessage(jmsMessage);
 
         verify(kafkaTemplate, never()).send(any(Message.class));
-        verify(span).end();
 
         double dropped = meterRegistry.counter("mq.listener.messages.dropped", "listener", "mq-to-kafka").count();
         assertTrue(dropped >= 1.0);
@@ -111,35 +81,22 @@ class MqMessageListenerTest {
 
     @Test
     void onMessageShouldRecordExceptionOnError() throws JMSException {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         when(jmsMessage.getText()).thenReturn("test message");
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
-        when(jmsMessage.getStringProperty("traceId")).thenReturn(null);
         when(replyToDestination.toString()).thenReturn("DEV.QUEUE.1");
 
         RuntimeException exception = new RuntimeException("Kafka send failed");
         doThrow(exception).when(kafkaTemplate).send(any(Message.class));
 
         assertThrows(RuntimeException.class, () -> listener.onMessage(jmsMessage));
-
-        verify(span).recordException(exception);
-        verify(span).end();
     }
 
     @Test
     void countersShouldIncrement() throws JMSException {
-        setupTracerMocks();
-        when(spanContext.getTraceId()).thenReturn("trace-123");
-        when(spanContext.getSpanId()).thenReturn("span-456");
-
         when(jmsMessage.getText()).thenReturn("test message");
         when(jmsMessage.getJMSReplyTo()).thenReturn(replyToDestination);
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
-        when(jmsMessage.getStringProperty("traceId")).thenReturn(null);
         when(replyToDestination.toString()).thenReturn("DEV.QUEUE.1");
 
         listener.onMessage(jmsMessage);
@@ -149,18 +106,5 @@ class MqMessageListenerTest {
 
         assertTrue(received >= 1.0);
         assertTrue(forwarded >= 1.0);
-    }
-
-    private void setupTracerMocks() {
-        setupTracerMocksWithoutSpanContext();
-        when(span.getSpanContext()).thenReturn(spanContext);
-    }
-
-    private void setupTracerMocksWithoutSpanContext() {
-        when(tracer.spanBuilder(anyString())).thenReturn(spanBuilder);
-        when(spanBuilder.setSpanKind(any())).thenReturn(spanBuilder);
-        when(spanBuilder.setAttribute(anyString(), anyString())).thenReturn(spanBuilder);
-        when(spanBuilder.startSpan()).thenReturn(span);
-        when(span.makeCurrent()).thenReturn(scope);
     }
 }

@@ -6,5 +6,3 @@ add component spring test with compose and spring docker support and run test e2
 add same components test for all major components like api gateway, consumers
 add some docker image violation check as part of the pipeline
 add ui with react which would call rest service in bff
-
-increase prometheus 15gb disk size, 1gb ram, scrape interval for few apps to 1sec,

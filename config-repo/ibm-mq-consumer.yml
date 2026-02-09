@@ -56,7 +56,6 @@ management:
       percentiles:
         http.server.requests: 0.95,0.99
         jms: 0.95,0.99
-        mq.e2e.latency: 0.95,0.99
 
 logging:
   level:
