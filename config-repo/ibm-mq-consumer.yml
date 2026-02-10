@@ -5,9 +5,10 @@ server:
 
 spring:
   jms:
-    cache:
+    pool:
       enabled: true
-      session-cache-size: 50
+      max-connections: 20
+      max-sessions-per-connection: 10
   kafka:
     bootstrap-servers: localhost:9092
     properties:
@@ -44,9 +45,6 @@ app:
     queue:
       inbound: DEV.QUEUE.2
       outbound: DEV.QUEUE.1
-    pool:
-      max-connections: 20
-      max-sessions-per-connection: 10
   kafka:
     topic:
       request: mq-requests

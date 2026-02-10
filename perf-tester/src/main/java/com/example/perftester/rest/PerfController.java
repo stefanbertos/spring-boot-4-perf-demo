@@ -112,7 +112,6 @@ public class PerfController {
     }
 
     private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {
-
         log.info("Exporting Grafana dashboards...");
         var dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
         dashboardExport.dashboardUrls().forEach(url -> log.info("  Dashboard URL: {}", url));

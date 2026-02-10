@@ -96,9 +96,10 @@ data:
         enabled: true
         change-log: classpath:db/changelog/db.changelog-master.yaml
       jms:
-        cache:
+        pool:
           enabled: true
-          session-cache-size: 50
+          max-connections: 20
+          max-sessions-per-connection: 10
       task:
         execution:
           thread-name-prefix: mq-sender-
@@ -112,13 +113,12 @@ data:
         password: passw0rd
 
     app:
+      kafka:
+        bootstrap-servers: localhost:9092
       mq:
         queue:
           inbound: DEV.QUEUE.1
           outbound: DEV.QUEUE.2
-        pool:
-          max-connections: 20
-          max-sessions-per-connection: 10
       grafana:
         url: ${GRAFANA_URL:http://perf-grafana:3000}
         export-path: ./grafana-exports
@@ -171,9 +171,10 @@ data:
 
     spring:
       jms:
-        cache:
+        pool:
           enabled: true
-          session-cache-size: 50
+          max-connections: 20
+          max-sessions-per-connection: 10
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
         properties:
@@ -210,9 +211,6 @@ data:
         queue:
           inbound: DEV.QUEUE.2
           outbound: DEV.QUEUE.1
-        pool:
-          max-connections: 20
-          max-sessions-per-connection: 10
       kafka:
         topic:
           request: mq-requests
@@ -448,6 +446,8 @@ data:
         conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
 
     app:
+      kafka:
+        bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:perf-kafka:9092}
       grafana:
         url: ${GRAFANA_URL:http://perf-grafana:3000}
       prometheus:

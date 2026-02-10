@@ -43,7 +43,13 @@
       "Bash(cmd /c:*)",
       "Bash(kubectl exec:*)",
       "Bash(git checkout:*)",
-      "Bash(del \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\infrastructure\\\\helm\\\\grafana\\\\gen_dashboards.py\")"
+      "Bash(del \"C:\\\\Users\\\\stefa\\\\IdeaProjects\\\\spring-boot-4-perf-demo\\\\infrastructure\\\\helm\\\\grafana\\\\gen_dashboards.py\")",
+      "Bash(for f in perf-tester/src/main/java/com/example/perftester/admin/IbmMqAdminService.java perf-tester/src/main/java/com/example/perftester/admin/KafkaAdminService.java perf-tester/src/main/java/com/example/perftester/admin/LoggingService.java perf-tester/src/main/java/com/example/perftester/rest/IbmMqAdminController.java perf-tester/src/main/java/com/example/perftester/rest/KafkaAdminController.java perf-tester/src/main/java/com/example/perftester/rest/LoggingController.java)",
+      "Bash(do sed -i -e '$a\\\\' \"$f\")",
+      "Bash(done)",
+      "Bash(Select-String:*)",
+      "Bash(javap:*)",
+      "Bash(jar -tf:*)"
     ]
   }
 }

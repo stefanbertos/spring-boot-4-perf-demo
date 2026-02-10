@@ -6,6 +6,11 @@ spring:
   docker:
     compose:
       file: ../compose.yaml
+  jms:
+    pool:
+      enabled: true
+      max-connections: 20
+      max-sessions-per-connection: 10
   kafka:
     bootstrap-servers: localhost:9092
     properties:
@@ -28,9 +33,6 @@ spring:
 
 app:
   mq:
-    pool:
-      max-connections: 20
-      max-sessions-per-connection: 10
 
 logging:
   level:

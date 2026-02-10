@@ -14,6 +14,8 @@ ibm:
     conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
 
 app:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:perf-kafka:9092}
   grafana:
     url: ${GRAFANA_URL:http://perf-grafana:3000}
   prometheus:
