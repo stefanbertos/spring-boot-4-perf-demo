@@ -379,7 +379,6 @@ perf-demo/
 │   │   ├── ibm-mq-consumer/
 │   │   ├── kafka-consumer/
 │   │   ├── perf-tester/
-│   │   ├── schema-registry/
 │   │   └── ...               # kafka, ibm-mq, grafana, prometheus, etc.
 │   ├── grafana/              # Grafana dashboards and provisioning
 │   ├── mq-config/            # IBM MQ MQSC scripts
@@ -632,7 +631,7 @@ spring:
 
 Serialization is a silent performance killer at scale:
 
-- **Prefer binary formats** (Avro, Protobuf) when both producer and consumer support it — this project uses **Apache Avro** for Kafka messages
+- **Prefer binary formats** (Avro, Protobuf) when both producer and consumer support it — this project uses **Apache Avro** for Kafka messages with custom serializer/deserializer (no Schema Registry or Confluent dependencies)
 - Use **Jackson Afterburner** to speed up JSON serialization where JSON is required
 - Only enable response compression when the network is the bottleneck — compression consumes CPU
 
@@ -668,7 +667,6 @@ logging:
     org.springframework: INFO
     org.springframework.web: INFO
     org.apache.kafka: WARN
-    io.confluent: WARN
     com.ibm.mq: INFO
     com.ibm.msg: INFO
     io.micrometer: WARN
@@ -681,7 +679,7 @@ logging:
 - Service-specific overrides go in `config-repo/<service>.yml` (e.g., `com.example.perftester: DEBUG`)
 - To enable debug for all apps, change `com.example: DEBUG` in the shared `application.yml`
 - To enable debug for one app, change its level in the service-specific config file
-- Noisy libraries (Kafka, Confluent, Hibernate, Micrometer) default to WARN to reduce log volume
+- Noisy libraries (Kafka, Hibernate, Micrometer) default to WARN to reduce log volume
 - When changing log levels, follow the Configuration Consistency Checklist (update all 3 layers)
 
 ### Configuration Property Naming (Required)
@@ -814,7 +812,7 @@ The Helm deployment and cleanup scripts must stay in sync with the Helm charts:
 
 **Deploy order rules:**
 - Infrastructure first (databases, message brokers, monitoring)
-- Kafka → Schema Registry → Config Server (strict dependency chain)
+- Kafka → Config Server (strict dependency chain)
 - Applications after Config Server (they depend on it for configuration)
 - UI tools and exporters last (Kafdrop, Redis Commander, Kafka Exporter)
 - Ingress last (routes to all services)
@@ -822,7 +820,6 @@ The Helm deployment and cleanup scripts must stay in sync with the Helm charts:
 **Cleanup order rules:**
 - Reverse of deploy order: Ingress first, infrastructure last
 - Applications before Config Server
-- Schema Registry before Kafka
 - PVCs, ConfigMaps/Secrets, and namespace deleted at the very end
 
 **Step numbering:**

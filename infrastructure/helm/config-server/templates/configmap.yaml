@@ -51,7 +51,6 @@ data:
         org.springframework: INFO
         org.springframework.web: INFO
         org.apache.kafka: WARN
-        io.confluent: WARN
         com.ibm.mq: INFO
         com.ibm.msg: INFO
         io.micrometer: WARN
@@ -177,11 +176,9 @@ data:
           max-sessions-per-connection: 10
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-        properties:
-          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+          value-serializer: com.example.ibmmqconsumer.serialization.AvroSerializer
           acks: 1
           compression-type: lz4
           properties:
@@ -191,9 +188,7 @@ data:
           group-id: ibm-mq-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
-          properties:
-            specific.avro.reader: true
+          value-deserializer: com.example.ibmmqconsumer.serialization.AvroDeserializer
       task:
         execution:
           thread-name-prefix: mq-consumer-
@@ -242,11 +237,9 @@ data:
     spring:
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-        properties:
-          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+          value-serializer: com.example.kafkaconsumer.serialization.AvroSerializer
           acks: 1
           compression-type: lz4
           properties:
@@ -256,9 +249,7 @@ data:
           group-id: kafka-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
-          properties:
-            specific.avro.reader: true
+          value-deserializer: com.example.kafkaconsumer.serialization.AvroDeserializer
       task:
         execution:
           thread-name-prefix: kafka-consumer-
@@ -414,8 +405,6 @@ data:
     spring:
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-        properties:
-          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
 
     ibm:
       mq:
@@ -426,8 +415,6 @@ data:
     spring:
       kafka:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-        properties:
-          schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
 
   perf-tester-kubernetes.yml: |
     # perf-tester Kubernetes profile configuration

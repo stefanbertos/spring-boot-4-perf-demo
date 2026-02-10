@@ -60,7 +60,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 3. Or run infrastructure only and start apps locally:
    ```bash
-   docker compose up -d redis kafka schema-registry ibm-mq oracle prometheus grafana loki tempo
+   docker compose up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
    ```
 
    Then run each module (start config-server first):

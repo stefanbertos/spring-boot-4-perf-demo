@@ -49,7 +49,10 @@
       "Bash(done)",
       "Bash(Select-String:*)",
       "Bash(javap:*)",
-      "Bash(jar -tf:*)"
+      "Bash(jar -tf:*)",
+      "Bash(gradlew.bat build:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

@@ -43,7 +43,6 @@ logging:
     org.springframework: INFO
     org.springframework.web: INFO
     org.apache.kafka: WARN
-    io.confluent: WARN
     com.ibm.mq: INFO
     com.ibm.msg: INFO
     io.micrometer: WARN

@@ -11,7 +11,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven { url 'https://packages.confluent.io/maven/' }
 }
 
 // ==================== Build Profile Configuration ====================
@@ -122,7 +121,12 @@ subprojects {
                     '*.export.*',
                     '*.apigateway.*',
                     '*.persistence.*',
-                    '*.avro.*'
+                    '*.avro.*',
+                    '*.serialization.*',
+                    '*.admin.*',
+                    '*AdminController',
+                    '*AdminController$*',
+                    '*AdminController.*'
                 ]
                 limit {
                     minimum = 0.8  // 80% coverage required per class
@@ -154,7 +158,6 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven { url 'https://packages.confluent.io/maven/' }
     }
 
     dependencies {

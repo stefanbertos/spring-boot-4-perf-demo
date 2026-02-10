@@ -20,7 +20,7 @@ echo Uninstalling all Helm releases in namespace: %NAMESPACE%
 echo.
 
 :: Uninstall Ingress
-echo [1/24] Uninstalling Ingress...
+echo [1/23] Uninstalling Ingress...
 helm uninstall %RELEASE_PREFIX%-ingress --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Ingress uninstalled.
@@ -30,7 +30,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall API Gateway
-echo [2/24] Uninstalling API Gateway...
+echo [2/23] Uninstalling API Gateway...
 helm uninstall %RELEASE_PREFIX%-api-gateway --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      API Gateway uninstalled.
@@ -40,7 +40,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Config Server
-echo [3/24] Uninstalling Config Server...
+echo [3/23] Uninstalling Config Server...
 helm uninstall %RELEASE_PREFIX%-config-server --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Config Server uninstalled.
@@ -50,7 +50,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafka Exporter
-echo [4/24] Uninstalling Kafka Exporter...
+echo [4/23] Uninstalling Kafka Exporter...
 helm uninstall %RELEASE_PREFIX%-kafka-exporter --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka Exporter uninstalled.
@@ -60,7 +60,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafdrop
-echo [5/24] Uninstalling Kafdrop...
+echo [5/23] Uninstalling Kafdrop...
 helm uninstall %RELEASE_PREFIX%-kafdrop --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafdrop uninstalled.
@@ -70,7 +70,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Perf-Tester
-echo [6/24] Uninstalling Perf-Tester...
+echo [6/23] Uninstalling Perf-Tester...
 helm uninstall %RELEASE_PREFIX%-perf-tester --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Perf-Tester uninstalled.
@@ -80,7 +80,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall IBM MQ Consumer
-echo [7/24] Uninstalling IBM MQ Consumer...
+echo [7/23] Uninstalling IBM MQ Consumer...
 helm uninstall %RELEASE_PREFIX%-ibm-mq-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      IBM MQ Consumer uninstalled.
@@ -90,7 +90,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafka Consumer
-echo [8/24] Uninstalling Kafka Consumer...
+echo [8/23] Uninstalling Kafka Consumer...
 helm uninstall %RELEASE_PREFIX%-kafka-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka Consumer uninstalled.
@@ -99,18 +99,8 @@ if %errorlevel% equ 0 (
 )
 echo.
 
-:: Uninstall Schema Registry
-echo [9/24] Uninstalling Schema Registry...
-helm uninstall %RELEASE_PREFIX%-schema-registry --namespace %NAMESPACE% 2>nul
-if %errorlevel% equ 0 (
-    echo      Schema Registry uninstalled.
-) else (
-    echo      Schema Registry not found or already removed.
-)
-echo.
-
 :: Uninstall Kafka
-echo [10/24] Uninstalling Kafka...
+echo [9/23] Uninstalling Kafka...
 helm uninstall %RELEASE_PREFIX%-kafka --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka uninstalled.
@@ -120,7 +110,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall SonarQube
-echo [11/24] Uninstalling SonarQube...
+echo [10/23] Uninstalling SonarQube...
 helm uninstall %RELEASE_PREFIX%-sonarqube --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      SonarQube uninstalled.
@@ -130,7 +120,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Grafana
-echo [12/24] Uninstalling Grafana...
+echo [11/23] Uninstalling Grafana...
 helm uninstall %RELEASE_PREFIX%-grafana --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Grafana uninstalled.
@@ -140,7 +130,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Promtail
-echo [13/24] Uninstalling Promtail...
+echo [12/23] Uninstalling Promtail...
 helm uninstall %RELEASE_PREFIX%-promtail --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Promtail uninstalled.
@@ -150,7 +140,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Loki
-echo [14/24] Uninstalling Loki...
+echo [13/23] Uninstalling Loki...
 helm uninstall %RELEASE_PREFIX%-loki --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Loki uninstalled.
@@ -160,7 +150,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Tempo
-echo [15/24] Uninstalling Tempo...
+echo [14/23] Uninstalling Tempo...
 helm uninstall %RELEASE_PREFIX%-tempo --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Tempo uninstalled.
@@ -170,7 +160,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Prometheus
-echo [16/24] Uninstalling Prometheus...
+echo [15/23] Uninstalling Prometheus...
 helm uninstall %RELEASE_PREFIX%-prometheus --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Prometheus uninstalled.
@@ -180,7 +170,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Oracle Exporter
-echo [17/24] Uninstalling Oracle Exporter...
+echo [16/23] Uninstalling Oracle Exporter...
 helm uninstall %RELEASE_PREFIX%-oracle-exporter --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Oracle Exporter uninstalled.
@@ -190,7 +180,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Oracle Database
-echo [18/24] Uninstalling Oracle Database...
+echo [17/23] Uninstalling Oracle Database...
 helm uninstall %RELEASE_PREFIX%-oracle --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Oracle Database uninstalled.
@@ -200,7 +190,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Redis Commander
-echo [19/24] Uninstalling Redis Commander...
+echo [18/23] Uninstalling Redis Commander...
 helm uninstall %RELEASE_PREFIX%-redis-commander --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Redis Commander uninstalled.
@@ -210,7 +200,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Redis
-echo [20/24] Uninstalling Redis...
+echo [19/23] Uninstalling Redis...
 helm uninstall %RELEASE_PREFIX%-redis --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Redis uninstalled.
@@ -220,7 +210,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall IBM MQ
-echo [21/24] Uninstalling IBM MQ...
+echo [20/23] Uninstalling IBM MQ...
 helm uninstall %RELEASE_PREFIX%-ibm-mq --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      IBM MQ uninstalled.
@@ -230,20 +220,20 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Delete PVCs
-echo [22/24] Deleting Persistent Volume Claims...
+echo [21/23] Deleting Persistent Volume Claims...
 kubectl delete pvc --all -n %NAMESPACE% 2>nul
 echo      PVCs deleted.
 echo.
 
 :: Delete ConfigMaps and Secrets (optional cleanup)
-echo [23/24] Deleting remaining ConfigMaps and Secrets...
+echo [22/23] Deleting remaining ConfigMaps and Secrets...
 kubectl delete configmap --all -n %NAMESPACE% 2>nul
 kubectl delete secret --all -n %NAMESPACE% 2>nul
 echo      ConfigMaps and Secrets deleted.
 echo.
 
 :: Delete namespace
-echo [24/24] Deleting namespace %NAMESPACE%...
+echo [23/23] Deleting namespace %NAMESPACE%...
 kubectl delete namespace %NAMESPACE% 2>nul
 echo      Namespace deleted.
 echo.

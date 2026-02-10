@@ -2,5 +2,3 @@
 spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
-    properties:
-      schema.registry.url: ${SCHEMA_REGISTRY_URL:http://perf-schema-registry:8081}
