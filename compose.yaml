@@ -1,8 +1,6 @@
 services:
   config-server:
-    build:
-      context: ./config-server
-      dockerfile: Dockerfile
+    image: config-server:latest
     ports:
       - "8888:8888"
     environment:
@@ -13,9 +11,7 @@ services:
       - ./config-repo:/config-repo:ro
 
   perf-tester:
-    build:
-      context: ./perf-tester
-      dockerfile: Dockerfile
+    image: perf-tester:latest
     ports:
       - "8080:8080"
     environment:
@@ -28,9 +24,7 @@ services:
       - redis
 
   ibm-mq-consumer:
-    build:
-      context: ./ibm-mq-consumer
-      dockerfile: Dockerfile
+    image: ibm-mq-consumer:latest
     ports:
       - "8081:8081"
     environment:
@@ -46,9 +40,7 @@ services:
       replicas: 10
 
   kafka-consumer:
-    build:
-      context: ./kafka-consumer
-      dockerfile: Dockerfile
+    image: kafka-consumer:latest
     ports:
       - "8082:8082"
     environment:
@@ -63,9 +55,7 @@ services:
       replicas: 10
 
   api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
+    image: api-gateway:latest
     ports:
       - "8090:8090"
     environment:

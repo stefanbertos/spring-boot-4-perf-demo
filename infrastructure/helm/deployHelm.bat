@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/28] Building application JARs with Gradle...
+echo [1/24] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -53,58 +53,25 @@ echo      JARs built successfully.
 echo.
 
 :: ============================================
-:: Build Docker Images
+:: Build OCI Images with Cloud Native Buildpacks
 :: ============================================
-echo [2/28] Building Docker image for perf-tester...
-docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
+echo [2/24] Building OCI images with Cloud Native Buildpacks...
+pushd %PROJECT_ROOT%
+call gradlew.bat bootBuildImage
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to build perf-tester image
+    echo ERROR: Failed to build OCI images
+    popd
     exit /b 1
 )
-echo      perf-tester image built.
-echo.
-
-echo [3/28] Building Docker image for ibm-mq-consumer...
-docker build -t ibm-mq-consumer:%IMAGE_TAG% %PROJECT_ROOT%\ibm-mq-consumer
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to build ibm-mq-consumer image
-    exit /b 1
-)
-echo      ibm-mq-consumer image built.
-echo.
-
-echo [4/28] Building Docker image for kafka-consumer...
-docker build -t kafka-consumer:%IMAGE_TAG% %PROJECT_ROOT%\kafka-consumer
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to build kafka-consumer image
-    exit /b 1
-)
-echo      kafka-consumer image built.
-echo.
-
-echo [5/28] Building Docker image for api-gateway...
-docker build -t api-gateway:%IMAGE_TAG% %PROJECT_ROOT%\api-gateway
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to build api-gateway image
-    exit /b 1
-)
-echo      api-gateway image built.
-echo.
-
-echo [6/28] Building Docker image for config-server...
-docker build -t config-server:%IMAGE_TAG% %PROJECT_ROOT%\config-server
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to build config-server image
-    exit /b 1
-)
-echo      config-server image built.
+popd
+echo      All OCI images built successfully.
 echo.
 
 :: ============================================
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [7/28] Loading images to Kubernetes cluster...
+echo [3/24] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -280,7 +247,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [8/28] Creating namespace %NAMESPACE%...
+echo [4/24] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -292,7 +259,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [9/28] Deploying IBM MQ...
+echo [5/24] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -308,7 +275,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [10/28] Deploying Oracle Database...
+echo [6/24] Deploying Oracle Database...
 helm upgrade --install %RELEASE_PREFIX%-oracle ./oracle ^
     --namespace %NAMESPACE% ^
     --wait --timeout 10m
@@ -324,7 +291,7 @@ echo      Waiting for Oracle Database to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=oracle -n %NAMESPACE% --timeout=600s
 echo.
 
-echo [11/28] Deploying Oracle Exporter...
+echo [7/24] Deploying Oracle Exporter...
 helm upgrade --install %RELEASE_PREFIX%-oracle-exporter ./oracle-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -335,7 +302,7 @@ if %errorlevel% neq 0 (
 echo      Oracle Exporter deployed.
 echo.
 
-echo [12/28] Deploying Prometheus...
+echo [8/24] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -346,7 +313,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [13/28] Deploying Tempo...
+echo [9/24] Deploying Tempo...
 helm upgrade --install %RELEASE_PREFIX%-tempo ./tempo ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -357,7 +324,7 @@ if %errorlevel% neq 0 (
 echo      Tempo deployed.
 echo.
 
-echo [14/28] Deploying Loki...
+echo [10/24] Deploying Loki...
 helm upgrade --install %RELEASE_PREFIX%-loki ./loki ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -368,7 +335,7 @@ if %errorlevel% neq 0 (
 echo      Loki deployed.
 echo.
 
-echo [15/28] Deploying Promtail...
+echo [11/24] Deploying Promtail...
 helm upgrade --install %RELEASE_PREFIX%-promtail ./promtail ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -379,7 +346,7 @@ if %errorlevel% neq 0 (
 echo      Promtail deployed.
 echo.
 
-echo [16/28] Deploying Grafana...
+echo [12/24] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -390,7 +357,7 @@ if %errorlevel% neq 0 (
 echo      Grafana deployed.
 echo.
 
-echo [17/28] Deploying SonarQube...
+echo [13/24] Deploying SonarQube...
 helm upgrade --install %RELEASE_PREFIX%-sonarqube ./sonarqube ^
     --namespace %NAMESPACE% ^
     --wait --timeout 10m
@@ -400,7 +367,7 @@ if %errorlevel% neq 0 (
 echo      SonarQube deployed.
 echo.
 
-echo [18/28] Deploying Redis...
+echo [14/24] Deploying Redis...
 helm upgrade --install %RELEASE_PREFIX%-redis ./redis ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -414,7 +381,7 @@ echo.
 :: ============================================
 :: Deploy Kafka
 :: ============================================
-echo [19/28] Deploying Kafka...
+echo [15/24] Deploying Kafka...
 helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -430,7 +397,7 @@ echo      Waiting for Kafka to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [20/28] Deploying Schema Registry...
+echo [16/24] Deploying Schema Registry...
 helm upgrade --install %RELEASE_PREFIX%-schema-registry ./schema-registry ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -449,7 +416,7 @@ echo.
 :: ============================================
 :: Deploy Config Server
 :: ============================================
-echo [21/28] Deploying Config Server...
+echo [17/24] Deploying Config Server...
 :: Extract repository from full image path (remove tag)
 for /f "tokens=1 delims=:" %%a in ("%CONFIG_SERVER_IMAGE%") do set CONFIG_SERVER_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-config-server ./config-server ^
@@ -473,7 +440,7 @@ echo.
 :: ============================================
 :: Deploy Applications
 :: ============================================
-echo [22/28] Deploying Applications...
+echo [18/24] Deploying Applications...
 
 echo      Deploying IBM MQ Consumer...
 :: Extract repository from full image path (remove tag)
@@ -524,7 +491,7 @@ echo.
 :: ============================================
 :: Deploy Kafdrop
 :: ============================================
-echo [23/28] Deploying Kafdrop...
+echo [19/24] Deploying Kafdrop...
 helm upgrade --install %RELEASE_PREFIX%-kafdrop ./kafdrop ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -538,7 +505,7 @@ echo.
 :: ============================================
 :: Deploy Redis Commander
 :: ============================================
-echo [24/28] Deploying Redis Commander...
+echo [20/24] Deploying Redis Commander...
 helm upgrade --install %RELEASE_PREFIX%-redis-commander ./redis-commander ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -552,7 +519,7 @@ echo.
 :: ============================================
 :: Deploy Kafka Exporter
 :: ============================================
-echo [25/28] Deploying Kafka Exporter...
+echo [21/24] Deploying Kafka Exporter...
 helm upgrade --install %RELEASE_PREFIX%-kafka-exporter ./kafka-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -566,7 +533,7 @@ echo.
 :: ============================================
 :: Deploy API Gateway
 :: ============================================
-echo [26/28] Deploying API Gateway...
+echo [22/24] Deploying API Gateway...
 :: Extract repository from full image path (remove tag)
 for /f "tokens=1 delims=:" %%a in ("%API_GATEWAY_IMAGE%") do set API_GATEWAY_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-api-gateway ./api-gateway ^
@@ -585,7 +552,7 @@ echo.
 :: ============================================
 :: Deploy Ingress
 :: ============================================
-echo [27/28] Deploying Ingress...
+echo [23/24] Deploying Ingress...
 helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -596,7 +563,7 @@ if %errorlevel% neq 0 (
 echo      Ingress deployed.
 echo.
 
-echo [28/28] Printing deployment summary...
+echo [24/24] Printing deployment summary...
 echo.
 echo ============================================
 echo  Deployment Complete!

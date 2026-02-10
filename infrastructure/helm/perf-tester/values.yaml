@@ -30,8 +30,6 @@ prometheus:
     enabled: "true"
     path: /api/actuator/prometheus
     port: "8080"
-    interval: "1s"
-    timeout: "1s"
     job: perf-tester
 
 redis:

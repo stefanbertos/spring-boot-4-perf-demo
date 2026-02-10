@@ -28,6 +28,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 - **Spring Boot 4.0** with Spring Cloud Gateway
 - **Spring Cloud Config Server** with filesystem backend
 - **Gradle** multi-module build with Checkstyle and PMD
+- **Cloud Native Buildpacks** (Paketo) for OCI image builds via `bootBuildImage`
 - **IBM MQ** with mq-jms-spring-boot-starter
 - **Apache Kafka** for message streaming
 - **Oracle Database** for persistence
@@ -46,14 +47,20 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 ### Local Development (Docker Compose)
 
-1. Build and start all services:
+1. Build OCI images and start all services:
    ```bash
-   docker compose up --build
+   ./gradlew bootBuildImage
+   docker compose up -d
    ```
 
-2. Or run infrastructure only and start apps locally:
+2. Or use the convenience script (builds, creates images, starts everything):
    ```bash
    runLocalDocker.bat
+   ```
+
+3. Or run infrastructure only and start apps locally:
+   ```bash
+   docker compose up -d redis kafka schema-registry ibm-mq oracle prometheus grafana loki tempo
    ```
 
    Then run each module (start config-server first):
@@ -118,6 +125,37 @@ cleanup.bat
 ### Send Message
 ```bash
 curl -X POST http://localhost:8080/api/perf/send -d "your message"
+```
+
+### Admin Endpoints
+
+**Logging** - Change log levels at runtime (defaults to `com.example` package):
+```bash
+# Set log level
+curl -X POST "http://localhost:8080/api/admin/logging/level?level=DEBUG"
+curl -X POST "http://localhost:8080/api/admin/logging/level?loggerName=org.springframework&level=DEBUG"
+
+# Get current log level
+curl "http://localhost:8080/api/admin/logging/level"
+curl "http://localhost:8080/api/admin/logging/level?loggerName=org.springframework"
+```
+
+**Kafka** - Resize Kafka topic partitions:
+```bash
+# Resize topic
+curl -X POST "http://localhost:8080/api/admin/kafka/topics/resize?topicName=mq-requests&partitions=10"
+
+# Get topic info
+curl "http://localhost:8080/api/admin/kafka/topics?topicName=mq-requests"
+```
+
+**IBM MQ** - Change queue max depth:
+```bash
+# Set max queue depth
+curl -X POST "http://localhost:8080/api/admin/mq/queues/depth?queueName=DEV.QUEUE.1&maxDepth=100000"
+
+# Get queue info
+curl "http://localhost:8080/api/admin/mq/queues?queueName=DEV.QUEUE.1"
 ```
 
 ### Health Check
@@ -239,6 +277,9 @@ The build supports two profiles for different deployment targets:
 # Build all modules (includes documentation generation)
 ./gradlew build
 
+# Build OCI images with Cloud Native Buildpacks
+./gradlew bootBuildImage
+
 # Run tests
 ./gradlew test
 
@@ -330,6 +371,13 @@ Logs are collected by Promtail and stored in Loki. Query logs in Grafana using L
 
 ### Enable Debug Logging
 
+At runtime (no restart needed):
+```bash
+curl -X POST "http://localhost:8080/api/admin/logging/level?loggerName=org.springframework.jms&level=DEBUG"
+curl -X POST "http://localhost:8080/api/admin/logging/level?loggerName=com.ibm.mq&level=DEBUG"
+```
+
+At startup:
 ```bash
 ./gradlew :perf-tester:bootRun --args='--logging.level.org.springframework.jms=DEBUG --logging.level.com.ibm.mq=DEBUG'
 ```
@@ -412,6 +460,3 @@ deployHelm.bat
 ```
 
 Images are automatically pushed to Google Artifact Registry.
-
-
-ollama launch claude --config

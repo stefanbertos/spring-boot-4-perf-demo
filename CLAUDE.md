@@ -31,6 +31,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Clean build
 ./gradlew clean build
+
+# Build OCI images via Buildpacks (replaces Dockerfiles)
+./gradlew bootBuildImage
+
+# Build single module image
+./gradlew :perf-tester:bootBuildImage
+
+# Run with Docker Compose (images must be built first)
+docker compose up
 ```
 
 ## Architecture
@@ -41,6 +50,7 @@ Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing.
 - **Spring Cloud Config Server** with filesystem backend for centralized configuration
 - **Spring Actuator** with Prometheus metrics export
 - **Lombok** for boilerplate reduction
+- **Cloud Native Buildpacks** via `bootBuildImage` for OCI image builds (no Dockerfiles)
 - **Docker Compose** for IBM MQ, Kafka, Prometheus, Grafana
 - **IBM MQ** with mq-jms-spring-boot-starter:4.0.1
 - **Kafka** with spring-boot-starter-kafka
@@ -347,11 +357,13 @@ Request a free API key at https://nvd.nist.gov/developers/request-an-api-key
 
 ### Project Structure
 
+OCI images are built via `./gradlew bootBuildImage` (Cloud Native Buildpacks) — no Dockerfiles. JMS connection pooling is auto-configured by the MQ starter via `spring.jms.pool.*` properties — no custom `JmsConfig` classes.
+
 ```
 perf-demo/
-├── build.gradle              # Root build with shared config
+├── build.gradle              # Root build with shared config + bootBuildImage
 ├── settings.gradle           # Module includes
-├── compose.yaml              # Docker Compose orchestration
+├── compose.yaml              # Docker Compose orchestration (references pre-built images)
 ├── config-repo/              # Spring Cloud Config files (served by config-server)
 │   ├── application.yml       # Shared config for all services
 │   ├── application-kubernetes.yml
@@ -376,7 +388,15 @@ perf-demo/
 │   ├── build.gradle
 │   └── src/main/java/com/example/perftester/
 │       ├── PerfTesterApplication.java
-│       ├── rest/PerfController.java
+│       ├── rest/
+│       │   ├── PerfController.java          # Performance test endpoint
+│       │   ├── LoggingController.java       # Runtime log level control
+│       │   ├── KafkaAdminController.java    # Kafka topic resize
+│       │   └── IbmMqAdminController.java    # MQ queue depth resize
+│       ├── admin/
+│       │   ├── LoggingService.java          # LoggingSystem wrapper
+│       │   ├── KafkaAdminService.java       # Kafka AdminClient wrapper
+│       │   └── IbmMqAdminService.java       # MQ PCF commands
 │       └── messaging/
 │           ├── MessageSender.java    # Sends to DEV.QUEUE.2
 │           └── MessageListener.java  # Listens on DEV.QUEUE.1
@@ -524,7 +544,7 @@ Static methods hide dependencies and make unit testing difficult. Prefer Spring-
 
 ### JVM Tuning
 
-All JVM tuning is applied via the `JAVA_TOOL_OPTIONS` environment variable, which the JVM reads automatically. This allows each deployment layer (Dockerfile, Docker Compose, Helm) to override options independently.
+All JVM tuning is applied via the `JAVA_TOOL_OPTIONS` environment variable, which the JVM reads automatically. This allows each deployment layer (Docker Compose, Helm) to override options independently.
 
 **Garbage Collector Selection:**
 - **ZGC** (`-XX:+UseZGC`) — used in this project for low-latency messaging workloads
@@ -561,13 +581,15 @@ JAVA_TOOL_OPTIONS="-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.
 
 | Layer | Location | Purpose |
 |-------|----------|---------|
-| Dockerfile | `ENV JAVA_TOOL_OPTIONS="..."` | Default for all container runs |
-| Docker Compose | `environment: JAVA_TOOL_OPTIONS: "..."` | Override for local Docker Compose |
+| Buildpacks | `bootBuildImage.environment` in `build.gradle` | `BP_JVM_VERSION` only; JVM flags set at runtime |
+| Docker Compose | `environment: JAVA_TOOL_OPTIONS: "..."` | Overrides buildpack defaults for local Docker Compose |
 | Helm values.yaml | `jvm.options: "..."` | Override for Kubernetes deployments |
 | Helm deployment.yaml | `env: JAVA_TOOL_OPTIONS` from values | Injected into pod containers |
 | build.gradle | `bootRun.jvmArgs` | Local development via `./gradlew bootRun` |
 
-**When changing JVM options, update all layers** (follows the Configuration Consistency Checklist).
+**Note:** Paketo Buildpacks set `JAVA_TOOL_OPTIONS` as a `.default` via the CNB launcher. Setting `JAVA_TOOL_OPTIONS` at runtime (Docker Compose, Helm) **completely replaces** the buildpack default, so our flags take full effect.
+
+**When changing JVM options, update all runtime layers** (Docker Compose, Helm values.yaml).
 
 **ZGC Memory Requirements (Required):**
 - ZGC uses multi-mapped memory regions and has higher non-heap overhead than G1GC

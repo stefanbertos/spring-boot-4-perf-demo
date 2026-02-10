@@ -8,12 +8,17 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo === Stopping Docker Compose ===
-docker compose down
+echo === Building OCI images with Cloud Native Buildpacks ===
+call gradlew.bat bootBuildImage
+
+if %ERRORLEVEL% NEQ 0 (
+    echo Image build failed!
+    exit /b 1
+)
 
 echo.
-echo === Rebuilding Docker images ===
-docker compose build config-server perf-tester ibm-mq-consumer kafka-consumer api-gateway
+echo === Stopping Docker Compose ===
+docker compose down
 
 echo.
 echo === Starting all services ===

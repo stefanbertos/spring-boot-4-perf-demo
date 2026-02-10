@@ -1,3 +1,5 @@
+add cadadvisor metrics and enhance grafana dashboards for perf-tester.json,ibm-mq-consumer.json,kafka-consumer.json also when the app is using kafka add kafka lag panel
+
 add deployment with argocd instead of deploy script, but keep helm charts if possible
 is it possible to run locally github actions? and then argocd?
 
