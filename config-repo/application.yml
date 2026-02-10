@@ -39,7 +39,7 @@ management:
 logging:
   level:
     root: INFO
-    com.example: INFO
+    com.example: DEBUG
     org.springframework: INFO
     org.springframework.web: INFO
     org.apache.kafka: WARN

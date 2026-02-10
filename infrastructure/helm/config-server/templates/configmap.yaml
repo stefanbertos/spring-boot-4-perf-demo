@@ -47,7 +47,7 @@ data:
     logging:
       level:
         root: INFO
-        com.example: INFO
+        com.example: DEBUG
         org.springframework: INFO
         org.springframework.web: INFO
         org.apache.kafka: WARN
@@ -161,7 +161,7 @@ data:
         org.springframework.jms: INFO
         com.ibm.mq: INFO
         com.ibm.msg: INFO
-        com.example.perftester: INFO
+        com.example.perftester: DEBUG
 
   ibm-mq-consumer.yml: |
     server:
@@ -227,7 +227,7 @@ data:
 
     logging:
       level:
-        com.example.ibmmqconsumer: INFO
+        com.example.ibmmqconsumer: DEBUG
 
   kafka-consumer.yml: |
     server:
@@ -274,7 +274,7 @@ data:
 
     logging:
       level:
-        com.example.kafkaconsumer: INFO
+        com.example.kafkaconsumer: DEBUG
 
   api-gateway.yml: |
     server:

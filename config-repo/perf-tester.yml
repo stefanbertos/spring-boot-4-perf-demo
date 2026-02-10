@@ -95,4 +95,4 @@ logging:
     org.springframework.jms: INFO
     com.ibm.mq: INFO
     com.ibm.msg: INFO
-    com.example.perftester: INFO
+    com.example.perftester: DEBUG

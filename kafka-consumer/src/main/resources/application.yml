@@ -25,6 +25,6 @@ spring:
 logging:
   level:
     root: INFO
-    com.example.kafkaconsumer: INFO
+    com.example.kafkaconsumer: DEBUG
     org.springframework: INFO
     org.apache.kafka: WARN
