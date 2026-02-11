@@ -16,7 +16,7 @@ public class RedisService {
 
     private final StringRedisTemplate redisTemplate;
 
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 300000)
     public void pushDummyValues() {
         var timestamp = Instant.now().toEpochMilli();
         var uuid = UUID.randomUUID().toString();

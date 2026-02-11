@@ -1,3 +1,8 @@
+grafana dashboards pod filter doesnt populate with pod values so all panels are empty
+compose.yaml seems to be corrupted, or configs are not picked properly - doest start ibm-mq-consumer,kafdrop, kafka, kafka-consumer,kafka-exporter,oracle, perf-tester
+make sure perf-tester is using persistence store disk with 5gb to store all zips
+make sure TestResultPersistenceService is used to store result to db
+
 create a plan and write to file first how to do analysis for current tps e2e
 is 111 ops/s in rate(jms_message_process_seconds_count{job="perf-tester"}[1m]) 
 check the code why i cannot go higher is it s problem of cpu, memory, connection in mq, 
