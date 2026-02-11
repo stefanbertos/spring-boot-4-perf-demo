@@ -68,7 +68,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "gnetId": 18276,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
   "liveNow": false,
@@ -616,7 +616,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum (rate(kafka_server_brokertopicmetrics_bytesout_total{job=\"$kafka_job_name\",instance=~\"$broker\",topic!=\"\"}[2m]))by(instance)",
+          "expr": "sum (rate(kafka_server_brokertopicmetrics_bytesout_total{job=\"$kafka_job_name\",instance=~\"$broker\",topic!=\"\"}[$__rate_interval]))by(instance)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -630,7 +630,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum (rate(kafka_server_brokertopicmetrics_bytesin_total{job=\"$kafka_job_name\",instance=~\"$broker\",topic!=\"\"}[2m]))by(instance)",
+          "expr": "sum (rate(kafka_server_brokertopicmetrics_bytesin_total{job=\"$kafka_job_name\",instance=~\"$broker\",topic!=\"\"}[$__rate_interval]))by(instance)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1980,7 +1980,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum (irate(kafka_server_sessionexpirelistener_zookeeperexpires_total{job=\"$kafka_job_name\",instance=~\"$broker\"}[1m]))by(instance)",
+          "expr": "sum (irate(kafka_server_sessionexpirelistener_zookeeperexpires_total{job=\"$kafka_job_name\",instance=~\"$broker\"}[$__rate_interval]))by(instance)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2082,7 +2082,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "sum (irate(kafka_server_sessionexpirelistener_zookeeperdisconnects_total{job=\"$kafka_job_name\",instance=~\"$broker\"}[1m]))by(instance)",
+          "expr": "sum (irate(kafka_server_sessionexpirelistener_zookeeperdisconnects_total{job=\"$kafka_job_name\",instance=~\"$broker\"}[$__rate_interval]))by(instance)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2277,7 +2277,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (pod)(rate(kafka_server_replicamanager_isrexpands_total[1m]))",
+          "expr": "sum by (pod)(rate(kafka_server_replicamanager_isrexpands_total[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2408,7 +2408,7 @@
       }
     }
   ],
-  "refresh": "",
+  "refresh": "30s",
   "revision": 1,
   "schemaVersion": 38,
   "style": "dark",

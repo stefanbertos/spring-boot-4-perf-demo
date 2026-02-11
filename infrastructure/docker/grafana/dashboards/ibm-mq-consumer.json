@@ -21,7 +21,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[1m])",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[$__rate_interval])",
           "legendFormat": "{{name}}"
         }
       ],
@@ -67,11 +67,11 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[1m]))",
+          "expr": "sum(rate(container_network_receive_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[$__rate_interval]))",
           "legendFormat": "rx total"
         },
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[1m]))",
+          "expr": "sum(rate(container_network_transmit_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[$__rate_interval]))",
           "legendFormat": "tx total"
         }
       ],
@@ -92,11 +92,11 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(container_fs_reads_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[1m]))",
+          "expr": "sum(rate(container_fs_reads_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[$__rate_interval]))",
           "legendFormat": "read total"
         },
         {
-          "expr": "sum(rate(container_fs_writes_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[1m]))",
+          "expr": "sum(rate(container_fs_writes_bytes_total{name=~\".*ibm-mq-consumer.*\", image!=\"\"}[$__rate_interval]))",
           "legendFormat": "write total"
         }
       ],
@@ -123,7 +123,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))",
+          "expr": "sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "TPS"
         }
       ],
@@ -141,15 +141,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[$__rate_interval])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(mq_listener_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99"
         },
         {
-          "expr": "sum(rate(mq_listener_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[1m])) / sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(mq_listener_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[$__rate_interval])) / sum(rate(mq_listener_process_time_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "avg"
         }
       ],
@@ -167,15 +167,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(mq_listener_messages_received_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(mq_listener_messages_received_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "received/s"
         },
         {
-          "expr": "sum(rate(mq_listener_messages_forwarded_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(mq_listener_messages_forwarded_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "forwarded/s"
         },
         {
-          "expr": "sum(rate(mq_listener_messages_dropped_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(mq_listener_messages_dropped_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "dropped/s"
         }
       ],
@@ -193,7 +193,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[30s]))",
+          "expr": "sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "TPS"
         }
       ],
@@ -211,15 +211,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[$__rate_interval])) by (le))",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(kafka_response_process_time_seconds_bucket{job=\"ibm-mq-consumer\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99"
         },
         {
-          "expr": "sum(rate(kafka_response_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[1m])) / sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(kafka_response_process_time_seconds_sum{job=\"ibm-mq-consumer\"}[$__rate_interval])) / sum(rate(kafka_response_process_time_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "avg"
         }
       ],
@@ -237,15 +237,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(kafka_response_messages_received_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(kafka_response_messages_received_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "received/s"
         },
         {
-          "expr": "sum(rate(kafka_response_messages_sent_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(kafka_response_messages_sent_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "sent to MQ/s"
         },
         {
-          "expr": "sum(rate(kafka_response_messages_dropped_total{job=\"ibm-mq-consumer\"}[1m]))",
+          "expr": "sum(rate(kafka_response_messages_dropped_total{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
           "legendFormat": "dropped/s"
         }
       ],
@@ -292,7 +292,7 @@
       "description": "Rate of change of consumer lag - positive means lag is growing, negative means catching up",
       "targets": [
         {
-          "expr": "sum(rate(kafka_consumergroup_lag{topic=\"mq-responses\"}[1m])) by (consumergroup, topic)",
+          "expr": "sum(rate(kafka_consumergroup_lag{topic=\"mq-responses\"}[$__rate_interval])) by (consumergroup, topic)",
           "legendFormat": "{{consumergroup}} / {{topic}}"
         }
       ],
@@ -410,6 +410,7 @@
       }
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 39,
   "templating": {
     "list": []

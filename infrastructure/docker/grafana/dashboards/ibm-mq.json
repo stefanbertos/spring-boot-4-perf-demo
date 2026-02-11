@@ -4,7 +4,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
   "panels": [
@@ -15,7 +15,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Put - {{qmgr}}"
         }
       ],
@@ -33,7 +33,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Get - {{qmgr}}"
         }
       ],
@@ -51,7 +51,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Put Bytes - {{qmgr}}"
         }
       ],
@@ -69,7 +69,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_destructive_get_bytes_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_destructive_get_bytes_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Get Bytes - {{qmgr}}"
         }
       ],
@@ -87,11 +87,11 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_commit_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_commit_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Commits - {{qmgr}}"
         },
         {
-          "expr": "rate(ibmmq_qmgr_rollback_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_rollback_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Rollbacks - {{qmgr}}"
         }
       ],
@@ -109,15 +109,15 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ibmmq_qmgr_failed_mqput_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_failed_mqput_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Failed Put"
         },
         {
-          "expr": "rate(ibmmq_qmgr_failed_mqget_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_failed_mqget_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Failed Get"
         },
         {
-          "expr": "rate(ibmmq_qmgr_failed_mqconn_mqconnx_total{job=\"ibm-mq\"}[1m])",
+          "expr": "rate(ibmmq_qmgr_failed_mqconn_mqconnx_total{job=\"ibm-mq\"}[$__rate_interval])",
           "legendFormat": "Failed Connect"
         }
       ],
@@ -251,6 +251,7 @@
       }
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 39,
   "templating": {
     "list": []

@@ -52,7 +52,8 @@
       "Bash(jar -tf:*)",
       "Bash(gradlew.bat build:*)",
       "Bash(cmd.exe:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "WebFetch(domain:grafana.com)"
     ]
   }
 }

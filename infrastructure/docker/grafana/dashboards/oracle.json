@@ -51,7 +51,7 @@
       "type": "dashboards"
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "rows": [
     {
       "collapse": false,
