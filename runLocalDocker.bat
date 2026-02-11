@@ -8,8 +8,9 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo === Building OCI images with Cloud Native Buildpacks ===
-call gradlew.bat bootBuildImage
+echo === Rebuilding Docker images ===
+docker compose build config-server perf-tester ibm-mq-consumer kafka-consumer api-gateway
+
 
 if %ERRORLEVEL% NEQ 0 (
     echo Image build failed!

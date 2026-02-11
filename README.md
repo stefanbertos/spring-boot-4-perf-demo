@@ -28,7 +28,6 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 - **Spring Boot 4.0** with Spring Cloud Gateway
 - **Spring Cloud Config Server** with filesystem backend
 - **Gradle** multi-module build with Checkstyle and PMD
-- **Cloud Native Buildpacks** (Paketo) for OCI image builds via `bootBuildImage`
 - **IBM MQ** with mq-jms-spring-boot-starter
 - **Apache Kafka** for message streaming
 - **Oracle Database** for persistence
@@ -47,10 +46,9 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 ### Local Development (Docker Compose)
 
-1. Build OCI images and start all services:
+1. Build and start all services:
    ```bash
-   ./gradlew bootBuildImage
-   docker compose up -d
+   docker compose up --build
    ```
 
 2. Or use the convenience script (builds, creates images, starts everything):

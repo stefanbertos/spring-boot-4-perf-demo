@@ -195,15 +195,6 @@ subprojects {
         }
     }
 
-    // ==================== Buildpacks (OCI Image) ====================
-    tasks.named('bootBuildImage') {
-        imageName = "${project.name}:${project.version}"
-        tags = ["${project.name}:latest"]
-        environment = [
-            'BP_JVM_VERSION': '25'
-        ]
-    }
-
     // Log active build profile
     tasks.register('showProfile') {
         group = 'help'

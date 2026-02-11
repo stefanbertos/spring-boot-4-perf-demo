@@ -53,18 +53,51 @@ echo      JARs built successfully.
 echo.
 
 :: ============================================
-:: Build OCI Images with Cloud Native Buildpacks
+:: Build Docker Images
 :: ============================================
-echo [2/23] Building OCI images with Cloud Native Buildpacks...
-pushd %PROJECT_ROOT%
-call gradlew.bat bootBuildImage
+echo [2/28] Building Docker image for perf-tester...
+docker build -t perf-tester:%IMAGE_TAG% %PROJECT_ROOT%\perf-tester
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to build OCI images
-    popd
+    echo ERROR: Failed to build perf-tester image
     exit /b 1
 )
-popd
-echo      All OCI images built successfully.
+echo      perf-tester image built.
+echo.
+
+echo [3/28] Building Docker image for ibm-mq-consumer...
+docker build -t ibm-mq-consumer:%IMAGE_TAG% %PROJECT_ROOT%\ibm-mq-consumer
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build ibm-mq-consumer image
+    exit /b 1
+)
+echo      ibm-mq-consumer image built.
+echo.
+
+echo [4/28] Building Docker image for kafka-consumer...
+docker build -t kafka-consumer:%IMAGE_TAG% %PROJECT_ROOT%\kafka-consumer
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build kafka-consumer image
+    exit /b 1
+)
+echo      kafka-consumer image built.
+echo.
+
+echo [5/28] Building Docker image for api-gateway...
+docker build -t api-gateway:%IMAGE_TAG% %PROJECT_ROOT%\api-gateway
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build api-gateway image
+    exit /b 1
+)
+echo      api-gateway image built.
+echo.
+
+echo [6/28] Building Docker image for config-server...
+docker build -t config-server:%IMAGE_TAG% %PROJECT_ROOT%\config-server
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build config-server image
+    exit /b 1
+)
+echo      config-server image built.
 echo.
 
 :: ============================================
