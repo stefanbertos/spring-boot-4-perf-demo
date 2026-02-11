@@ -448,6 +448,48 @@ data:
             {"expr": "health_ping_duration_seconds{job=\"perf-tester\", service=\"redis\", quantile=\"0.95\"}", "legendFormat": "Redis p95"}
           ],
           "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+        },
+        {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 148}, "panels": [], "title": "Container Resources (cAdvisor)", "type": "row"},
+        {
+          "title": "Container CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 149},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(container_cpu_usage_seconds_total{pod=~\"perf-tester-.*\", container!=\"\", container!=\"POD\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Memory Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 149},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "container_memory_working_set_bytes{pod=~\"perf-tester-.*\", container!=\"\", container!=\"POD\"}", "legendFormat": "{{ "{{pod}}" }} working set"},
+            {"expr": "kube_pod_container_resource_limits{pod=~\"perf-tester-.*\", resource=\"memory\"}", "legendFormat": "{{ "{{pod}}" }} limit"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Network I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 157},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_network_receive_bytes_total{pod=~\"perf-tester-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} rx"},
+            {"expr": "sum(rate(container_network_transmit_bytes_total{pod=~\"perf-tester-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} tx"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Filesystem I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 157},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_fs_reads_bytes_total{pod=~\"perf-tester-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} read"},
+            {"expr": "sum(rate(container_fs_writes_bytes_total{pod=~\"perf-tester-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} write"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
         }
       ],
       "schemaVersion": 39,
@@ -1231,6 +1273,67 @@ data:
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [{"expr": "rate(kafka_response_messages_received_total{job=\"ibm-mq-consumer\"}[1m])", "legendFormat": "{{ "{{pod}}" }} received"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 183}, "panels": [], "title": "Container Resources (cAdvisor)", "type": "row"},
+        {
+          "title": "Container CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 184},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(container_cpu_usage_seconds_total{pod=~\"ibm-mq-consumer-.*\", container!=\"\", container!=\"POD\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Memory Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 184},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "container_memory_working_set_bytes{pod=~\"ibm-mq-consumer-.*\", container!=\"\", container!=\"POD\"}", "legendFormat": "{{ "{{pod}}" }} working set"},
+            {"expr": "kube_pod_container_resource_limits{pod=~\"ibm-mq-consumer-.*\", resource=\"memory\"}", "legendFormat": "{{ "{{pod}}" }} limit"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Network I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 192},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_network_receive_bytes_total{pod=~\"ibm-mq-consumer-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} rx"},
+            {"expr": "sum(rate(container_network_transmit_bytes_total{pod=~\"ibm-mq-consumer-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} tx"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Filesystem I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 192},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_fs_reads_bytes_total{pod=~\"ibm-mq-consumer-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} read"},
+            {"expr": "sum(rate(container_fs_writes_bytes_total{pod=~\"ibm-mq-consumer-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} write"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 200}, "panels": [], "title": "Kafka Exporter Lag", "type": "row"},
+        {
+          "title": "Consumer Group Lag (mq-responses)",
+          "type": "timeseries",
+          "description": "Kafka consumer lag from kafka-exporter for the mq-responses topic consumed by ibm-mq-consumer",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 201},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_consumergroup_lag{topic=\"mq-responses\"}) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} / {{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Consumer Group Lag Rate (mq-responses)",
+          "type": "timeseries",
+          "description": "Rate of change of consumer lag - positive means lag is growing, negative means catching up",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 201},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(kafka_consumergroup_lag{topic=\"mq-responses\"}[1m])) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} / {{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short", "custom": {"fillOpacity": 20}}, "overrides": []}
         }
       ],
       "schemaVersion": 39,
@@ -1677,6 +1780,67 @@ data:
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "targets": [{"expr": "rate(kafka_request_messages_received_total{job=\"kafka-consumer\"}[1m])", "legendFormat": "{{ "{{pod}}" }} received"}],
           "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+        },
+        {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 149}, "panels": [], "title": "Container Resources (cAdvisor)", "type": "row"},
+        {
+          "title": "Container CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 150},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "rate(container_cpu_usage_seconds_total{pod=~\"kafka-consumer-.*\", container!=\"\", container!=\"POD\"}[1m])", "legendFormat": "{{ "{{pod}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Memory Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 150},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "container_memory_working_set_bytes{pod=~\"kafka-consumer-.*\", container!=\"\", container!=\"POD\"}", "legendFormat": "{{ "{{pod}}" }} working set"},
+            {"expr": "kube_pod_container_resource_limits{pod=~\"kafka-consumer-.*\", resource=\"memory\"}", "legendFormat": "{{ "{{pod}}" }} limit"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Network I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 158},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_network_receive_bytes_total{pod=~\"kafka-consumer-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} rx"},
+            {"expr": "sum(rate(container_network_transmit_bytes_total{pod=~\"kafka-consumer-.*\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} tx"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Container Filesystem I/O",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 158},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [
+            {"expr": "sum(rate(container_fs_reads_bytes_total{pod=~\"kafka-consumer-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} read"},
+            {"expr": "sum(rate(container_fs_writes_bytes_total{pod=~\"kafka-consumer-.*\", container!=\"\"}[1m])) by (pod)", "legendFormat": "{{ "{{pod}}" }} write"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 166}, "panels": [], "title": "Kafka Exporter Lag", "type": "row"},
+        {
+          "title": "Consumer Group Lag (mq-requests)",
+          "type": "timeseries",
+          "description": "Kafka consumer lag from kafka-exporter for the mq-requests topic consumed by kafka-consumer",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 167},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(kafka_consumergroup_lag{topic=\"mq-requests\"}) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} / {{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short", "custom": {"fillOpacity": 20}}, "overrides": []}
+        },
+        {
+          "title": "Consumer Group Lag Rate (mq-requests)",
+          "type": "timeseries",
+          "description": "Rate of change of consumer lag - positive means lag is growing, negative means catching up",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 167},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"expr": "sum(rate(kafka_consumergroup_lag{topic=\"mq-requests\"}[1m])) by (consumergroup, topic)", "legendFormat": "{{ "{{consumergroup}}" }} / {{ "{{topic}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short", "custom": {"fillOpacity": 20}}, "overrides": []}
         }
       ],
       "schemaVersion": 39,

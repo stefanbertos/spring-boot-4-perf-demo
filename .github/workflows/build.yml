@@ -30,11 +30,53 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
-      - name: Archive code coverage results
+      - name: Archive Checkstyle reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
-          path: build/reports/jacoco/html/*.html
+          name: checkstyle-reports
+          path: |
+            perf-tester/build/reports/checkstyle/main.html
+            ibm-mq-consumer/build/reports/checkstyle/main.html
+            kafka-consumer/build/reports/checkstyle/main.html
+            api-gateway/build/reports/checkstyle/main.html
+            config-server/build/reports/checkstyle/main.html
+
+      - name: Archive PMD reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmd-reports
+          path: |
+            perf-tester/build/reports/pmd/main.html
+            ibm-mq-consumer/build/reports/pmd/main.html
+            kafka-consumer/build/reports/pmd/main.html
+            api-gateway/build/reports/pmd/main.html
+            config-server/build/reports/pmd/main.html
+
+      - name: Archive JaCoCo reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: |
+            perf-tester/build/reports/jacoco/test/html/
+            ibm-mq-consumer/build/reports/jacoco/test/html/
+            kafka-consumer/build/reports/jacoco/test/html/
+            api-gateway/build/reports/jacoco/test/html/
+            config-server/build/reports/jacoco/test/html/
+
+      - name: Archive test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            perf-tester/build/reports/tests/
+            ibm-mq-consumer/build/reports/tests/
+            kafka-consumer/build/reports/tests/
+            api-gateway/build/reports/tests/
+            config-server/build/reports/tests/
 
       - name: Archive technical documentation (PDF)
         uses: actions/upload-artifact@v4

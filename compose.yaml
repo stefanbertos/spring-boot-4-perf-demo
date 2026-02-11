@@ -259,6 +259,16 @@ services:
     volumes:
       - sonarqube-db-data:/var/lib/postgresql/data
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.51.0
+    ports:
+      - "8085:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
+
 volumes:
   redis-data:
   grafana-data:
