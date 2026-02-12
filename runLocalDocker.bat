@@ -23,7 +23,7 @@ docker compose down
 
 echo.
 echo === Starting all services ===
-docker compose up -d
+docker compose up --build -d
 
 echo ============================================
 echo  Ingress URLs
