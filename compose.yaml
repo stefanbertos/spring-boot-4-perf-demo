@@ -11,7 +11,13 @@ services:
       CONFIG_REPO_PATH: /config-repo
     volumes:
       - ./config-repo:/config-repo:ro
-    mem_limit: 512m
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
 
   perf-tester:
     build:
@@ -23,12 +29,19 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+    volumes:
+      - perf-tester-data:/data/exports
     depends_on:
-      - config-server
-      - ibm-mq
-      - redis
-      - oracle
-      - kafka
+      config-server:
+        condition: service_healthy
+      ibm-mq:
+        condition: service_started
+      redis:
+        condition: service_started
+      oracle:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     mem_limit: 512m
 
   ibm-mq-consumer:
@@ -42,9 +55,12 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
     depends_on:
-      - config-server
-      - ibm-mq
-      - kafka
+      config-server:
+        condition: service_healthy
+      ibm-mq:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     mem_limit: 512m
 
   kafka-consumer:
@@ -57,9 +73,12 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      - config-server
-      - kafka
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     mem_limit: 512m
 
   api-gateway:
@@ -82,12 +101,18 @@ services:
       TEMPO_URL: http://tempo:3200
       SONAR_URL: http://sonarqube:9000
     depends_on:
-      - config-server
-      - grafana
-      - prometheus
-      - perf-tester
-      - ibm-mq-consumer
-      - kafka-consumer
+      config-server:
+        condition: service_healthy
+      grafana:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      perf-tester:
+        condition: service_started
+      ibm-mq-consumer:
+        condition: service_started
+      kafka-consumer:
+        condition: service_started
     mem_limit: 512m
 
   redis:
@@ -109,7 +134,7 @@ services:
       - redis
 
   kafka:
-    image: apache/kafka:3.9.0
+    image: apache/kafka:4.0.0
     ports:
       - "9092:9092"
     environment:
@@ -124,6 +149,12 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
@@ -132,7 +163,8 @@ services:
     command:
       - --kafka.server=kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
 
   ibm-mq:
     image: icr.io/ibm-messaging/mq:9.2.5.0-r3
@@ -184,7 +216,8 @@ services:
       KAFKA_BROKERCONNECT: kafka:9092
       SERVER_SERVLET_CONTEXTPATH: /kafdrop
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -228,6 +261,7 @@ services:
       ORACLE_PASSWORD: oracle
       APP_USER: perfuser
       APP_USER_PASSWORD: perfpass
+    shm_size: 1g
     volumes:
       - oracle-data:/opt/oracle/oradata
 
@@ -276,6 +310,7 @@ services:
     privileged: true
 
 volumes:
+  perf-tester-data:
   redis-data:
   grafana-data:
   tempo-data:

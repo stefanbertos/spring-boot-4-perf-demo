@@ -90,6 +90,11 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data/exports
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -104,3 +109,9 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 5
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "perf-tester.fullname" . }}-pvc
+      {{- end }}

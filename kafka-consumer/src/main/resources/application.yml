@@ -22,6 +22,14 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: com.example.kafkaconsumer.serialization.AvroDeserializer
 
+app:
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+    consumer:
+      concurrency: 20
+
 logging:
   level:
     root: INFO

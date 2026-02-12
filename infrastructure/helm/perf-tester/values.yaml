@@ -19,13 +19,18 @@ mq:
     inbound: DEV.QUEUE.1
     outbound: DEV.QUEUE.2
 
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: ""
+
 grafana:
   url: http://perf-grafana:3000/grafana
-  exportPath: /tmp/grafana-exports
+  exportPath: /data/exports/grafana-exports
 
 prometheus:
   url: http://perf-prometheus:9090/prometheus
-  exportPath: /tmp/prometheus-exports
+  exportPath: /data/exports/prometheus-exports
   scrape:
     enabled: "true"
     path: /api/actuator/prometheus
@@ -43,7 +48,7 @@ tracing:
   url: http://perf-tempo:4318/v1/traces
 
 export:
-  path: /tmp/test-exports
+  path: /data/exports/test-exports
 
 jms:
   sessionCacheSize: 50

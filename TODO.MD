@@ -1,7 +1,11 @@
-grafana dashboards pod filter doesnt populate with pod values so all panels are empty
-compose.yaml seems to be corrupted, or configs are not picked properly - doest start ibm-mq-consumer,kafdrop, kafka, kafka-consumer,kafka-exporter,oracle, perf-tester
-make sure perf-tester is using persistence store disk with 5gb to store all zips
-make sure TestResultPersistenceService is used to store result to db
+helm grafana dashboards pod filter doesnt populate with pod values so all panels are empty, check and fix it
+
+compose.yaml seems to be corrupted, or configs are not picked properly - 
+doest start ibm-mq-consumer,kafdrop, kafka, kafka-consumer,kafka-exporter,oracle, perf-tester
+
+make sure TestResultPersistenceService is used to store result to db, currently its unused, make sure the rest controller, has endpoint to query it
+
+add ui with react which would call rest service to display the data from database about the tests
 
 create a plan and write to file first how to do analysis for current tps e2e
 is 111 ops/s in rate(jms_message_process_seconds_count{job="perf-tester"}[1m]) 
@@ -15,4 +19,4 @@ is it possible to run locally github actions? and then argocd?
 add component spring test with compose and spring docker support and run test e2e, the component test should use the gherkin language and steps implemented in java
 add same components test for all major components like api gateway, consumers
 add some docker image violation check as part of the pipeline
-add ui with react which would call rest service in bff
+

@@ -53,7 +53,17 @@
       "Bash(gradlew.bat build:*)",
       "Bash(cmd.exe:*)",
       "Bash(powershell.exe:*)",
-      "WebFetch(domain:grafana.com)"
+      "WebFetch(domain:grafana.com)",
+      "Bash(helm template:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker pull:*)",
+      "Bash(ping:*)",
+      "Bash(docker volume ls:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)",
+      "Bash(timeout:*)"
     ]
   }
 }
