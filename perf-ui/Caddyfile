@@ -1,0 +1,10 @@
+:80 {
+    root * /srv
+    encode gzip
+
+    @api path /api/*
+    reverse_proxy @api {$API_GATEWAY_URL:api-gateway:8090}
+
+    try_files {path} /index.html
+    file_server
+}

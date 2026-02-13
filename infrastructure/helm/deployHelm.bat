@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Build Application JARs
 :: ============================================
-echo [1/23] Building application JARs with Gradle...
+echo [1/28] Building application JARs with Gradle...
 pushd %PROJECT_ROOT%
 call gradlew.bat clean build -x test
 if %errorlevel% neq 0 (
@@ -100,11 +100,20 @@ if %errorlevel% neq 0 (
 echo      config-server image built.
 echo.
 
+echo [7/28] Building Docker image for perf-ui...
+docker build -t perf-ui:%IMAGE_TAG% %PROJECT_ROOT%\perf-ui
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to build perf-ui image
+    exit /b 1
+)
+echo      perf-ui image built.
+echo.
+
 :: ============================================
 :: Load images to Kubernetes (for local clusters)
 :: or push to registry (for GCP/remote clusters)
 :: ============================================
-echo [3/23] Loading images to Kubernetes cluster...
+echo [8/28] Loading images to Kubernetes cluster...
 
 :: Detect cluster type and load images accordingly
 kubectl config current-context > temp_context.txt
@@ -119,6 +128,7 @@ set IBM_MQ_CONSUMER_IMAGE=ibm-mq-consumer:%IMAGE_TAG%
 set KAFKA_CONSUMER_IMAGE=kafka-consumer:%IMAGE_TAG%
 set API_GATEWAY_IMAGE=api-gateway:%IMAGE_TAG%
 set CONFIG_SERVER_IMAGE=config-server:%IMAGE_TAG%
+set PERF_UI_IMAGE=perf-ui:%IMAGE_TAG%
 set IMAGE_PULL_POLICY=IfNotPresent
 
 :: Check for GKE (Google Kubernetes Engine)
@@ -226,6 +236,16 @@ if %errorlevel% equ 0 (
         exit /b 1
     )
 
+    :: Tag and push perf-ui image
+    set PERF_UI_IMAGE=!GCP_REGISTRY!/perf-ui:%IMAGE_TAG%
+    echo      Tagging and pushing perf-ui to !PERF_UI_IMAGE!...
+    docker tag perf-ui:%IMAGE_TAG% !PERF_UI_IMAGE!
+    docker push !PERF_UI_IMAGE!
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to push perf-ui image
+        exit /b 1
+    )
+
     :: For GCP, we need to pull from registry
     set IMAGE_PULL_POLICY=Always
 
@@ -241,6 +261,7 @@ if %errorlevel% equ 0 (
     minikube image load kafka-consumer:%IMAGE_TAG%
     minikube image load api-gateway:%IMAGE_TAG%
     minikube image load config-server:%IMAGE_TAG%
+    minikube image load perf-ui:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -253,6 +274,7 @@ if %errorlevel% equ 0 (
     kind load docker-image kafka-consumer:%IMAGE_TAG%
     kind load docker-image api-gateway:%IMAGE_TAG%
     kind load docker-image config-server:%IMAGE_TAG%
+    kind load docker-image perf-ui:%IMAGE_TAG%
     goto :images_loaded
 )
 
@@ -280,7 +302,7 @@ echo.
 :: ============================================
 :: Create Namespace
 :: ============================================
-echo [4/23] Creating namespace %NAMESPACE%...
+echo [9/28] Creating namespace %NAMESPACE%...
 kubectl create namespace %NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace
@@ -292,7 +314,7 @@ echo.
 :: ============================================
 :: Deploy Infrastructure
 :: ============================================
-echo [5/23] Deploying IBM MQ...
+echo [10/28] Deploying IBM MQ...
 helm upgrade --install %RELEASE_PREFIX%-ibm-mq ./ibm-mq ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -308,7 +330,7 @@ echo      Waiting for IBM MQ to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ibm-mq -n %NAMESPACE% --timeout=300s
 echo.
 
-echo [6/23] Deploying Oracle Database...
+echo [11/28] Deploying Oracle Database...
 helm upgrade --install %RELEASE_PREFIX%-oracle ./oracle ^
     --namespace %NAMESPACE% ^
     --wait --timeout 10m
@@ -324,7 +346,7 @@ echo      Waiting for Oracle Database to be ready...
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=oracle -n %NAMESPACE% --timeout=600s
 echo.
 
-echo [7/23] Deploying Oracle Exporter...
+echo [12/28] Deploying Oracle Exporter...
 helm upgrade --install %RELEASE_PREFIX%-oracle-exporter ./oracle-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -335,7 +357,7 @@ if %errorlevel% neq 0 (
 echo      Oracle Exporter deployed.
 echo.
 
-echo [8/23] Deploying Prometheus...
+echo [13/28] Deploying Prometheus...
 helm upgrade --install %RELEASE_PREFIX%-prometheus ./prometheus ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -346,18 +368,7 @@ if %errorlevel% neq 0 (
 echo      Prometheus deployed.
 echo.
 
-echo [9/23] Deploying Tempo...
-helm upgrade --install %RELEASE_PREFIX%-tempo ./tempo ^
-    --namespace %NAMESPACE% ^
-    --wait --timeout 3m
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to deploy Tempo
-    exit /b 1
-)
-echo      Tempo deployed.
-echo.
-
-echo [10/23] Deploying Loki...
+echo [14/28] Deploying Loki...
 helm upgrade --install %RELEASE_PREFIX%-loki ./loki ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -368,7 +379,7 @@ if %errorlevel% neq 0 (
 echo      Loki deployed.
 echo.
 
-echo [11/23] Deploying Promtail...
+echo [15/28] Deploying Promtail...
 helm upgrade --install %RELEASE_PREFIX%-promtail ./promtail ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -379,7 +390,7 @@ if %errorlevel% neq 0 (
 echo      Promtail deployed.
 echo.
 
-echo [12/23] Deploying Grafana...
+echo [16/28] Deploying Grafana...
 helm upgrade --install %RELEASE_PREFIX%-grafana ./grafana ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -390,7 +401,7 @@ if %errorlevel% neq 0 (
 echo      Grafana deployed.
 echo.
 
-echo [13/23] Deploying SonarQube...
+echo [17/28] Deploying SonarQube...
 helm upgrade --install %RELEASE_PREFIX%-sonarqube ./sonarqube ^
     --namespace %NAMESPACE% ^
     --wait --timeout 10m
@@ -400,7 +411,7 @@ if %errorlevel% neq 0 (
 echo      SonarQube deployed.
 echo.
 
-echo [14/23] Deploying Redis...
+echo [18/28] Deploying Redis...
 helm upgrade --install %RELEASE_PREFIX%-redis ./redis ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -414,7 +425,7 @@ echo.
 :: ============================================
 :: Deploy Kafka
 :: ============================================
-echo [15/23] Deploying Kafka...
+echo [19/28] Deploying Kafka...
 helm upgrade --install %RELEASE_PREFIX%-kafka ./kafka ^
     --namespace %NAMESPACE% ^
     --wait --timeout 5m
@@ -433,7 +444,7 @@ echo.
 :: ============================================
 :: Deploy Config Server
 :: ============================================
-echo [16/23] Deploying Config Server...
+echo [20/28] Deploying Config Server...
 :: Extract repository from full image path (remove tag)
 for /f "tokens=1 delims=:" %%a in ("%CONFIG_SERVER_IMAGE%") do set CONFIG_SERVER_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-config-server ./config-server ^
@@ -457,7 +468,7 @@ echo.
 :: ============================================
 :: Deploy Applications
 :: ============================================
-echo [17/23] Deploying Applications...
+echo [21/28] Deploying Applications...
 
 echo      Deploying IBM MQ Consumer...
 :: Extract repository from full image path (remove tag)
@@ -506,9 +517,28 @@ echo      Perf-Tester deployed.
 echo.
 
 :: ============================================
+:: Deploy Perf-UI
+:: ============================================
+echo [22/28] Deploying Perf-UI...
+:: Extract repository from full image path (remove tag)
+for /f "tokens=1 delims=:" %%a in ("%PERF_UI_IMAGE%") do set PERF_UI_REPO=%%a
+helm upgrade --install %RELEASE_PREFIX%-perf-ui ./perf-ui ^
+    --namespace %NAMESPACE% ^
+    --set image.repository=%PERF_UI_REPO% ^
+    --set image.tag=%IMAGE_TAG% ^
+    --set image.pullPolicy=%IMAGE_PULL_POLICY% ^
+    --wait --timeout 3m
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to deploy Perf-UI
+    exit /b 1
+)
+echo      Perf-UI deployed.
+echo.
+
+:: ============================================
 :: Deploy Kafdrop
 :: ============================================
-echo [18/23] Deploying Kafdrop...
+echo [23/28] Deploying Kafdrop...
 helm upgrade --install %RELEASE_PREFIX%-kafdrop ./kafdrop ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -522,7 +552,7 @@ echo.
 :: ============================================
 :: Deploy Redis Commander
 :: ============================================
-echo [19/23] Deploying Redis Commander...
+echo [24/28] Deploying Redis Commander...
 helm upgrade --install %RELEASE_PREFIX%-redis-commander ./redis-commander ^
     --namespace %NAMESPACE% ^
     --wait --timeout 3m
@@ -536,7 +566,7 @@ echo.
 :: ============================================
 :: Deploy Kafka Exporter
 :: ============================================
-echo [20/23] Deploying Kafka Exporter...
+echo [25/28] Deploying Kafka Exporter...
 helm upgrade --install %RELEASE_PREFIX%-kafka-exporter ./kafka-exporter ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -550,7 +580,7 @@ echo.
 :: ============================================
 :: Deploy API Gateway
 :: ============================================
-echo [21/23] Deploying API Gateway...
+echo [26/28] Deploying API Gateway...
 :: Extract repository from full image path (remove tag)
 for /f "tokens=1 delims=:" %%a in ("%API_GATEWAY_IMAGE%") do set API_GATEWAY_REPO=%%a
 helm upgrade --install %RELEASE_PREFIX%-api-gateway ./api-gateway ^
@@ -569,7 +599,7 @@ echo.
 :: ============================================
 :: Deploy Ingress
 :: ============================================
-echo [22/23] Deploying Ingress...
+echo [27/28] Deploying Ingress...
 helm upgrade --install %RELEASE_PREFIX%-ingress ./ingress ^
     --namespace %NAMESPACE% ^
     --wait --timeout 2m
@@ -580,7 +610,7 @@ if %errorlevel% neq 0 (
 echo      Ingress deployed.
 echo.
 
-echo [23/23] Printing deployment summary...
+echo [28/28] Printing deployment summary...
 echo.
 echo ============================================
 echo  Deployment Complete!
@@ -594,13 +624,13 @@ echo  Ingress URLs
 echo ============================================
 echo.
 echo Access the services:
+echo   - Perf-UI:     http://localhost/ (default landing page)
 echo   - Grafana:     http://localhost/grafana (admin/admin)
 echo   - Swagger UI:  http://localhost/api/swagger-ui/index.html
 echo   - Prometheus:  http://localhost/prometheus
 echo   - Kafdrop:     http://localhost/kafdrop
 echo   - Redis Commander: http://localhost/redis-commander
 echo   - Loki:        http://localhost/loki
-echo   - Tempo:        http://localhost/tempo
 echo   - MQ Console:  http://localhost/ibmmq (admin/passw0rd)
 echo   - SonarQube:   http://localhost/sonar (admin/admin)
 echo.

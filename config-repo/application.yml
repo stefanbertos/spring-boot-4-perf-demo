@@ -29,17 +29,12 @@ management:
     metrics:
       export:
         enabled: true
-  tracing:
-    sampling:
-      probability: 1.0
-    propagation:
-      type: b3,w3c
 
 # Default logging levels for all applications
 logging:
   level:
     root: INFO
-    com.example: DEBUG
+    com.example: INFO
     org.springframework: INFO
     org.springframework.web: INFO
     org.apache.kafka: WARN
@@ -47,7 +42,3 @@ logging:
     com.ibm.msg: INFO
     io.micrometer: WARN
     org.hibernate: WARN
-
-# Default tracing URL (localhost for development)
-tracing:
-  url: http://localhost:4318/v1/traces

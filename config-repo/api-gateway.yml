@@ -82,22 +82,6 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Tempo - redirect to Grafana Explore with Tempo datasource
-            - id: tempo-root
-              uri: ${GRAFANA_URL:http://localhost:3000}
-              predicates:
-                - Path=/tempo
-              filters:
-                - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
-
-            # Tempo API - needs path stripping for API calls
-            - id: tempo-api
-              uri: ${TEMPO_URL:http://localhost:3200}
-              predicates:
-                - Path=/tempo/**
-              filters:
-                - StripPrefix=1
-
             # Sonar - has web context configured
             - id: sonar
               uri: ${SONAR_URL:http://localhost:9000}
@@ -113,6 +97,14 @@ spring:
                 - Path=/config,/config/**
               filters:
                 - StripPrefix=1
+
+            # Perf-UI SPA (catch-all, must be last)
+            - id: perf-ui
+              uri: ${PERF_UI_URL:http://localhost:3001}
+              predicates:
+                - Path=/**
+              filters:
+                - StripPrefix=0
           httpclient:
             ssl:
               use-insecure-trust-manager: true

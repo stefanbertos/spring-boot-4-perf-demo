@@ -27,8 +27,6 @@ spec:
               value: api-gateway
             - name: CONFIG_SERVER_URL
               value: {{ .Values.configServer.url }}
-            - name: TRACING_URL
-              value: {{ .Values.tracing.url }}
           ports:
             - name: http
               containerPort: 8090

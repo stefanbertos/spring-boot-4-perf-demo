@@ -53,7 +53,7 @@ public class PerformanceTracker {
         inFlightMessages.put(messageId, System.nanoTime());
     }
 
-    public void recordReceive(String messageId) {
+    public long recordReceive(String messageId) {
         var sendTime = inFlightMessages.remove(messageId);
         if (sendTime != null) {
             long latencyNanos = System.nanoTime() - sendTime;
@@ -74,8 +74,10 @@ public class PerformanceTracker {
             if (completionLatch != null) {
                 completionLatch.countDown();
             }
+            return latencyNanos;
         } else {
             log.warn("Received response for unknown message ID: {}", messageId);
+            return -1;
         }
     }
 

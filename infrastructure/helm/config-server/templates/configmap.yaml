@@ -37,17 +37,12 @@ data:
         metrics:
           export:
             enabled: true
-      tracing:
-        sampling:
-          probability: 1.0
-        propagation:
-          type: b3,w3c
 
     # Default logging levels for all applications
     logging:
       level:
         root: INFO
-        com.example: DEBUG
+        com.example: INFO
         org.springframework: INFO
         org.springframework.web: INFO
         org.apache.kafka: WARN
@@ -56,8 +51,6 @@ data:
         io.micrometer: WARN
         org.hibernate: WARN
 
-    tracing:
-      url: http://perf-tempo:4318/v1/traces
 
   application-kubernetes.yml: |
     spring:
@@ -65,35 +58,16 @@ data:
         compose:
           enabled: false
 
-    tracing:
-      url: ${TRACING_URL:http://perf-tempo:4318/v1/traces}
-
   perf-tester.yml: |
     server:
       port: 8080
       address: 0.0.0.0
 
     spring:
-      datasource:
-        url: jdbc:oracle:thin:@perf-oracle:1521/XEPDB1
-        username: perfuser
-        password: perfpass
-        driver-class-name: oracle.jdbc.OracleDriver
-        hikari:
-          maximum-pool-size: 10
-          minimum-idle: 2
-          connection-timeout: 30000
-      jpa:
-        hibernate:
-          ddl-auto: none
-        show-sql: false
-        properties:
-          hibernate:
-            dialect: org.hibernate.dialect.OracleDialect
-            format_sql: true
-      liquibase:
-        enabled: true
-        change-log: classpath:db/changelog/db.changelog-master.yaml
+      data:
+        redis:
+          host: perf-redis
+          port: 6379
       jms:
         pool:
           enabled: true
@@ -161,7 +135,7 @@ data:
         org.springframework.jms: INFO
         com.ibm.mq: INFO
         com.ibm.msg: INFO
-        com.example.perftester: DEBUG
+        com.example.perftester: INFO
 
   ibm-mq-consumer.yml: |
     server:
@@ -227,7 +201,7 @@ data:
 
     logging:
       level:
-        com.example.ibmmqconsumer: DEBUG
+        com.example.ibmmqconsumer: INFO
 
   kafka-consumer.yml: |
     server:
@@ -274,7 +248,7 @@ data:
 
     logging:
       level:
-        com.example.kafkaconsumer: DEBUG
+        com.example.kafkaconsumer: INFO
 
   api-gateway.yml: |
     server:
@@ -352,20 +326,6 @@ data:
                   filters:
                     - StripPrefix=0
 
-                - id: tempo-root
-                  uri: http://perf-grafana:3000
-                  predicates:
-                    - Path=/tempo
-                  filters:
-                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
-
-                - id: tempo-api
-                  uri: http://perf-tempo:3200
-                  predicates:
-                    - Path=/tempo/**
-                  filters:
-                    - StripPrefix=1
-
                 - id: sonar
                   uri: http://perf-sonarqube:9000
                   predicates:
@@ -379,6 +339,13 @@ data:
                     - Path=/config,/config/**
                   filters:
                     - StripPrefix=1
+
+                - id: perf-ui
+                  uri: http://perf-perf-ui:80
+                  predicates:
+                    - Path=/**
+                  filters:
+                    - StripPrefix=0
               httpclient:
                 ssl:
                   use-insecure-trust-manager: true
@@ -419,10 +386,6 @@ data:
   perf-tester-kubernetes.yml: |
     # perf-tester Kubernetes profile configuration
     spring:
-      datasource:
-        url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
-        username: ${SPRING_DATASOURCE_USERNAME:perfuser}
-        password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
       data:
         redis:
           host: ${SPRING_DATA_REDIS_HOST:perf-redis}
@@ -527,20 +490,6 @@ data:
                   filters:
                     - StripPrefix=0
 
-                - id: tempo-root
-                  uri: http://perf-grafana:3000
-                  predicates:
-                    - Path=/tempo
-                  filters:
-                    - RedirectTo=302, /grafana/explore?orgId=1&datasource=tempo
-
-                - id: tempo-api
-                  uri: http://perf-tempo:3200
-                  predicates:
-                    - Path=/tempo/**
-                  filters:
-                    - StripPrefix=1
-
                 - id: sonar
                   uri: http://perf-sonarqube:9000
                   predicates:
@@ -554,6 +503,13 @@ data:
                     - Path=/config,/config/**
                   filters:
                     - StripPrefix=1
+
+                - id: perf-ui
+                  uri: http://perf-perf-ui:80
+                  predicates:
+                    - Path=/**
+                  filters:
+                    - StripPrefix=0
               httpclient:
                 ssl:
                   use-insecure-trust-manager: true

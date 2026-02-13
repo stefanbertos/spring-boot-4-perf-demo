@@ -63,7 +63,10 @@
       "Bash(docker volume rm:*)",
       "Bash(docker run:*)",
       "Bash(docker exec:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)"
     ]
   }
 }

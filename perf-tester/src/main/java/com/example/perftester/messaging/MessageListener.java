@@ -22,13 +22,13 @@ public class MessageListener {
         var message = ((TextMessage) jmsMessage).getText();
         var correlationId = jmsMessage.getJMSCorrelationID();
 
-            var messageId = PerformanceTracker.extractMessageId(message);
-            if (messageId != null) {
-                performanceTracker.recordReceive(messageId);
-                log.debug("Received response for message [{}] correlationId=[{}]",
-                        messageId, correlationId);
-            } else {
-                log.warn("Received message without valid ID: {}", message);
-            }
+        var messageId = PerformanceTracker.extractMessageId(message);
+        if (messageId != null) {
+            performanceTracker.recordReceive(messageId);
+            log.debug("Received response for message [{}] correlationId=[{}]",
+                    messageId, correlationId);
+        } else {
+            log.warn("Received message without valid ID: {}", message);
+        }
     }
 }

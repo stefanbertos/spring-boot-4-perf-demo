@@ -56,8 +56,11 @@ public class PerfController {
         log.info("Starting performance test: {} messages, timeout {}s, delay {}ms, testId={}",
                 count, timeoutSeconds, delayMs, testId);
 
+        performanceTracker.startTest(count);
+
         long testStartTimeMs = System.currentTimeMillis();
-        var result = runPerformanceTest(message, count, timeoutSeconds, delayMs);
+        runPerformanceTest(message, count, timeoutSeconds, delayMs);
+        var result = performanceTracker.getResult();
         long testEndTimeMs = System.currentTimeMillis();
 
         if (exportStatistics) {
@@ -82,10 +85,8 @@ public class PerfController {
         return ResponseEntity.ok().build();
     }
 
-    private PerfTestResult runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)
+    private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)
             throws InterruptedException {
-        performanceTracker.startTest(count);
-
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             var payload = message + "-" + i;
@@ -94,7 +95,7 @@ public class PerfController {
                 Thread.sleep(delayMs);
             }
         }
-        // this is here to wait untill all messages are send
+        // this is here to wait until all messages are sent
         CompletableFuture.allOf(futures).join();
 
         log.info("All {} messages sent, waiting for responses...", count);
@@ -108,7 +109,7 @@ public class PerfController {
         } else {
             log.warn("Test timed out: {}/{} messages completed", result.completedMessages(), count);
         }
-        return result;
+        return completed;
     }
 
     private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {

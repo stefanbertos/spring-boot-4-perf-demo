@@ -68,7 +68,8 @@ class PerfControllerTest {
     @BeforeEach
     void setUp() {
         controller = new PerfController(messageSender, performanceTracker,
-                grafanaExportService, prometheusExportService, testResultPackager, kubernetesService);
+                grafanaExportService, prometheusExportService, testResultPackager,
+                kubernetesService);
 
         // Default mock for Kubernetes service
         when(kubernetesService.exportClusterInfo()).thenReturn(null);
@@ -84,10 +85,7 @@ class PerfControllerTest {
         PerfTestResult withPrometheus = withDashboards.withPrometheusExport("/path/to/prometheus.json");
 
         when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(performanceTracker.getResult())
-                .thenReturn(perfResult)
-                .thenReturn(withDashboards)
-                .thenReturn(withPrometheus);
+        when(performanceTracker.getResult()).thenReturn(perfResult);
 
         DashboardExportResult dashboardExport = new DashboardExportResult(
                 List.of("http://grafana/d/1"), List.of("/path/to/file.png"));

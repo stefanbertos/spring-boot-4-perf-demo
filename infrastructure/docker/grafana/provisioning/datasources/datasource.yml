@@ -13,38 +13,3 @@ datasources:
     access: proxy
     url: http://loki:3100
     uid: loki
-    jsonData:
-      derivedFields:
-        - datasourceUid: tempo
-          matcherRegex: "traceId=(\\w+)"
-          name: TraceID
-          url: "$${__value.raw}"
-        - datasourceUid: tempo
-          matcherRegex: "trace_id=(\\w+)"
-          name: TraceID
-          url: "$${__value.raw}"
-
-  - name: Tempo
-    type: tempo
-    access: proxy
-    url: http://tempo:3200
-    uid: tempo
-    jsonData:
-      tracesToLogsV2:
-        datasourceUid: loki
-        filterByTraceID: true
-        filterBySpanID: true
-        tags:
-          - key: service.name
-            value: service_name
-      tracesToMetrics:
-        datasourceUid: prometheus
-        tags:
-          - key: service.name
-            value: service
-      nodeGraph:
-        enabled: true
-      serviceMap:
-        datasourceUid: prometheus
-      lokiSearch:
-        datasourceUid: loki

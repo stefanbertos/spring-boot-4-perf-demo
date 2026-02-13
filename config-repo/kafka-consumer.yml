@@ -43,4 +43,4 @@ management:
 
 logging:
   level:
-    com.example.kafkaconsumer: DEBUG
+    com.example.kafkaconsumer: INFO

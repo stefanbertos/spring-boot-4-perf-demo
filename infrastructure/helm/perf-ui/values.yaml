@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: perf-ui
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+apiGateway:
+  url: "perf-api-gateway:8090"
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "128Mi"
+    cpu: "250m"

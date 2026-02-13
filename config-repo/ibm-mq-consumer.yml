@@ -61,4 +61,4 @@ management:
 
 logging:
   level:
-    com.example.ibmmqconsumer: DEBUG
+    com.example.ibmmqconsumer: INFO

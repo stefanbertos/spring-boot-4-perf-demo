@@ -39,8 +39,18 @@ if %errorlevel% equ 0 (
 )
 echo.
 
+:: Uninstall Perf-UI
+echo [3/23] Uninstalling Perf-UI...
+helm uninstall %RELEASE_PREFIX%-perf-ui --namespace %NAMESPACE% 2>nul
+if %errorlevel% equ 0 (
+    echo      Perf-UI uninstalled.
+) else (
+    echo      Perf-UI not found or already removed.
+)
+echo.
+
 :: Uninstall Config Server
-echo [3/23] Uninstalling Config Server...
+echo [4/23] Uninstalling Config Server...
 helm uninstall %RELEASE_PREFIX%-config-server --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Config Server uninstalled.
@@ -50,7 +60,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafka Exporter
-echo [4/23] Uninstalling Kafka Exporter...
+echo [5/23] Uninstalling Kafka Exporter...
 helm uninstall %RELEASE_PREFIX%-kafka-exporter --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka Exporter uninstalled.
@@ -60,7 +70,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafdrop
-echo [5/23] Uninstalling Kafdrop...
+echo [6/23] Uninstalling Kafdrop...
 helm uninstall %RELEASE_PREFIX%-kafdrop --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafdrop uninstalled.
@@ -70,7 +80,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Perf-Tester
-echo [6/23] Uninstalling Perf-Tester...
+echo [7/23] Uninstalling Perf-Tester...
 helm uninstall %RELEASE_PREFIX%-perf-tester --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Perf-Tester uninstalled.
@@ -80,7 +90,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall IBM MQ Consumer
-echo [7/23] Uninstalling IBM MQ Consumer...
+echo [8/23] Uninstalling IBM MQ Consumer...
 helm uninstall %RELEASE_PREFIX%-ibm-mq-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      IBM MQ Consumer uninstalled.
@@ -90,7 +100,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafka Consumer
-echo [8/23] Uninstalling Kafka Consumer...
+echo [9/23] Uninstalling Kafka Consumer...
 helm uninstall %RELEASE_PREFIX%-kafka-consumer --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka Consumer uninstalled.
@@ -100,7 +110,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Kafka
-echo [9/23] Uninstalling Kafka...
+echo [10/23] Uninstalling Kafka...
 helm uninstall %RELEASE_PREFIX%-kafka --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Kafka uninstalled.
@@ -110,7 +120,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall SonarQube
-echo [10/23] Uninstalling SonarQube...
+echo [11/23] Uninstalling SonarQube...
 helm uninstall %RELEASE_PREFIX%-sonarqube --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      SonarQube uninstalled.
@@ -120,7 +130,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Grafana
-echo [11/23] Uninstalling Grafana...
+echo [12/23] Uninstalling Grafana...
 helm uninstall %RELEASE_PREFIX%-grafana --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Grafana uninstalled.
@@ -130,7 +140,7 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Promtail
-echo [12/23] Uninstalling Promtail...
+echo [13/23] Uninstalling Promtail...
 helm uninstall %RELEASE_PREFIX%-promtail --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Promtail uninstalled.
@@ -140,22 +150,12 @@ if %errorlevel% equ 0 (
 echo.
 
 :: Uninstall Loki
-echo [13/23] Uninstalling Loki...
+echo [14/23] Uninstalling Loki...
 helm uninstall %RELEASE_PREFIX%-loki --namespace %NAMESPACE% 2>nul
 if %errorlevel% equ 0 (
     echo      Loki uninstalled.
 ) else (
     echo      Loki not found or already removed.
-)
-echo.
-
-:: Uninstall Tempo
-echo [14/23] Uninstalling Tempo...
-helm uninstall %RELEASE_PREFIX%-tempo --namespace %NAMESPACE% 2>nul
-if %errorlevel% equ 0 (
-    echo      Tempo uninstalled.
-) else (
-    echo      Tempo not found or already removed.
 )
 echo.
 

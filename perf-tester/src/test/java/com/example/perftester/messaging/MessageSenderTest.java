@@ -38,7 +38,8 @@ class MessageSenderTest {
 
     @BeforeEach
     void setUp() throws JMSException {
-        messageSender = new MessageSender(jmsTemplate, "DEV.QUEUE.2", "DEV.QUEUE.1", performanceTracker);
+        messageSender = new MessageSender(jmsTemplate, "DEV.QUEUE.2", "DEV.QUEUE.1",
+                performanceTracker);
     }
 
     @Test

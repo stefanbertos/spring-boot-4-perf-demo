@@ -12,10 +12,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 public class AsyncConfig {
 
     public static final String MQ_SENDER_EXECUTOR = "mqSenderExecutor";
-    private static final int MQ_SENDER_THREAD_COUNT = 20;
 
     @Bean(MQ_SENDER_EXECUTOR)
     public ExecutorService mqSenderExecutor() {
-        return Executors.newFixedThreadPool(MQ_SENDER_THREAD_COUNT);
+        return Executors.newVirtualThreadPerTaskExecutor();
     }
 }

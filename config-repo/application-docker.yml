@@ -3,6 +3,3 @@ spring:
   docker:
     compose:
       enabled: false
-
-tracing:
-  url: http://tempo:4318/v1/traces
