@@ -374,6 +374,11 @@ perf-demo/
 │   ├── perf-tester.yml
 │   └── perf-tester-kubernetes.yml
 ├── infrastructure/
+│   ├── argocd/               # ArgoCD GitOps deployment manifests
+│   │   ├── deployArgo.bat    # Bootstrap script (installs ArgoCD + deploys apps)
+│   │   ├── project.yaml      # AppProject (RBAC scoping)
+│   │   ├── root-app.yaml     # Root Application (App of Apps)
+│   │   └── apps/             # Child Application CRs (one per service)
 │   ├── helm/                 # Helm charts for Kubernetes deployment
 │   │   ├── config-server/    # Includes ConfigMap with all service configs
 │   │   ├── ibm-mq-consumer/
@@ -798,33 +803,77 @@ Client apps run with `SPRING_PROFILES_ACTIVE=kubernetes`, so the config-server m
 
 **When adding a new config-repo file, always add it to the Helm ConfigMap as well.**
 
-### Deploy/Cleanup Script Consistency (Required)
+### ArgoCD GitOps Deployment (Required)
 
-The Helm deployment and cleanup scripts must stay in sync with the Helm charts:
+Kubernetes deployment uses **ArgoCD** with the **App of Apps** pattern. A root Application watches `infrastructure/argocd/apps/` and deploys child Application CRs, each pointing to a Helm chart under `infrastructure/helm/<service>/`.
 
-- **`infrastructure/helm/deployHelm.bat`** — deploys all Helm charts in dependency order
-- **`infrastructure/helm/cleanup.bat`** — uninstalls all Helm charts in reverse dependency order
+**Sync waves** control deployment order (all resources in wave N must be healthy before wave N+1 begins):
+
+| Wave | Services | Rationale |
+|------|----------|-----------|
+| **0** | ibm-mq, oracle, redis, kafka | Infrastructure — databases & message brokers |
+| **1** | prometheus, oracle-exporter, loki, promtail, grafana, sonarqube | Monitoring stack |
+| **2** | config-server | Configuration — all Spring Boot apps depend on it |
+| **3** | ibm-mq-consumer, kafka-consumer, perf-tester | Applications |
+| **4** | perf-ui, kafdrop, redis-commander, kafka-exporter | UI & tools |
+| **5** | api-gateway | Gateway — needs all backends |
+| **6** | ingress | Entry point — needs gateway |
+
+**Bootstrap (deploy):**
+```bash
+# Full setup: installs ArgoCD into 'argocd' namespace, then deploys project + root app
+infrastructure\argocd\deployArgo.bat
+
+# Or manually if ArgoCD is already installed:
+kubectl apply -f infrastructure/argocd/project.yaml
+kubectl apply -f infrastructure/argocd/root-app.yaml
+```
+
+**Teardown:**
+```bash
+# Cascading delete removes all child apps and their resources
+kubectl delete application perf-demo -n argocd
+kubectl delete appproject perf-demo -n argocd
+```
+
+**Container images** must be pre-built and available before deploying:
+- For local clusters: `./gradlew bootBuildImage && minikube image load <image>:latest`
+- For remote clusters: push to a container registry and update `helm.valuesObject.image.repository` in the child Application manifests
 
 **When adding a new Helm chart, always:**
-1. Add a deploy step in `deployHelm.bat` at the correct position (respect dependency order)
-2. Add an uninstall step in `cleanup.bat` (reverse order of deploy)
-3. Update step numbering in both scripts (`[N/total]` counters)
+1. Create a new child Application manifest in `infrastructure/argocd/apps/<service>.yaml`
+2. Assign the correct sync wave based on dependency order
+3. For custom application images, include a `helm.valuesObject` block with image repository/tag
+4. Add the `argocd` namespace destination to `project.yaml` if the new app deploys to a different namespace
 
-**Deploy order rules:**
-- Infrastructure first (databases, message brokers, monitoring)
-- Kafka → Config Server (strict dependency chain)
-- Applications after Config Server (they depend on it for configuration)
-- UI tools and exporters last (Kafdrop, Redis Commander, Kafka Exporter)
-- Ingress last (routes to all services)
-
-**Cleanup order rules:**
-- Reverse of deploy order: Ingress first, infrastructure last
-- Applications before Config Server
-- PVCs, ConfigMaps/Secrets, and namespace deleted at the very end
-
-**Step numbering:**
-- Use sequential `[N/total]` format — no gaps, no duplicates, no fractional steps (e.g., `12b`)
-- Update the total count in all steps when adding/removing components
+**ArgoCD manifests structure:**
+```
+infrastructure/argocd/
+├── deployArgo.bat            # Bootstrap script (installs ArgoCD + deploys apps)
+├── project.yaml              # AppProject (RBAC scoping)
+├── root-app.yaml             # Root Application (deploys child apps)
+└── apps/                     # One Application CR per service (20 files)
+    ├── ibm-mq.yaml           # wave 0
+    ├── oracle.yaml           # wave 0
+    ├── redis.yaml            # wave 0
+    ├── kafka.yaml            # wave 0
+    ├── prometheus.yaml       # wave 1
+    ├── oracle-exporter.yaml  # wave 1
+    ├── loki.yaml             # wave 1
+    ├── promtail.yaml         # wave 1
+    ├── grafana.yaml          # wave 1
+    ├── sonarqube.yaml        # wave 1
+    ├── config-server.yaml    # wave 2
+    ├── ibm-mq-consumer.yaml  # wave 3
+    ├── kafka-consumer.yaml   # wave 3
+    ├── perf-tester.yaml      # wave 3
+    ├── perf-ui.yaml          # wave 4
+    ├── kafdrop.yaml          # wave 4
+    ├── redis-commander.yaml  # wave 4
+    ├── kafka-exporter.yaml   # wave 4
+    ├── api-gateway.yaml      # wave 5
+    └── ingress.yaml          # wave 6
+```
 
 ### Helm Chart Structure
 
