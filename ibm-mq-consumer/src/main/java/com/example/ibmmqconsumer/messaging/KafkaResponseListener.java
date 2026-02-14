@@ -1,6 +1,7 @@
 package com.example.ibmmqconsumer.messaging;
 
 import com.example.avro.MqMessage;
+import com.example.avro.util.KafkaHeaderUtils;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -46,8 +47,8 @@ public class KafkaResponseListener {
         messagesReceived.increment();
 
         var message = record.value().getContent();
-        var replyTo = getHeader(record, "mq-reply-to");
-        var correlationId = getHeader(record, "correlationId");
+        var replyTo = KafkaHeaderUtils.getHeader(record, "mq-reply-to");
+        var correlationId = KafkaHeaderUtils.getHeader(record, "correlationId");
         log.debug("Received Kafka response: {}, replyTo: {}, correlationId=[{}]",
                 message, replyTo, correlationId);
 
@@ -66,11 +67,6 @@ public class KafkaResponseListener {
             log.warn("No mq-reply-to header, dropping message: {}", message);
             messagesDropped.increment();
         }
-    }
-
-    private String getHeader(ConsumerRecord<String, MqMessage> record, String headerName) {
-        var header = record.headers().lastHeader(headerName);
-        return header != null ? new String(header.value(), java.nio.charset.StandardCharsets.UTF_8) : null;
     }
 
     private String extractQueueName(String replyTo) {

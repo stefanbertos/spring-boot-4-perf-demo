@@ -1,8 +1,8 @@
 package com.example.kafkaconsumer.componenttest.steps;
 
 import com.example.avro.MqMessage;
-import com.example.kafkaconsumer.serialization.AvroDeserializer;
-import com.example.kafkaconsumer.serialization.AvroSerializer;
+import com.example.avro.serialization.AvroDeserializer;
+import com.example.avro.serialization.AvroSerializer;
 import io.cucumber.java.After;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;

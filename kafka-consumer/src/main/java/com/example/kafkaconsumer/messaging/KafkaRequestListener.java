@@ -1,6 +1,7 @@
 package com.example.kafkaconsumer.messaging;
 
 import com.example.avro.MqMessage;
+import com.example.avro.util.KafkaHeaderUtils;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,8 +49,8 @@ public class KafkaRequestListener {
         messagesReceived.increment();
 
         var body = record.value().getContent();
-        var replyTo = getHeader(record, "mq-reply-to");
-        var correlationId = getHeader(record, "correlationId");
+        var replyTo = KafkaHeaderUtils.getHeader(record, "mq-reply-to");
+        var correlationId = KafkaHeaderUtils.getHeader(record, "correlationId");
 
             log.debug("Received Kafka request: {} correlationId=[{}]",
                     body, correlationId);
@@ -77,8 +78,4 @@ public class KafkaRequestListener {
             messagesProcessed.increment();
     }
 
-    private String getHeader(ConsumerRecord<String, MqMessage> record, String headerName) {
-        var header = record.headers().lastHeader(headerName);
-        return header != null ? new String(header.value(), java.nio.charset.StandardCharsets.UTF_8) : null;
-    }
 }

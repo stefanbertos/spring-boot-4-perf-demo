@@ -1,5 +1,6 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.config.PerfProperties;
 import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
@@ -60,6 +61,8 @@ class PerfControllerTest {
     @Mock
     private KubernetesService kubernetesService;
 
+    private final PerfProperties perfProperties = new PerfProperties(16000, 60000, 60000, 30000, 60, 15);
+
     @TempDir
     Path tempDir;
 
@@ -69,7 +72,7 @@ class PerfControllerTest {
     void setUp() {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
-                kubernetesService);
+                kubernetesService, perfProperties);
 
         // Default mock for Kubernetes service
         when(kubernetesService.exportClusterInfo()).thenReturn(null);

@@ -1,9 +1,6 @@
 // Kafka Consumer module - consumes Kafka requests, processes, and sends Kafka responses
-plugins {
-    id 'com.github.davidmc24.gradle.plugin.avro'
-}
-
 dependencies {
+    implementation project(':avro-common')
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'

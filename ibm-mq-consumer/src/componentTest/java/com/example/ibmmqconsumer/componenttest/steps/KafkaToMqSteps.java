@@ -1,7 +1,7 @@
 package com.example.ibmmqconsumer.componenttest.steps;
 
 import com.example.avro.MqMessage;
-import com.example.ibmmqconsumer.serialization.AvroSerializer;
+import com.example.avro.serialization.AvroSerializer;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.apache.kafka.clients.producer.KafkaProducer;

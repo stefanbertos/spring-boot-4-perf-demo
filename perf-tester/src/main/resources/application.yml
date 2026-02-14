@@ -15,6 +15,13 @@ spring:
 app:
   kafka:
     bootstrap-servers: localhost:9092
+  perf:
+    metrics-propagation-delay-ms: 16000
+    tps-window-ms: 60000
+    grafana-buffer-before-ms: 60000
+    grafana-buffer-after-ms: 30000
+    prometheus-buffer-seconds: 60
+    prometheus-step-seconds: 15
 
 logging:
   level:

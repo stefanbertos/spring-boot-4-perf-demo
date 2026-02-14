@@ -101,6 +101,13 @@ data:
         export-path: ./prometheus-exports
       export:
         path: ./test-exports
+      perf:
+        metrics-propagation-delay-ms: 16000
+        tps-window-ms: 60000
+        grafana-buffer-before-ms: 60000
+        grafana-buffer-after-ms: 30000
+        prometheus-buffer-seconds: 60
+        prometheus-step-seconds: 15
       healthcheck:
         enabled: true
         interval-ms: 60000
@@ -152,7 +159,7 @@ data:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: com.example.ibmmqconsumer.serialization.AvroSerializer
+          value-serializer: com.example.avro.serialization.AvroSerializer
           acks: 1
           compression-type: lz4
           properties:
@@ -162,7 +169,7 @@ data:
           group-id: ibm-mq-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: com.example.ibmmqconsumer.serialization.AvroDeserializer
+          value-deserializer: com.example.avro.serialization.AvroDeserializer
       task:
         execution:
           thread-name-prefix: mq-consumer-
@@ -213,7 +220,7 @@ data:
         bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAPSERVERS:perf-kafka:9092}
         producer:
           key-serializer: org.apache.kafka.common.serialization.StringSerializer
-          value-serializer: com.example.kafkaconsumer.serialization.AvroSerializer
+          value-serializer: com.example.avro.serialization.AvroSerializer
           acks: 1
           compression-type: lz4
           properties:
@@ -223,7 +230,7 @@ data:
           group-id: kafka-consumer-group
           auto-offset-reset: earliest
           key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-          value-deserializer: com.example.kafkaconsumer.serialization.AvroDeserializer
+          value-deserializer: com.example.avro.serialization.AvroDeserializer
       task:
         execution:
           thread-name-prefix: kafka-consumer-

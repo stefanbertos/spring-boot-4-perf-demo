@@ -1,9 +1,6 @@
 // IBM MQ Consumer module - consumes from MQ, publishes to Kafka, receives Kafka responses, sends to MQ
-plugins {
-    id 'com.github.davidmc24.gradle.plugin.avro'
-}
-
 dependencies {
+    implementation project(':avro-common')
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'

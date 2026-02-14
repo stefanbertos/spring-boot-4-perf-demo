@@ -1,6 +1,4 @@
-continue
-
-add debug flag into perf tester controller to switch to debug logs
+comiadd debug flag into perf tester controller to switch to debug logs
 
 docker compose - missing acls for kubernetes export
 2026-02-14T14:46:04.094Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export nodes.json: Operation: [list]  for kind: [Node]  with name: [null]  in namespace: [null]  failed.

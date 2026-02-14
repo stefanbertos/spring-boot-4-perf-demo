@@ -2,7 +2,7 @@
 
 == Overview
 
-The perf-tester module exposes REST APIs for sending test messages and monitoring application health. All APIs are documented using OpenAPI 3.0 specification.
+The perf-tester module exposes REST APIs for performance testing, Kafka topic administration, IBM MQ queue administration, and runtime log level management. All APIs are documented using OpenAPI 3.0 specification.
 
 == Base URL
 
@@ -34,9 +34,9 @@ OpenAPI JSON specification:
 
 == Performance Testing API
 
-=== Send Message
+=== Send Messages
 
-Sends a message through the entire message flow pipeline.
+Sends messages through the entire message flow pipeline and tracks performance metrics. When `exportStatistics` is enabled, the response is a ZIP file containing test results, Grafana dashboard exports, Prometheus metrics, and Kubernetes cluster info.
 
 [cols="1,3"]
 |===
@@ -45,13 +45,131 @@ Sends a message through the entire message flow pipeline.
 |Content-Type |`text/plain`
 |===
 
-==== Request
+==== Request Parameters
+
+[cols="2,1,1,1,3"]
+|===
+|Parameter |Type |Required |Default |Description
+
+|Body
+|string
+|Yes
+|-
+|The message content to send (plain text, must not be blank)
+
+|`count`
+|integer
+|No
+|`1000`
+|Number of messages to send (min: 1, max: 100,000)
+
+|`timeoutSeconds`
+|integer
+|No
+|`60`
+|Maximum time to wait for all responses (min: 1, max: 3,600)
+
+|`delayMs`
+|integer
+|No
+|`0`
+|Delay between each message send in milliseconds (min: 0, max: 60,000)
+
+|`testId`
+|string
+|No
+|-
+|Optional identifier for the test run, used in export filenames
+
+|`exportStatistics`
+|boolean
+|No
+|`false`
+|When true, returns a ZIP file with test results and exported metrics
+|===
+
+==== Request Example
 
 [source,bash]
 ----
-curl -X POST http://localhost:8080/api/perf/send \
+# Basic test with 500 messages
+curl -X POST "http://localhost:8080/api/perf/send?count=500&timeoutSeconds=30" \
   -H "Content-Type: text/plain" \
-  -d "Your test message"
+  -d "Hello MQ"
+
+# Test with statistics export
+curl -X POST "http://localhost:8080/api/perf/send?count=1000&exportStatistics=true&testId=load-test-01" \
+  -H "Content-Type: text/plain" \
+  -d "Hello MQ" \
+  --output test-results.zip
+----
+
+==== Response
+
+When `exportStatistics=false` (default):
+
+* Returns `200 OK` with an empty body.
+
+When `exportStatistics=true`:
+
+* Returns `200 OK` with a ZIP file attachment containing:
+** `test-results.json` -- performance test results (TPS, latency, message counts)
+** Grafana dashboard PDF exports (if Grafana is available)
+** Prometheus metrics snapshot (if Prometheus is available)
+** Kubernetes cluster info (if running in Kubernetes)
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Test completed (or ZIP file returned when `exportStatistics=true`)
+
+|400
+|Invalid parameters (count out of range, blank message body, etc.)
+
+|500
+|Internal error (MQ connection failure, message send failure)
+|===
+
+== Kafka Admin API
+
+=== Resize Topic Partitions
+
+Increases the number of partitions for an existing Kafka topic.
+
+NOTE: Kafka only supports increasing partitions. Reducing the partition count is not supported.
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/admin/kafka/topics/resize`
+|===
+
+==== Request Parameters
+
+[cols="2,1,1,3"]
+|===
+|Parameter |Type |Required |Description
+
+|`topicName`
+|string
+|Yes
+|Name of the Kafka topic (must not be blank)
+
+|`partitions`
+|integer
+|Yes
+|New partition count (min: 1)
+|===
+
+==== Request Example
+
+[source,bash]
+----
+curl -X POST "http://localhost:8080/api/admin/kafka/topics/resize?topicName=mq-requests&partitions=6"
 ----
 
 ==== Response
@@ -59,9 +177,8 @@ curl -X POST http://localhost:8080/api/perf/send \
 [source,json]
 ----
 {
-  "correlationId": "ID:414d5120514d312020202020202020207e8f9a66012c0040",
-  "status": "SENT",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "topicName": "mq-requests",
+  "partitions": 6
 }
 ----
 
@@ -72,69 +189,312 @@ curl -X POST http://localhost:8080/api/perf/send \
 |Code |Description
 
 |200
-|Message successfully sent to queue
+|Topic resized successfully
+
+|400
+|Invalid parameters (blank topic name, partitions < 1)
 
 |500
-|Failed to send message (MQ connection error)
+|Kafka admin operation failed
 |===
 
-=== Send Batch Messages
+=== Get Topic Info
 
-Sends multiple messages for load testing.
+Retrieves partition information for a Kafka topic.
 
 [cols="1,3"]
 |===
-|Method |`POST`
-|Path |`/api/perf/send/batch`
-|Content-Type |`application/json`
+|Method |`GET`
+|Path |`/api/admin/kafka/topics`
 |===
 
-==== Request
-
-[source,bash]
-----
-curl -X POST http://localhost:8080/api/perf/send/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messagePrefix": "Test message",
-    "count": 100,
-    "delayMs": 10
-  }'
-----
-
-==== Request Body
+==== Request Parameters
 
 [cols="2,1,1,3"]
 |===
-|Field |Type |Required |Description
+|Parameter |Type |Required |Description
 
-|messagePrefix
+|`topicName`
 |string
 |Yes
-|Prefix for generated messages
-
-|count
-|integer
-|Yes
-|Number of messages to send
-
-|delayMs
-|integer
-|No
-|Delay between messages in milliseconds
+|Name of the Kafka topic (must not be blank)
 |===
+
+==== Request Example
+
+[source,bash]
+----
+curl "http://localhost:8080/api/admin/kafka/topics?topicName=mq-requests"
+----
 
 ==== Response
 
 [source,json]
 ----
 {
-  "totalSent": 100,
-  "successCount": 100,
-  "failureCount": 0,
-  "durationMs": 1523
+  "topicName": "mq-requests",
+  "partitions": 3
 }
 ----
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Topic info retrieved
+
+|400
+|Invalid parameters (blank topic name)
+
+|500
+|Kafka admin operation failed
+|===
+
+== IBM MQ Admin API
+
+=== Change Queue Max Depth
+
+Changes the maximum depth (backlog capacity) of an IBM MQ queue.
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/admin/mq/queues/depth`
+|===
+
+==== Request Parameters
+
+[cols="2,1,1,3"]
+|===
+|Parameter |Type |Required |Description
+
+|`queueName`
+|string
+|Yes
+|Name of the MQ queue (must not be blank)
+
+|`maxDepth`
+|integer
+|Yes
+|New maximum queue depth (min: 1)
+|===
+
+==== Request Example
+
+[source,bash]
+----
+curl -X POST "http://localhost:8080/api/admin/mq/queues/depth?queueName=DEV.QUEUE.2&maxDepth=50000"
+----
+
+==== Response
+
+[source,json]
+----
+{
+  "queueName": "DEV.QUEUE.2",
+  "currentDepth": 0,
+  "maxDepth": 50000
+}
+----
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Queue max depth changed successfully
+
+|400
+|Invalid parameters (blank queue name, maxDepth < 1)
+
+|500
+|MQ admin operation failed
+|===
+
+=== Get Queue Info
+
+Retrieves current depth and max depth information for an IBM MQ queue.
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/admin/mq/queues`
+|===
+
+==== Request Parameters
+
+[cols="2,1,1,3"]
+|===
+|Parameter |Type |Required |Description
+
+|`queueName`
+|string
+|Yes
+|Name of the MQ queue (must not be blank)
+|===
+
+==== Request Example
+
+[source,bash]
+----
+curl "http://localhost:8080/api/admin/mq/queues?queueName=DEV.QUEUE.2"
+----
+
+==== Response
+
+[source,json]
+----
+{
+  "queueName": "DEV.QUEUE.2",
+  "currentDepth": 42,
+  "maxDepth": 5000
+}
+----
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Queue info retrieved
+
+|400
+|Invalid parameters (blank queue name)
+
+|500
+|MQ admin operation failed
+|===
+
+== Logging Admin API
+
+=== Change Log Level
+
+Changes the log level for a specified logger at runtime without restarting the application.
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/admin/logging/level`
+|===
+
+==== Request Parameters
+
+[cols="2,1,1,1,3"]
+|===
+|Parameter |Type |Required |Default |Description
+
+|`loggerName`
+|string
+|No
+|`com.example`
+|Fully qualified logger name
+
+|`level`
+|string
+|Yes
+|-
+|Log level to set. Valid values: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF`
+|===
+
+==== Request Example
+
+[source,bash]
+----
+# Change all com.example loggers to DEBUG
+curl -X POST "http://localhost:8080/api/admin/logging/level?level=DEBUG"
+
+# Change a specific logger
+curl -X POST "http://localhost:8080/api/admin/logging/level?loggerName=com.example.perftester.messaging&level=TRACE"
+----
+
+==== Response
+
+[source,json]
+----
+{
+  "loggerName": "com.example",
+  "configuredLevel": "DEBUG",
+  "effectiveLevel": "DEBUG"
+}
+----
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Log level changed successfully
+
+|400
+|Invalid log level value
+|===
+
+=== Get Log Level
+
+Retrieves the current configured and effective log level for a specified logger.
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/admin/logging/level`
+|===
+
+==== Request Parameters
+
+[cols="2,1,1,1,3"]
+|===
+|Parameter |Type |Required |Default |Description
+
+|`loggerName`
+|string
+|No
+|`com.example`
+|Fully qualified logger name
+|===
+
+==== Request Example
+
+[source,bash]
+----
+curl "http://localhost:8080/api/admin/logging/level"
+
+curl "http://localhost:8080/api/admin/logging/level?loggerName=org.springframework.web"
+----
+
+==== Response
+
+[source,json]
+----
+{
+  "loggerName": "com.example",
+  "configuredLevel": "INFO",
+  "effectiveLevel": "INFO"
+}
+----
+
+NOTE: The `configuredLevel` may be `null` if the logger inherits its level from a parent logger. The `effectiveLevel` always reflects the actual level in use.
+
+==== Response Codes
+
+[cols="1,3"]
+|===
+|Code |Description
+
+|200
+|Log level retrieved
+
+|404
+|Logger not found (returns ProblemDetail)
+|===
 
 == Health & Monitoring APIs
 
@@ -174,6 +534,21 @@ curl -X POST http://localhost:8080/api/perf/send/batch \
 }
 ----
 
+=== Kubernetes Health Probes
+
+When running in Kubernetes, liveness and readiness probes are available:
+
+[cols="1,3"]
+|===
+|Path |Description
+
+|`/actuator/health/liveness`
+|Liveness probe -- indicates if the application is running
+
+|`/actuator/health/readiness`
+|Readiness probe -- indicates if the application can accept traffic
+|===
+
 === Prometheus Metrics
 
 [cols="1,3"]
@@ -188,7 +563,7 @@ curl -X POST http://localhost:8080/api/perf/send/batch \
 ----
 # HELP jvm_memory_used_bytes The amount of used memory
 # TYPE jvm_memory_used_bytes gauge
-jvm_memory_used_bytes{area="heap",id="G1 Eden Space"} 1.048576E7
+jvm_memory_used_bytes{area="heap",id="ZHeap"} 1.048576E7
 
 # HELP messages_sent_total Total messages sent
 # TYPE messages_sent_total counter
@@ -209,113 +584,49 @@ message_processing_seconds_bucket{le="0.1"} 1520
 |Path |`/actuator/info`
 |===
 
-==== Response
+== Error Responses
+
+=== Problem Details (RFC 7807)
+
+All error responses follow the RFC 7807 Problem Details format via Spring Boot's `ProblemDetail` support:
 
 [source,json]
 ----
 {
-  "app": {
-    "name": "perf-tester",
-    "version": "0.0.1-SNAPSHOT",
-    "description": "Performance Testing Application"
-  },
-  "java": {
-    "version": "25"
-  }
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Invalid log level: VERBOSE. Valid values: TRACE, DEBUG, INFO, WARN, ERROR, OFF",
+  "instance": "/api/admin/logging/level"
 }
 ----
 
-== Custom Metrics
-
-The application exposes custom metrics for monitoring message processing:
-
-=== Message Metrics
-
-[cols="2,1,3"]
-|===
-|Metric |Type |Description
-
-|`messages.sent.total`
-|Counter
-|Total messages sent to outbound queue
-
-|`messages.received.total`
-|Counter
-|Total messages received from inbound queue
-
-|`message.processing.time`
-|Timer
-|Time to process each message
-
-|`message.roundtrip.time`
-|Timer
-|End-to-end message roundtrip time
-|===
-
-=== Queue Metrics
-
-[cols="2,1,3"]
-|===
-|Metric |Type |Description
-
-|`mq.queue.depth`
-|Gauge
-|Current queue depth
-
-|`mq.connection.count`
-|Gauge
-|Active MQ connections
-
-|`kafka.consumer.lag`
-|Gauge
-|Kafka consumer lag per partition
-|===
-
-== Error Responses
-
-=== Standard Error Format
-
-All error responses follow RFC 7807 Problem Details format:
-
 [source,json]
 ----
 {
-  "type": "https://api.example.com/errors/mq-connection-failed",
-  "title": "MQ Connection Failed",
-  "status": 500,
-  "detail": "Unable to connect to queue manager QM1",
-  "instance": "/api/perf/send",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "traceId": "abc123def456"
+  "type": "about:blank",
+  "title": "Logger Not Found",
+  "status": 404,
+  "detail": "Logger not found: com.nonexistent",
+  "instance": "/api/admin/logging/level"
 }
 ----
 
 === Common Error Codes
 
-[cols="1,2,3"]
+[cols="1,3"]
 |===
-|Status |Type |Description
+|Status |Description
 
 |400
-|bad-request
-|Invalid request body or parameters
+|Invalid request parameters (validation failures, out-of-range values, blank required fields)
+
+|404
+|Resource not found (e.g., unknown logger name)
 
 |500
-|mq-connection-failed
-|Cannot connect to IBM MQ
-
-|500
-|kafka-connection-failed
-|Cannot connect to Kafka
-
-|503
-|service-unavailable
-|Downstream service unavailable
+|Internal server error (MQ connection failure, Kafka admin failure)
 |===
-
-== Rate Limiting
-
-Currently, no rate limiting is implemented. For production deployments, consider adding rate limiting at the API Gateway level.
 
 == Authentication
 
@@ -324,11 +635,3 @@ The API is currently unauthenticated for development purposes. For production, i
 * OAuth 2.0 / JWT tokens
 * API keys
 * mTLS
-
-== API Versioning
-
-The API uses URL path versioning. Current version is v1 (implicit).
-
-Future versions will be available at:
-
-* `/api/v2/perf/send`

@@ -1,4 +1,4 @@
-package com.example.kafkaconsumer.serialization;
+package com.example.avro.serialization;
 
 import java.io.ByteArrayOutputStream;
 

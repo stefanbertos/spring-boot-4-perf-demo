@@ -1,5 +1,6 @@
 package com.example.perftester.grafana;
 
+import com.example.perftester.config.PerfProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -24,9 +25,8 @@ import java.util.Objects;
 @Service
 public class GrafanaExportService {
 
-    private static final long BUFFER_BEFORE_MS = 60000;
-    private static final long BUFFER_AFTER_MS = 30000;
-
+    private final long bufferBeforeMs;
+    private final long bufferAfterMs;
     private final RestClient restClient;
     private final String grafanaUrl;
     private final String exportPath;
@@ -34,9 +34,12 @@ public class GrafanaExportService {
     public GrafanaExportService(
             @Value("${app.grafana.url:http://localhost:3000}") String grafanaUrl,
             @Value("${app.grafana.export-path:./grafana-exports}") String exportPath,
-            @Value("${app.grafana.api-key:}") String apiKey) {
+            @Value("${app.grafana.api-key:}") String apiKey,
+            PerfProperties perfProperties) {
         this.grafanaUrl = grafanaUrl;
         this.exportPath = exportPath;
+        this.bufferBeforeMs = perfProperties.grafanaBufferBeforeMs();
+        this.bufferAfterMs = perfProperties.grafanaBufferAfterMs();
 
         var builder = RestClient.builder()
                 .baseUrl(grafanaUrl);
@@ -51,6 +54,17 @@ public class GrafanaExportService {
         this.restClient = builder.build();
     }
 
+    /**
+     * Exports all Grafana dashboards as PNG images for the given test time window.
+     *
+     * <p>Adds a configurable buffer before and after the test window to capture
+     * surrounding context. Each dashboard is rendered via the Grafana render API
+     * and streamed directly to disk.
+     *
+     * @param testStartTimeMs epoch millis of test start
+     * @param testEndTimeMs   epoch millis of test end
+     * @return dashboard URLs and paths to exported image files
+     */
     public DashboardExportResult exportDashboards(long testStartTimeMs, long testEndTimeMs) {
         var exported = new ArrayList<ExportedDashboard>();
         var timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
@@ -64,8 +78,8 @@ public class GrafanaExportService {
             return new DashboardExportResult(List.of(), List.of());
         }
 
-        long fromMs = testStartTimeMs - BUFFER_BEFORE_MS;
-        long toMs = testEndTimeMs + BUFFER_AFTER_MS;
+        long fromMs = testStartTimeMs - bufferBeforeMs;
+        long toMs = testEndTimeMs + bufferAfterMs;
 
         var dashboards = fetchAllDashboards();
         for (var dashboard : dashboards) {

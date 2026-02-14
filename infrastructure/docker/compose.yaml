@@ -12,6 +12,7 @@ services:
     volumes:
       - ../config-repo:/config-repo:ro
     mem_limit: 1g
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 1"]
       interval: 5s
@@ -41,6 +42,13 @@ services:
       kafka:
         condition: service_healthy
     mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   ibm-mq-consumer:
     build:
@@ -60,6 +68,13 @@ services:
       kafka:
         condition: service_healthy
     mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
 
   kafka-consumer:
     build:
@@ -78,6 +93,13 @@ services:
       kafka:
         condition: service_healthy
     mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   api-gateway:
     build:
@@ -111,7 +133,14 @@ services:
         condition: service_started
       kafka-consumer:
         condition: service_started
-    mem_limit: 512m
+    mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   perf-ui:
     build:
@@ -121,6 +150,8 @@ services:
       - "3001:80"
     environment:
       API_GATEWAY_URL: api-gateway:8090
+    mem_limit: 256m
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -139,6 +170,8 @@ services:
       TRUST_PROXY: "true"
     depends_on:
       - redis
+    mem_limit: 256m
+    restart: unless-stopped
 
   kafka:
     image: apache/kafka:4.0.0
@@ -215,6 +248,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -270,6 +305,8 @@ services:
       DATA_SOURCE_NAME: perfuser/perfpass@oracle:1521/XEPDB1
     depends_on:
       - oracle
+    mem_limit: 256m
+    restart: unless-stopped
 
   sonarqube:
     image: sonarqube:community

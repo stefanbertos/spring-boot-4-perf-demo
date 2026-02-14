@@ -1,5 +1,6 @@
 package com.example.perftester.perf;
 
+import com.example.perftester.config.PerfProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class PerformanceTracker {
 
-    private static final long TPS_WINDOW_MS = 60_000L; // 1 minute window for TPS calculation
-
+    private final long tpsWindowMs;
     private final Timer e2eLatencyTimer;
     private final ConcurrentHashMap<String, Long> inFlightMessages = new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<Long> completionTimestamps = new ConcurrentLinkedDeque<>();
@@ -29,7 +29,8 @@ public class PerformanceTracker {
     private final AtomicLong minLatencyNanos = new AtomicLong(Long.MAX_VALUE);
     private final AtomicLong maxLatencyNanos = new AtomicLong(Long.MIN_VALUE);
 
-    public PerformanceTracker(MeterRegistry meterRegistry) {
+    public PerformanceTracker(MeterRegistry meterRegistry, PerfProperties perfProperties) {
+        this.tpsWindowMs = perfProperties.tpsWindowMs();
         this.e2eLatencyTimer = Timer.builder("mq.e2e.latency")
                 .description("End-to-end message processing latency")
                 .publishPercentiles(0.5, 0.75, 0.90, 0.95, 0.99)
@@ -145,7 +146,7 @@ public class PerformanceTracker {
      */
     private double calculateWindowedTps() {
         long currentTimeMs = System.currentTimeMillis();
-        long windowStartMs = currentTimeMs - TPS_WINDOW_MS;
+        long windowStartMs = currentTimeMs - tpsWindowMs;
 
         // Remove timestamps older than the window
         while (!completionTimestamps.isEmpty()) {
@@ -174,7 +175,7 @@ public class PerformanceTracker {
         // Calculate the effective window duration
         // Use the smaller of: actual message span or 1 minute
         long actualSpanMs = lastTimestamp - firstTimestamp;
-        long effectiveWindowMs = Math.min(Math.max(actualSpanMs, 1), TPS_WINDOW_MS);
+        long effectiveWindowMs = Math.min(Math.max(actualSpanMs, 1), tpsWindowMs);
 
         // TPS = messages in window / window duration in seconds
         return messagesInWindow / (effectiveWindowMs / 1000.0);

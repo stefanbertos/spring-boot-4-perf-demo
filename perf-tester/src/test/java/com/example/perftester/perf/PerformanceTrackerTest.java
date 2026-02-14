@@ -1,5 +1,6 @@
 package com.example.perftester.perf;
 
+import com.example.perftester.config.PerfProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,8 @@ class PerformanceTrackerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        tracker = new PerformanceTracker(meterRegistry);
+        var perfProperties = new PerfProperties(16000, 60000, 60000, 30000, 60, 15);
+        tracker = new PerformanceTracker(meterRegistry, perfProperties);
     }
 
     @Test

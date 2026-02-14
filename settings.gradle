@@ -1,5 +1,6 @@
 rootProject.name = 'perf-demo'
 
+include 'avro-common'
 include 'perf-tester'
 include 'ibm-mq-consumer'
 include 'kafka-consumer'

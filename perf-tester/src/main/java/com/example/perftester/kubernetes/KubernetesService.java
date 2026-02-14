@@ -30,6 +30,12 @@ public class KubernetesService {
         this.prettyWriter = Serialization.jsonMapper().writerWithDefaultPrettyPrinter();
     }
 
+    /**
+     * Exports Kubernetes cluster information (nodes, pods, services, deployments, configmaps)
+     * from the {@code perf-demo} namespace to JSON files in the configured export directory.
+     *
+     * @return the path to the export directory, or {@code null} if the export failed
+     */
     public String exportClusterInfo() {
         try {
             var exportDir = Path.of(exportPath, "kubernetes-export");

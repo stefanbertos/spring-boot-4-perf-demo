@@ -44,5 +44,7 @@ include::{docdir}/chapters/07-troubleshooting.adoc[leveloffset=+1]
 
 include::{docdir}/chapters/08-appendix.adoc[leveloffset=+1]
 
+include::{docdir}/chapters/09-component-testing.adoc[leveloffset=+1]
+
 [index]
 == Index

@@ -1,17 +1,20 @@
 package com.example.perftester.rest;
 
 import com.example.perftester.admin.LoggingAdminService;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
+@Validated
 @RestController
 @RequestMapping("/api/admin/logging")
 @RequiredArgsConstructor
@@ -24,7 +27,7 @@ public class LoggingAdminController {
     @PostMapping("/level")
     public ResponseEntity<LogLevelResponse> changeLogLevel(
             @RequestParam(defaultValue = DEFAULT_LOGGER) String loggerName,
-            @RequestParam String level) {
+            @RequestParam @NotBlank String level) {
         var logLevel = parseLogLevel(level);
         loggingAdminService.setLogLevel(loggerName, logLevel);
         var config = loggingAdminService.getLoggerConfiguration(loggerName);
@@ -36,8 +39,10 @@ public class LoggingAdminController {
             @RequestParam(defaultValue = DEFAULT_LOGGER) String loggerName) {
         var config = loggingAdminService.getLoggerConfiguration(loggerName);
         if (config == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Logger not found: " + loggerName);
+            var problem = ProblemDetail.forStatusAndDetail(
+                    HttpStatus.NOT_FOUND, "Logger not found: " + loggerName);
+            problem.setTitle("Logger Not Found");
+            return ResponseEntity.of(problem).build();
         }
         return ResponseEntity.ok(LogLevelResponse.from(config));
     }
@@ -46,9 +51,8 @@ public class LoggingAdminController {
         try {
             return LogLevel.valueOf(level.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Invalid log level: " + level
-                            + ". Valid values: TRACE, DEBUG, INFO, WARN, ERROR, OFF", e);
+            throw new IllegalArgumentException("Invalid log level: " + level
+                    + ". Valid values: TRACE, DEBUG, INFO, WARN, ERROR, OFF", e);
         }
     }
 

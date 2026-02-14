@@ -183,6 +183,10 @@ subprojects {
         componentTestAnnotationProcessor 'org.projectlombok:lombok'
     }
 
+    tasks.named('processComponentTestResources') {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+
     tasks.register('componentTest', Test) {
         description = 'Runs Cucumber BDD component tests with Testcontainers.'
         group = 'verification'

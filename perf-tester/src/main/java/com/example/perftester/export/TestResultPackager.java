@@ -26,6 +26,18 @@ public class TestResultPackager {
         this.exportPath = exportPath;
     }
 
+    /**
+     * Packages test results, dashboard images, Prometheus metrics, and Kubernetes info
+     * into a single ZIP file saved to the configured export path.
+     *
+     * @param result               performance test metrics (TPS, latency, completion counts)
+     * @param dashboardImageFiles  paths to exported Grafana dashboard PNG files
+     * @param prometheusExportFile path to exported Prometheus metrics JSON (nullable)
+     * @param testId               optional test identifier for the filename
+     * @param testStartTimeMs      epoch millis of test start
+     * @param testEndTimeMs        epoch millis of test end
+     * @return the filename and saved path of the generated ZIP
+     */
     public PackageResult packageResults(
             PerfTestResult result,
             List<String> dashboardImageFiles,

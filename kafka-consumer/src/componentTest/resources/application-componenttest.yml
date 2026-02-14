@@ -7,13 +7,13 @@ spring:
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: com.example.kafkaconsumer.serialization.AvroSerializer
+      value-serializer: com.example.avro.serialization.AvroSerializer
       acks: 1
     consumer:
       group-id: kafka-consumer-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: com.example.kafkaconsumer.serialization.AvroDeserializer
+      value-deserializer: com.example.avro.serialization.AvroDeserializer
 
 app:
   kafka:

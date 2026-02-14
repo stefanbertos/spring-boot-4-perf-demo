@@ -1,0 +1,13 @@
+// Shared Avro schema, serializers, and utilities used by ibm-mq-consumer and kafka-consumer
+plugins {
+    id 'com.github.davidmc24.gradle.plugin.avro'
+}
+
+// This is a library module, not a Spring Boot application
+bootJar.enabled = false
+jar.enabled = true
+
+dependencies {
+    implementation 'org.apache.avro:avro:1.12.0'
+    implementation 'org.apache.kafka:kafka-clients'
+}

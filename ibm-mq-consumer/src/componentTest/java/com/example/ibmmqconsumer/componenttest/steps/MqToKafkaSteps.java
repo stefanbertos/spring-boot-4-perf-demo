@@ -1,7 +1,7 @@
 package com.example.ibmmqconsumer.componenttest.steps;
 
 import com.example.avro.MqMessage;
-import com.example.ibmmqconsumer.serialization.AvroDeserializer;
+import com.example.avro.serialization.AvroDeserializer;
 import com.ibm.mq.jakarta.jms.MQQueue;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;

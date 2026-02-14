@@ -9,6 +9,162 @@ The application uses Spring Boot's externalized configuration, supporting multip
 . Environment variables
 . Command-line arguments
 
+== Spring Cloud Config Server
+
+The application uses a **3-layer configuration approach** to support local development, Docker Compose, and Kubernetes deployments consistently.
+
+=== Layer 1: Local application.yml
+
+Each module contains a local `application.yml` in `src/main/resources/`. This serves as the baseline configuration for local development without requiring the config-server to be running.
+
+[source,text]
+----
+perf-tester/src/main/resources/application.yml
+ibm-mq-consumer/src/main/resources/application.yml
+kafka-consumer/src/main/resources/application.yml
+----
+
+=== Layer 2: Config-repo Files
+
+Centralized configuration files in `infrastructure/config-repo/` are served by the config-server module (port 8888). These are used when running with Docker Compose.
+
+[source,text]
+----
+infrastructure/config-repo/
+├── application.yml                    # Shared config for all services
+├── application-kubernetes.yml         # Shared Kubernetes overrides
+├── perf-tester.yml                    # perf-tester specific config
+├── perf-tester-kubernetes.yml         # perf-tester Kubernetes overrides
+├── ibm-mq-consumer.yml               # ibm-mq-consumer specific config
+├── ibm-mq-consumer-kubernetes.yml     # ibm-mq-consumer Kubernetes overrides
+├── kafka-consumer.yml                 # kafka-consumer specific config
+└── kafka-consumer-kubernetes.yml      # kafka-consumer Kubernetes overrides
+----
+
+The shared `application.yml` contains defaults inherited by all services (virtual threads, actuator endpoints, logging levels). Service-specific files override or extend these defaults.
+
+=== Layer 3: Helm ConfigMap
+
+For Kubernetes deployments, all config-repo files are embedded in the config-server Helm ConfigMap at `infrastructure/helm/config-server/templates/configmap.yaml`. This eliminates the need for a Git repository or volume mount in the cluster.
+
+The ConfigMap must include both base files (`<service>.yml`) and Kubernetes profile files (`<service>-kubernetes.yml`), because client applications run with `SPRING_PROFILES_ACTIVE=kubernetes`.
+
+=== Configuration Consistency
+
+When changing any configuration property, all three layers must be updated:
+
+[cols="1,3,2"]
+|===
+|Layer |Path |Used When
+
+|Local
+|`<module>/src/main/resources/application.yml`
+|Local dev without config-server
+
+|Config-repo
+|`infrastructure/config-repo/<service>.yml`
+|Docker Compose with config-server
+
+|Helm ConfigMap
+|`infrastructure/helm/config-server/templates/configmap.yaml`
+|Kubernetes / ArgoCD deployment
+|===
+
+== Avro Serialization
+
+The project uses **Apache Avro** for binary serialization of Kafka messages, providing compact encoding and schema evolution support without requiring a Schema Registry.
+
+=== Avro Schema
+
+The shared `avro-common` module contains the `MqMessage` schema and custom serializers. The schema defines two fields:
+
+.avro-common/src/main/avro/MqMessage.avsc
+[source,json]
+----
+{
+  "namespace": "com.example.avro",
+  "type": "record",
+  "name": "MqMessage",
+  "fields": [
+    { "name": "content", "type": "string" },
+    { "name": "timestamp", "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ]
+}
+----
+
+The `timestamp-millis` logical type maps to `java.time.Instant` in the generated Java code.
+
+=== Custom Serializers
+
+Since the project does not use a Schema Registry, custom serializer and deserializer classes handle Avro encoding directly:
+
+[cols="1,3"]
+|===
+|Class |Fully Qualified Name
+
+|Serializer
+|`com.example.avro.serialization.AvroSerializer`
+
+|Deserializer
+|`com.example.avro.serialization.AvroDeserializer`
+|===
+
+These are configured as Kafka producer/consumer value serializers in the Spring configuration:
+
+[source,yaml]
+----
+spring:
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: com.example.avro.serialization.AvroSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: com.example.avro.serialization.AvroDeserializer
+----
+
+=== Module Dependency
+
+Both `ibm-mq-consumer` and `kafka-consumer` depend on the `avro-common` module to access the generated `MqMessage` class and the serialization classes.
+
+== Redis Configuration
+
+The `perf-tester` module uses Redis for caching performance test results and metrics.
+
+=== Connection Settings
+
+Redis connection is configured via Spring Data Redis properties:
+
+[source,yaml]
+----
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+----
+
+=== Environment-Specific Hosts
+
+[cols="1,2,2"]
+|===
+|Environment |Host |Port
+
+|Local development
+|`localhost`
+|6379
+
+|Docker Compose
+|`perf-redis`
+|6379
+
+|Kubernetes
+|Configured via environment variables
+|6379
+|===
+
+In Kubernetes, the Redis host is injected through the Helm values and environment variables in the deployment template, allowing it to point to the cluster-internal Redis service.
+
 == Module Configuration
 
 === perf-tester Configuration
@@ -67,12 +223,12 @@ spring:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: com.example.avro.serialization.AvroSerializer
     consumer:
-      group-id: mq-consumer-group
+      group-id: ibm-mq-consumer-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: com.example.avro.serialization.AvroDeserializer
 
 # IBM MQ Configuration
 ibm:
@@ -108,10 +264,12 @@ spring:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: com.example.avro.serialization.AvroSerializer
     consumer:
       group-id: kafka-consumer-group
       auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: com.example.avro.serialization.AvroDeserializer
 
 app:
   kafka:

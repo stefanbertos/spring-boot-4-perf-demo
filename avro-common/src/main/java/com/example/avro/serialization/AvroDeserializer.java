@@ -1,4 +1,4 @@
-package com.example.ibmmqconsumer.serialization;
+package com.example.avro.serialization;
 
 import com.example.avro.MqMessage;
 

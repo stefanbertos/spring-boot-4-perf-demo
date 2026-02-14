@@ -1,5 +1,6 @@
 package com.example.perftester.prometheus;
 
+import com.example.perftester.config.PerfProperties;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,18 +27,35 @@ public class PrometheusExportService {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final String exportPath;
+    private final long prometheusBufferSeconds;
+    private final int prometheusStepSeconds;
 
     public PrometheusExportService(
             @Value("${app.prometheus.url:http://localhost:9090}") String prometheusUrl,
-            @Value("${app.prometheus.export-path:./prometheus-exports}") String exportPath) {
+            @Value("${app.prometheus.export-path:./prometheus-exports}") String exportPath,
+            PerfProperties perfProperties) {
         this.restClient = RestClient.builder()
                 .baseUrl(prometheusUrl)
                 .build();
         this.objectMapper = new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT);
         this.exportPath = exportPath;
+        this.prometheusBufferSeconds = perfProperties.prometheusBufferSeconds();
+        this.prometheusStepSeconds = perfProperties.prometheusStepSeconds();
     }
 
+    /**
+     * Exports all Prometheus metrics for the given test time window to a JSON file.
+     *
+     * <p>Queries all metric names from Prometheus, then fetches range data for each metric
+     * using the configured buffer and step resolution. Metrics are streamed to a JSON file
+     * to avoid holding large datasets in memory.
+     *
+     * @param testStartTimeMs epoch millis of test start
+     * @param testEndTimeMs   epoch millis of test end
+     * @param testId          optional test identifier used in the export filename
+     * @return result containing the export file path, query URL pattern, or error details
+     */
     public PrometheusExportResult exportMetrics(long testStartTimeMs, long testEndTimeMs, String testId) {
         var timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                 .format(Instant.now().atZone(java.time.ZoneId.systemDefault()));
@@ -51,9 +69,9 @@ public class PrometheusExportService {
         }
 
         // Add buffer for metric collection delay
-        long fromSec = (testStartTimeMs / 1000) - 60;
-        long toSec = (testEndTimeMs / 1000) + 60;
-        int step = 15; // 15 second resolution
+        long fromSec = (testStartTimeMs / 1000) - prometheusBufferSeconds;
+        long toSec = (testEndTimeMs / 1000) + prometheusBufferSeconds;
+        int step = prometheusStepSeconds;
 
         var filename = String.format("prometheus_export_%s.json", timestamp);
         var filePath = exportDir.resolve(filename);
