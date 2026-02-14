@@ -5,7 +5,6 @@ import com.example.perftester.perf.PerformanceTracker;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 
 import java.time.Duration;
@@ -15,16 +14,18 @@ import static org.awaitility.Awaitility.await;
 
 public class MessageSendReceiveSteps {
 
-    @Autowired
-    private MessageSender messageSender;
-
-    @Autowired
-    private JmsTemplate jmsTemplate;
-
-    @Autowired
-    private PerformanceTracker performanceTracker;
+    private final MessageSender messageSender;
+    private final JmsTemplate jmsTemplate;
+    private final PerformanceTracker performanceTracker;
 
     private String trackedMessageId;
+
+    public MessageSendReceiveSteps(MessageSender messageSender, JmsTemplate jmsTemplate,
+                                   PerformanceTracker performanceTracker) {
+        this.messageSender = messageSender;
+        this.jmsTemplate = jmsTemplate;
+        this.performanceTracker = performanceTracker;
+    }
 
     @Given("the MQ broker is running")
     public void theMqBrokerIsRunning() {

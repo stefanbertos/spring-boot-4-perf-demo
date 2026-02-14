@@ -10,7 +10,6 @@ import io.cucumber.java.en.When;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -18,7 +17,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaAdmin;
 
 import java.nio.charset.StandardCharsets;
@@ -34,10 +32,13 @@ import static org.awaitility.Awaitility.await;
 
 public class KafkaProcessingSteps {
 
-    @Autowired
-    private KafkaAdmin kafkaAdmin;
+    private final KafkaAdmin kafkaAdmin;
 
     private KafkaConsumer<String, MqMessage> consumer;
+
+    public KafkaProcessingSteps(KafkaAdmin kafkaAdmin) {
+        this.kafkaAdmin = kafkaAdmin;
+    }
 
     @Given("the Kafka topics {string} and {string} exist")
     public void theKafkaTopicsExist(String requestTopic, String responseTopic) {

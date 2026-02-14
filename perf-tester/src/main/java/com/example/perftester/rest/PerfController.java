@@ -1,5 +1,6 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.admin.LoggingAdminService;
 import com.example.perftester.config.PerfProperties;
 import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
@@ -15,6 +16,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.logging.LogLevel;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -43,12 +45,15 @@ import java.util.concurrent.TimeUnit;
 @EnableConfigurationProperties(PerfProperties.class)
 public class PerfController {
 
+    private static final String DEBUG_LOGGER = "com.example";
+
     private final MessageSender messageSender;
     private final PerformanceTracker performanceTracker;
     private final GrafanaExportService grafanaExportService;
     private final PrometheusExportService prometheusExportService;
     private final TestResultPackager testResultPackager;
     private final KubernetesService kubernetesService;
+    private final LoggingAdminService loggingAdminService;
     private final PerfProperties perfProperties;
 
     /**
@@ -64,6 +69,7 @@ public class PerfController {
      * @param delayMs          delay between sends in milliseconds (0-60,000)
      * @param testId           optional identifier for the test run
      * @param exportStatistics if true, exports dashboards/metrics and returns a ZIP file
+     * @param debug            if true, switches {@code com.example} to DEBUG for the test duration
      * @return ZIP resource with test results if exporting, otherwise 200 OK
      */
     @PostMapping("/send")
@@ -73,8 +79,26 @@ public class PerfController {
             @RequestParam(defaultValue = "60") @Min(1) @Max(3600) int timeoutSeconds,
             @RequestParam(defaultValue = "0") @Min(0) @Max(60000) int delayMs,
             @RequestParam(required = false) String testId,
-            @RequestParam(defaultValue = "false") boolean exportStatistics) throws InterruptedException {
+            @RequestParam(defaultValue = "false") boolean exportStatistics,
+            @RequestParam(defaultValue = "false") boolean debug) throws InterruptedException {
 
+        LogLevel previousLevel = null;
+        if (debug) {
+            previousLevel = enableDebugLogging();
+        }
+
+        try {
+            return executeTest(message, count, timeoutSeconds, delayMs, testId, exportStatistics);
+        } finally {
+            if (debug && previousLevel != null) {
+                loggingAdminService.setLogLevel(DEBUG_LOGGER, previousLevel);
+            }
+        }
+    }
+
+    private ResponseEntity<Resource> executeTest(String message, int count, int timeoutSeconds,
+                                                  int delayMs, String testId,
+                                                  boolean exportStatistics) throws InterruptedException {
         log.info("Starting performance test: {} messages, timeout {}s, delay {}ms, testId={}",
                 count, timeoutSeconds, delayMs, testId);
 
@@ -105,6 +129,14 @@ public class PerfController {
             return buildZipResponse(packageResult);
         }
         return ResponseEntity.ok().build();
+    }
+
+    private LogLevel enableDebugLogging() {
+        var config = loggingAdminService.getLoggerConfiguration(DEBUG_LOGGER);
+        var previousLevel = config != null ? config.getEffectiveLevel() : LogLevel.INFO;
+        loggingAdminService.setLogLevel(DEBUG_LOGGER, LogLevel.DEBUG);
+        log.info("Debug mode enabled for '{}' (previous level: {})", DEBUG_LOGGER, previousLevel);
+        return previousLevel;
     }
 
     private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)

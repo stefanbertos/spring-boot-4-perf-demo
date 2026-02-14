@@ -1,5 +1,6 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.admin.LoggingAdminService;
 import com.example.perftester.config.PerfProperties;
 import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
@@ -61,6 +62,9 @@ class PerfControllerTest {
     @Mock
     private KubernetesService kubernetesService;
 
+    @Mock
+    private LoggingAdminService loggingAdminService;
+
     private final PerfProperties perfProperties = new PerfProperties(16000, 60000, 60000, 30000, 60, 15);
 
     @TempDir
@@ -72,7 +76,7 @@ class PerfControllerTest {
     void setUp() {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
-                kubernetesService, perfProperties);
+                kubernetesService, loggingAdminService, perfProperties);
 
         // Default mock for Kubernetes service
         when(kubernetesService.exportClusterInfo()).thenReturn(null);
@@ -106,7 +110,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(PerfTestResult.class), anyList(), anyString(), anyString(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        ResponseEntity<Resource> response = controller.sendMessages("test message", 10, 1, 0, "test-id", true);
+        ResponseEntity<Resource> response = controller.sendMessages("test message", 10, 1, 0, "test-id", true, false);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -136,7 +140,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        ResponseEntity<Resource> response = controller.sendMessages("test", 10, 1, 0, null, true);
+        ResponseEntity<Resource> response = controller.sendMessages("test", 10, 1, 0, null, true, false);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
@@ -162,7 +166,7 @@ class PerfControllerTest {
                 .thenReturn(packageResult);
 
         long startTime = System.currentTimeMillis();
-        controller.sendMessages("test", 2, 1, 10, "test-id", true);
+        controller.sendMessages("test", 2, 1, 10, "test-id", true, false);
         long elapsed = System.currentTimeMillis() - startTime;
 
         // Should take at least 10ms delay between 2 messages (10ms delay)
@@ -201,7 +205,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
                 .thenReturn(packageResult);
 
-        controller.sendMessages("test", 1, 1, 0, "test-id", true);
+        controller.sendMessages("test", 1, 1, 0, "test-id", true, false);
 
         assertFalse(Files.exists(kubeDir));
     }

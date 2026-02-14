@@ -9,7 +9,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.kafka.core.KafkaAdmin;
 
@@ -23,11 +22,13 @@ import static org.awaitility.Awaitility.await;
 
 public class KafkaToMqSteps {
 
-    @Autowired
-    private JmsTemplate jmsTemplate;
+    private final JmsTemplate jmsTemplate;
+    private final KafkaAdmin kafkaAdmin;
 
-    @Autowired
-    private KafkaAdmin kafkaAdmin;
+    public KafkaToMqSteps(JmsTemplate jmsTemplate, KafkaAdmin kafkaAdmin) {
+        this.jmsTemplate = jmsTemplate;
+        this.kafkaAdmin = kafkaAdmin;
+    }
 
     @When("a Kafka message with content {string} and header {string} = {string} is sent to {string}")
     public void aKafkaMessageWithHeaderIsSentTo(String content, String headerName, String headerValue, String topic) {

@@ -32,7 +32,7 @@ class KubernetesServiceTest {
         var nodeList = createNodeList("test-node");
         when(client.nodes().list()).thenReturn(nodeList);
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         assertThat(result).isNotNull();
@@ -46,7 +46,7 @@ class KubernetesServiceTest {
         // Create a file where the export directory would be, preventing directory creation
         Files.writeString(tempDir.resolve("kubernetes-export"), "blocking");
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         assertThat(result).isNull();
@@ -56,7 +56,7 @@ class KubernetesServiceTest {
     void exportClusterInfoShouldHandleIndividualResourceFailures() throws IOException {
         when(client.nodes()).thenThrow(new RuntimeException("Connection refused"));
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         // Individual resource failures are caught per-resource; export still succeeds
@@ -69,7 +69,7 @@ class KubernetesServiceTest {
         var nodeList = createNodeList("my-node");
         when(client.nodes().list()).thenReturn(nodeList);
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         assertThat(result).isNotNull();
@@ -86,7 +86,7 @@ class KubernetesServiceTest {
         var nodeList = createNodeList("node-1", "node-2");
         when(client.nodes().list()).thenReturn(nodeList);
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         assertThat(result).isNotNull();
@@ -101,11 +101,19 @@ class KubernetesServiceTest {
         when(client.nodes().list()).thenReturn(nodeList);
         when(client.namespaces().list()).thenThrow(new RuntimeException("Forbidden"));
 
-        var service = new KubernetesService(client, tempDir.toString(), "perf-demo");
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", true);
         var result = service.exportClusterInfo();
 
         assertThat(result).isNotNull();
         assertThat(Files.exists(Path.of(result, "nodes.json"))).isTrue();
+    }
+
+    @Test
+    void exportClusterInfoShouldReturnNullWhenDisabled() {
+        var service = new KubernetesService(client, tempDir.toString(), "perf-demo", false);
+        var result = service.exportClusterInfo();
+
+        assertThat(result).isNull();
     }
 
     private NodeList createNodeList(String... nodeNames) {

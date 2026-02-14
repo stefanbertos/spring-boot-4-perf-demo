@@ -147,7 +147,7 @@ services:
       context: ../../perf-ui
       dockerfile: Dockerfile
     ports:
-      - "3001:80"
+      - "5173:80"
     environment:
       API_GATEWAY_URL: api-gateway:8090
     mem_limit: 256m

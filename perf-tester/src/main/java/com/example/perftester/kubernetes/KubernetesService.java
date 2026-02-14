@@ -19,14 +19,17 @@ public class KubernetesService {
     private final KubernetesClient client;
     private final String exportPath;
     private final String namespace;
+    private final boolean enabled;
     private final ObjectWriter prettyWriter;
 
     public KubernetesService(KubernetesClient client,
                              @Value("${app.export.path:./test-exports}") String exportPath,
-                             @Value("${app.kubernetes.namespace:perf-demo}") String namespace) {
+                             @Value("${app.kubernetes.namespace:perf-demo}") String namespace,
+                             @Value("${app.kubernetes.export-enabled:false}") boolean enabled) {
         this.client = client;
         this.exportPath = exportPath;
         this.namespace = namespace;
+        this.enabled = enabled;
         this.prettyWriter = Serialization.jsonMapper().writerWithDefaultPrettyPrinter();
     }
 
@@ -37,6 +40,10 @@ public class KubernetesService {
      * @return the path to the export directory, or {@code null} if the export failed
      */
     public String exportClusterInfo() {
+        if (!enabled) {
+            log.info("Kubernetes export is disabled (app.kubernetes.export-enabled=false)");
+            return null;
+        }
         try {
             var exportDir = Path.of(exportPath, "kubernetes-export");
             Files.createDirectories(exportDir);

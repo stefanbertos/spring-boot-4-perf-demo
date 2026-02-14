@@ -69,7 +69,9 @@
       "Bash(npm run lint)",
       "Bash(xargs:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

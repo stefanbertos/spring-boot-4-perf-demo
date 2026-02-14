@@ -3,15 +3,17 @@ package com.example.ibmmqconsumer.componenttest.steps;
 import io.cucumber.java.en.Given;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaAdmin;
 
 import java.util.List;
 
 public class SharedSteps {
 
-    @Autowired
-    private KafkaAdmin kafkaAdmin;
+    private final KafkaAdmin kafkaAdmin;
+
+    public SharedSteps(KafkaAdmin kafkaAdmin) {
+        this.kafkaAdmin = kafkaAdmin;
+    }
 
     @Given("the MQ queues and Kafka topic {string} are available")
     public void theMqQueuesAndKafkaTopicAreAvailable(String topic) {

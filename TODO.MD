@@ -1,26 +1,3 @@
-comiadd debug flag into perf tester controller to switch to debug logs
-
-docker compose - missing acls for kubernetes export
-2026-02-14T14:46:04.094Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export nodes.json: Operation: [list]  for kind: [Node]  with name: [null]  in namespace: [null]  failed.
-2026-02-14T14:46:23.258029415Z 2026-02-14T14:46:23.257Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export namespaces.json: Operation: [list]  for kind: [Namespace]  with name: [null]  in namespace: [null]  failed.
-2026-02-14T14:46:42.414453069Z 2026-02-14T14:46:42.414Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export persistent-volumes.json: Operation: [list]  for kind: [PersistentVolume]  with name: [null]  in namespace: [null]  failed.
-2026-02-14T14:47:01.594718645Z 2026-02-14T14:47:01.594Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export pods.json: Operation: [list]  for kind: [Pod]  with name: [null]  in namespace: [perf-demo]  failed.
-2026-02-14T14:47:20.742470881Z 2026-02-14T14:47:20.741Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export deployments.json: Operation: [list]  for kind: [Deployment]  with name: [null]  in namespace: [perf-demo]  failed.
-2026-02-14T14:47:39.918542979Z 2026-02-14T14:47:39.918Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export statefulsets.json: Operation: [list]  for kind: [StatefulSet]  with name: [null]  in namespace: [perf-demo]  failed.
-2026-02-14T14:47:59.063730871Z 2026-02-14T14:47:59.063Z  WARN 1 --- [perf-tester] [mcat-handler-87] c.e.p.kubernetes.KubernetesService       : Failed to export daemonsets.json: Operation: [list]  for kind: [DaemonSet]  with name: [null]  in namespace: [perf-demo]  failed.
-
-docker componse - http://localhost:8888/ doesnt work
-
-missing perf-ui url in docker compose http://localhost:5173/ 
-
-docker compose build fails on 
-=== Building Gradle projects ===
-> Task :config-server:processComponentTestResources FAILED
-> Task :kafka-consumer:processComponentTestResources FAILED
-> Task :ibm-mq-consumer:processComponentTestResources FAILED
-
-
-
 argocd is not starting
 [2/5] Installing ArgoCD (stable) into namespace argocd...
 customresourcedefinition.apiextensions.k8s.io/applications.argoproj.io created

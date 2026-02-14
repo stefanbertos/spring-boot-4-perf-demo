@@ -26,6 +26,8 @@ ibm:
     password: passw0rd
 
 app:
+  kubernetes:
+    export-enabled: false
   kafka:
     bootstrap-servers: localhost:9092
   mq:

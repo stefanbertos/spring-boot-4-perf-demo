@@ -6,7 +6,6 @@ import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -15,11 +14,14 @@ public class GatewayRoutingSteps {
     @LocalServerPort
     private int port;
 
-    @Autowired
-    private WireMockServer wireMockServer;
+    private final WireMockServer wireMockServer;
 
     private WebTestClient webTestClient;
     private WebTestClient.ResponseSpec responseSpec;
+
+    public GatewayRoutingSteps(WireMockServer wireMockServer) {
+        this.wireMockServer = wireMockServer;
+    }
 
     @Before
     public void setup() {

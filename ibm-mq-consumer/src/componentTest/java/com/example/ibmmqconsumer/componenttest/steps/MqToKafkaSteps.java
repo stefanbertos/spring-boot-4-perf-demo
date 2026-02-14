@@ -13,7 +13,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.kafka.core.KafkaAdmin;
 
@@ -29,11 +28,13 @@ import static org.awaitility.Awaitility.await;
 
 public class MqToKafkaSteps {
 
-    @Autowired
-    private JmsTemplate jmsTemplate;
+    private final JmsTemplate jmsTemplate;
+    private final KafkaAdmin kafkaAdmin;
 
-    @Autowired
-    private KafkaAdmin kafkaAdmin;
+    public MqToKafkaSteps(JmsTemplate jmsTemplate, KafkaAdmin kafkaAdmin) {
+        this.jmsTemplate = jmsTemplate;
+        this.kafkaAdmin = kafkaAdmin;
+    }
 
     private KafkaConsumer<String, MqMessage> consumer;
     private final List<ConsumerRecord<String, MqMessage>> receivedMessages = new ArrayList<>();
