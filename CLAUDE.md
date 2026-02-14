@@ -49,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :perf-tester:bootBuildImage
 
 # Run with Docker Compose (images must be built first)
-docker compose -f infrastructure/compose.yaml up
+docker compose -f infrastructure/docker/compose.yaml up
 ```
 
 ## Architecture
@@ -387,32 +387,35 @@ perf-demo/
 ├── build.gradle              # Root build with shared config + bootBuildImage
 ├── settings.gradle           # Module includes
 ├── infrastructure/
-│   ├── compose.yaml          # Docker Compose orchestration (references pre-built images)
-│   ├── runLocalDocker.bat    # Script to build images and run Docker Compose locally
-├── config-repo/              # Spring Cloud Config files (served by config-server)
-│   ├── application.yml       # Shared config for all services
-│   ├── application-kubernetes.yml
-│   ├── ibm-mq-consumer.yml
-│   ├── ibm-mq-consumer-kubernetes.yml
-│   ├── kafka-consumer.yml
-│   ├── kafka-consumer-kubernetes.yml
-│   ├── perf-tester.yml
-│   └── perf-tester-kubernetes.yml
-├── infrastructure/
+│   ├── runLocalDocker.bat    # Build images and start Docker Compose
+│   ├── cleanupDocker.bat     # Stop containers, remove volumes and images
+│   ├── deployArgo.bat        # Bootstrap ArgoCD + deploy all apps
+│   ├── cleanupKubernetes.bat # Delete all ArgoCD apps and namespace
+│   ├── config-repo/          # Spring Cloud Config files (served by config-server)
+│   │   ├── application.yml       # Shared config for all services
+│   │   ├── application-kubernetes.yml
+│   │   ├── ibm-mq-consumer.yml
+│   │   ├── ibm-mq-consumer-kubernetes.yml
+│   │   ├── kafka-consumer.yml
+│   │   ├── kafka-consumer-kubernetes.yml
+│   │   ├── perf-tester.yml
+│   │   └── perf-tester-kubernetes.yml
+│   ├── docker/               # Docker Compose and container config
+│   │   ├── compose.yaml      # Docker Compose orchestration
+│   │   ├── grafana/          # Grafana dashboards and provisioning
+│   │   ├── mq-config/        # IBM MQ MQSC scripts
+│   │   ├── prometheus/       # Prometheus config
+│   │   └── loki/             # Loki config
 │   ├── argocd/               # ArgoCD GitOps deployment manifests
-│   │   ├── deployArgo.bat    # Bootstrap script (installs ArgoCD + deploys apps)
 │   │   ├── project.yaml      # AppProject (RBAC scoping)
 │   │   ├── root-app.yaml     # Root Application (App of Apps)
 │   │   └── apps/             # Child Application CRs (one per service)
-│   ├── helm/                 # Helm charts for Kubernetes deployment
-│   │   ├── config-server/    # Includes ConfigMap with all service configs
-│   │   ├── ibm-mq-consumer/
-│   │   ├── kafka-consumer/
-│   │   ├── perf-tester/
-│   │   └── ...               # kafka, ibm-mq, grafana, prometheus, etc.
-│   ├── grafana/              # Grafana dashboards and provisioning
-│   ├── mq-config/            # IBM MQ MQSC scripts
-│   └── prometheus/           # Prometheus config
+│   └── helm/                 # Helm charts for Kubernetes deployment
+│       ├── config-server/    # Includes ConfigMap with all service configs
+│       ├── ibm-mq-consumer/
+│       ├── kafka-consumer/
+│       ├── perf-tester/
+│       └── ...               # kafka, ibm-mq, grafana, prometheus, etc.
 ├── perf-tester/
 │   ├── build.gradle
 │   └── src/main/java/com/example/perftester/
@@ -443,6 +446,24 @@ perf-demo/
         └── messaging/
             └── KafkaRequestListener.java  # Kafka request -> Kafka response
 ```
+
+### Folder Structure Conventions (Required)
+
+All infrastructure, deployment, and operational files live under `infrastructure/`:
+
+| Directory | Purpose |
+|-----------|---------|
+| `infrastructure/` | Scripts (`.bat`) for Docker and Kubernetes lifecycle |
+| `infrastructure/docker/` | Docker Compose file and container configs (Grafana, Prometheus, MQ, Loki) |
+| `infrastructure/config-repo/` | Spring Cloud Config files served by config-server |
+| `infrastructure/argocd/` | ArgoCD Application CRs, AppProject, root app |
+| `infrastructure/helm/` | Helm charts for Kubernetes deployment |
+
+**Rules:**
+- All lifecycle scripts (`runLocalDocker.bat`, `cleanupDocker.bat`, `deployArgo.bat`, `cleanupKubernetes.bat`) live at `infrastructure/` root — not nested inside subdirectories
+- Application source modules (`perf-tester/`, `kafka-consumer/`, etc.) live at project root — never inside `infrastructure/`
+- Docker-specific configs (Grafana dashboards, Prometheus rules, MQSC scripts) live under `infrastructure/docker/`
+- When adding new infrastructure, place it under the appropriate `infrastructure/` subdirectory
 
 ## Architecture Guidelines
 
@@ -672,7 +693,7 @@ Serialization is a silent performance killer at scale:
 This project uses **Spring Cloud Config Server** for centralized configuration. Configuration exists in three layers that must be kept in sync:
 
 1. **Local `application.yml`** (in each module's `src/main/resources/`) — baseline defaults for local development
-2. **Config-repo files** (`config-repo/<service>.yml`) — served by config-server, used in Docker Compose
+2. **Config-repo files** (`infrastructure/config-repo/<service>.yml`) — served by config-server, used in Docker Compose
 3. **Helm ConfigMap** (`infrastructure/helm/config-server/templates/configmap.yaml`) — deployed in Kubernetes
 
 **When changing any configuration property (serializers, connection strings, feature flags, etc.), update ALL THREE layers:**
@@ -680,10 +701,10 @@ This project uses **Spring Cloud Config Server** for centralized configuration. 
 | Layer | Path | Used When |
 |-------|------|-----------|
 | Local | `<module>/src/main/resources/application.yml` | Local dev without config-server |
-| Config-repo | `config-repo/<service>.yml` | Docker Compose with config-server |
+| Config-repo | `infrastructure/config-repo/<service>.yml` | Docker Compose with config-server |
 | Helm ConfigMap | `infrastructure/helm/config-server/templates/configmap.yaml` | Kubernetes / Rancher deployment |
 
-Profile-specific overrides (`config-repo/<service>-kubernetes.yml`) handle Kubernetes-specific values like service hostnames and environment variable references.
+Profile-specific overrides (`infrastructure/config-repo/<service>-kubernetes.yml`) handle Kubernetes-specific values like service hostnames and environment variable references.
 
 ### Logging Configuration (Required)
 
@@ -704,9 +725,9 @@ logging:
 ```
 
 **Rules:**
-- Default logging is in `config-repo/application.yml` (shared by all apps) and mirrored in the Helm ConfigMap
+- Default logging is in `infrastructure/config-repo/application.yml` (shared by all apps) and mirrored in the Helm ConfigMap
 - Each module's local `application.yml` also has logging as a fallback for running without config-server
-- Service-specific overrides go in `config-repo/<service>.yml` (e.g., `com.example.perftester: DEBUG`)
+- Service-specific overrides go in `infrastructure/config-repo/<service>.yml` (e.g., `com.example.perftester: DEBUG`)
 - To enable debug for all apps, change `com.example: DEBUG` in the shared `application.yml`
 - To enable debug for one app, change its level in the service-specific config file
 - Noisy libraries (Kafka, Hibernate, Micrometer) default to WARN to reduce log volume
@@ -740,10 +761,10 @@ app:
 
 Before considering a configuration change complete, verify:
 - [ ] Local `application.yml` has the correct values for local development
-- [ ] `config-repo/<service>.yml` has the correct values for Docker Compose
-- [ ] `config-repo/<service>-kubernetes.yml` has Kubernetes-specific overrides if needed
+- [ ] `infrastructure/config-repo/<service>.yml` has the correct values for Docker Compose
+- [ ] `infrastructure/config-repo/<service>-kubernetes.yml` has Kubernetes-specific overrides if needed
 - [ ] Helm ConfigMap has the correct values for Kubernetes deployment — **both base and kubernetes profile files**
-- [ ] Profile-specific files (`*-kubernetes.yml`) in ConfigMap match `config-repo/` versions
+- [ ] Profile-specific files (`*-kubernetes.yml`) in ConfigMap match `infrastructure/config-repo/` versions
 - [ ] Environment variables in Helm `deployment.yaml` templates match what the config expects
 
 ## Kubernetes / Helm Guidelines
@@ -819,14 +840,14 @@ readinessProbe:
 
 ### Config Server ConfigMap (Required)
 
-The config-server Helm ConfigMap (`infrastructure/helm/config-server/templates/configmap.yaml`) must include **all** configuration files that exist in `config-repo/`:
+The config-server Helm ConfigMap (`infrastructure/helm/config-server/templates/configmap.yaml`) must include **all** configuration files that exist in `infrastructure/config-repo/`:
 
 - Base files: `application.yml`, `<service>.yml` for each service
 - Kubernetes profile files: `application-kubernetes.yml`, `<service>-kubernetes.yml` for each service
 
 Client apps run with `SPRING_PROFILES_ACTIVE=kubernetes`, so the config-server must serve both `<service>.yml` and `<service>-kubernetes.yml`. Missing profile files means Kubernetes-specific overrides (service hostnames, env var references) won't be applied.
 
-**When adding a new config-repo file, always add it to the Helm ConfigMap as well.**
+**When adding a new `infrastructure/config-repo/` file, always add it to the Helm ConfigMap as well.**
 
 ### ArgoCD GitOps Deployment (Required)
 
@@ -847,7 +868,7 @@ Kubernetes deployment uses **ArgoCD** with the **App of Apps** pattern. A root A
 **Bootstrap (deploy):**
 ```bash
 # Full setup: installs ArgoCD into 'argocd' namespace, then deploys project + root app
-infrastructure\argocd\deployArgo.bat
+infrastructure\deployArgo.bat
 
 # Or manually if ArgoCD is already installed:
 kubectl apply -f infrastructure/argocd/project.yaml
@@ -856,7 +877,10 @@ kubectl apply -f infrastructure/argocd/root-app.yaml
 
 **Teardown:**
 ```bash
-# Cascading delete removes all child apps and their resources
+# Full cleanup: deletes all ArgoCD apps, AppProject, and namespace
+infrastructure\cleanupKubernetes.bat
+
+# Or manually:
 kubectl delete application perf-demo -n argocd
 kubectl delete appproject perf-demo -n argocd
 ```
@@ -874,7 +898,6 @@ kubectl delete appproject perf-demo -n argocd
 **ArgoCD manifests structure:**
 ```
 infrastructure/argocd/
-├── deployArgo.bat            # Bootstrap script (installs ArgoCD + deploys apps)
 ├── project.yaml              # AppProject (RBAC scoping)
 ├── root-app.yaml             # Root Application (deploys child apps)
 └── apps/                     # One Application CR per service (21 files)

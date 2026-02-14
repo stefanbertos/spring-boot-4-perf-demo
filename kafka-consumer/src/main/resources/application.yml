@@ -5,7 +5,7 @@ spring:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   docker:
     compose:
-      file: ../infrastructure/compose.yaml
+      file: ../infrastructure/docker/compose.yaml
   kafka:
     bootstrap-servers: localhost:9092
     producer:

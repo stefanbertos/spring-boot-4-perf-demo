@@ -56,7 +56,7 @@ echo.
 :: Step 4: Apply AppProject
 :: ============================================
 echo [4/5] Applying ArgoCD AppProject...
-kubectl apply -f "%~dp0project.yaml"
+kubectl apply -f "%~dp0argocd\project.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply AppProject
     exit /b 1
@@ -68,7 +68,7 @@ echo.
 :: Step 5: Apply Root Application (App of Apps)
 :: ============================================
 echo [5/5] Applying root Application (App of Apps)...
-kubectl apply -f "%~dp0root-app.yaml"
+kubectl apply -f "%~dp0argocd\root-app.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply root Application
     exit /b 1

@@ -9,7 +9,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo === Rebuilding Docker images ===
-docker compose -f infrastructure/compose.yaml build config-server perf-tester ibm-mq-consumer kafka-consumer api-gateway
+docker compose -f infrastructure/docker/compose.yaml build config-server perf-tester ibm-mq-consumer kafka-consumer api-gateway
 
 
 if %ERRORLEVEL% NEQ 0 (
@@ -19,11 +19,11 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo === Stopping Docker Compose ===
-docker compose -f infrastructure/compose.yaml down
+docker compose -f infrastructure/docker/compose.yaml down
 
 echo.
 echo === Starting all services ===
-docker compose -f infrastructure/compose.yaml up --build -d
+docker compose -f infrastructure/docker/compose.yaml up --build -d
 
 echo ============================================
 echo  Ingress URLs

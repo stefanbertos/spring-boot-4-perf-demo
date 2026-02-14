@@ -28,19 +28,19 @@ The application supports multiple deployment strategies:
 [source,bash]
 ----
 # Build and start all services
-docker compose up --build
+docker compose -f infrastructure/docker/compose.yaml up --build
 
 # Start in detached mode
-docker compose up -d --build
+docker compose -f infrastructure/docker/compose.yaml up -d --build
 
 # View logs
-docker compose logs -f
+docker compose -f infrastructure/docker/compose.yaml logs -f
 
 # Stop all services
-docker compose down
+docker compose -f infrastructure/docker/compose.yaml down
 
 # Stop and remove volumes
-docker compose down -v
+docker compose -f infrastructure/docker/compose.yaml down -v
 ----
 
 === Scaling Services
@@ -50,10 +50,10 @@ Scale specific services for load testing:
 [source,bash]
 ----
 # Scale ibm-mq-consumer to 10 replicas
-docker compose up -d --scale ibm-mq-consumer=10
+docker compose -f infrastructure/docker/compose.yaml up -d --scale ibm-mq-consumer=10
 
 # Scale kafka-consumer to 10 replicas
-docker compose up -d --scale kafka-consumer=10
+docker compose -f infrastructure/docker/compose.yaml up -d --scale kafka-consumer=10
 ----
 
 === Resource Allocation
@@ -398,8 +398,8 @@ helm rollback perf-perf-tester 3 -n perf-demo
 [source,bash]
 ----
 # Pull previous image version
-docker compose pull
+docker compose -f infrastructure/docker/compose.yaml pull
 
 # Restart with previous images
-docker compose up -d
+docker compose -f infrastructure/docker/compose.yaml up -d
 ----

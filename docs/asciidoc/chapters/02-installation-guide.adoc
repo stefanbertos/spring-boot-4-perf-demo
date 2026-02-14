@@ -137,7 +137,7 @@ Start all services using Docker Compose:
 
 [source,bash]
 ----
-docker compose up --build
+docker compose -f infrastructure/docker/compose.yaml up --build
 ----
 
 This will start:
@@ -159,7 +159,7 @@ Start infrastructure services only, then run applications locally:
 [source,bash]
 ----
 # Start infrastructure
-runLocalDocker.bat
+infrastructure\runLocalDocker.bat
 
 # In separate terminals, start each application
 ./gradlew :perf-tester:bootRun
@@ -287,7 +287,7 @@ For Docker Desktop:
 
 === Port Conflicts
 
-If ports are already in use, modify `compose.yaml` or use different ports:
+If ports are already in use, modify `infrastructure/docker/compose.yaml` or use different ports:
 
 [source,yaml]
 ----
@@ -303,7 +303,7 @@ If IBM MQ fails to start with license error:
 
 [source,bash]
 ----
-# Ensure LICENSE=accept is set in compose.yaml
+# Ensure LICENSE=accept is set in infrastructure/docker/compose.yaml
 environment:
   LICENSE: accept
 ----

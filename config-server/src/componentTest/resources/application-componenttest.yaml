@@ -5,7 +5,7 @@ spring:
     config:
       server:
         native:
-          search-locations: file:./config-repo
+          search-locations: file:./infrastructure/config-repo
 
 server:
   port: 0

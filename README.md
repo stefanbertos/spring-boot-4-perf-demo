@@ -48,7 +48,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 1. Build and start all services:
    ```bash
-   docker compose -f infrastructure/compose.yaml up --build
+   docker compose -f infrastructure/docker/compose.yaml up --build
    ```
 
 2. Or use the convenience script (builds, creates images, starts everything):
@@ -56,9 +56,14 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
    infrastructure\runLocalDocker.bat
    ```
 
-3. Or run infrastructure only and start apps locally:
+3. To stop and clean up everything:
    ```bash
-   docker compose -f infrastructure/compose.yaml up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
+   infrastructure\cleanupDocker.bat
+   ```
+
+4. Or run infrastructure only and start apps locally:
+   ```bash
+   docker compose -f infrastructure/docker/compose.yaml up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
    ```
 
    Then run each module (start config-server first):
@@ -70,17 +75,16 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
    ./gradlew :api-gateway:bootRun
    ```
 
-### Kubernetes Deployment (Helm)
+### Kubernetes Deployment (ArgoCD)
 
 ```bash
-cd infrastructure/helm
-deployHelm.bat
+# Deploy all services via ArgoCD (App of Apps)
+infrastructure\deployArgo.bat
 ```
 
-To uninstall:
+To tear down everything:
 ```bash
-cd infrastructure/helm
-cleanup.bat
+infrastructure\cleanupKubernetes.bat
 ```
 
 ## Service URLs
@@ -206,7 +210,7 @@ All application configuration is centralized via Spring Cloud Config Server with
 ### Config Repository Structure
 
 ```
-config-repo/
+infrastructure/config-repo/
 ├── application.yml              # Shared config (virtual threads, task pool, management)
 ├── application-docker.yml       # Shared Docker Compose profile
 ├── application-kubernetes.yml   # Shared Kubernetes profile

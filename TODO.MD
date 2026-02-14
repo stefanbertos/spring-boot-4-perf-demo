@@ -1,3 +1,1 @@
-32k context size for ai
-
-add clenupDocker and cleanup kubernetes script to delete everything there
+scan the whole repo and make plan what could be improved in all sides, either structure of the folders, best practices, documentation, code etc

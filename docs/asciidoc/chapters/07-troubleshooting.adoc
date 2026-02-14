@@ -19,11 +19,11 @@ Application fails to start with connection errors.
 [source,bash]
 ----
 # Check if MQ is running
-docker compose ps ibm-mq
+docker compose -f infrastructure/docker/compose.yaml ps ibm-mq
 curl -k https://localhost:9443/ibmmq/console
 
 # Check if Kafka is running
-docker compose ps kafka
+docker compose -f infrastructure/docker/compose.yaml ps kafka
 kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # Check port availability
@@ -206,7 +206,7 @@ Kafka consumer lag keeps growing.
 +
 [source,bash]
 ----
-docker compose up -d --scale kafka-consumer=5
+docker compose -f infrastructure/docker/compose.yaml up -d --scale kafka-consumer=5
 ----
 
 . Increase partition count (requires topic recreation)
@@ -374,15 +374,15 @@ kubectl exec -it <pod-name> -- jcmd 1 GC.heap_dump /tmp/heap.hprof
 [source,bash]
 ----
 # Overall status
-docker compose ps
+docker compose -f infrastructure/docker/compose.yaml ps
 kubectl get all -n perf-demo
 
 # Logs
-docker compose logs -f <service>
+docker compose -f infrastructure/docker/compose.yaml logs -f <service>
 kubectl logs -f deployment/<name> -n perf-demo
 
 # Shell access
-docker compose exec <service> bash
+docker compose -f infrastructure/docker/compose.yaml exec <service> bash
 kubectl exec -it <pod> -n perf-demo -- bash
 
 # Resource usage
