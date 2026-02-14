@@ -68,7 +68,8 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(xargs:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }

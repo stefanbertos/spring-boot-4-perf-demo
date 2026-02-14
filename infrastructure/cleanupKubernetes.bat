@@ -65,6 +65,8 @@ if %errorlevel% neq 0 (
 echo      Namespace %APP_NAMESPACE% deleted.
 echo.
 
+kubectl delete namespace %ARGOCD_NAMESPACE%
+
 echo ============================================
 echo  Kubernetes Cleanup Complete!
 echo ============================================
@@ -74,9 +76,6 @@ echo   - ArgoCD root application and all child applications
 echo   - AppProject 'perf-demo'
 echo   - Namespace '%APP_NAMESPACE%' and all its resources
 echo.
-echo Note: ArgoCD itself is still installed in the '%ARGOCD_NAMESPACE%' namespace.
-echo To also remove ArgoCD:
-echo   kubectl delete namespace %ARGOCD_NAMESPACE%
 echo.
 echo To redeploy, run: infrastructure\deployArgo.bat
 

@@ -71,8 +71,9 @@ public class PerformanceTracker {
             updateMin(latencyNanos);
             updateMax(latencyNanos);
 
-            if (completionLatch != null) {
-                completionLatch.countDown();
+            var latch = completionLatch;
+            if (latch != null) {
+                latch.countDown();
             }
             return latencyNanos;
         } else {
@@ -102,10 +103,11 @@ public class PerformanceTracker {
     }
 
     public boolean awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
-        if (completionLatch == null) {
+        var latch = completionLatch;
+        if (latch == null) {
             return true;
         }
-        return completionLatch.await(timeout, unit);
+        return latch.await(timeout, unit);
     }
 
     public PerfTestResult getResult() {
