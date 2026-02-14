@@ -29,6 +29,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :kafka-consumer:test
 ./gradlew :config-server:test
 
+# Run component tests (requires Docker)
+./gradlew componentTest
+
+# Run component tests for specific module
+./gradlew :kafka-consumer:componentTest
+./gradlew :ibm-mq-consumer:componentTest
+./gradlew :perf-tester:componentTest
+./gradlew :config-server:componentTest
+./gradlew :api-gateway:componentTest
+
 # Clean build
 ./gradlew clean build
 
@@ -39,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :perf-tester:bootBuildImage
 
 # Run with Docker Compose (images must be built first)
-docker compose up
+docker compose -f infrastructure/compose.yaml up
 ```
 
 ## Architecture
@@ -70,6 +80,19 @@ perf-tester -> DEV.QUEUE.2 -> ibm-mq-consumer -> Kafka (mq-requests) -> kafka-co
                                                                               |
 perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 ```
+
+### Component Tests (BDD)
+
+Each module has a `componentTest` source set (`src/componentTest/`) with **Cucumber 7.x** BDD tests and **Testcontainers** for real infrastructure. Tests are NOT wired into `build` or `check` (require Docker).
+
+- **kafka-consumer**: Testcontainers Kafka — validates message processing and header forwarding
+- **ibm-mq-consumer**: Testcontainers Kafka + IBM MQ — validates MQ-to-Kafka and Kafka-to-MQ bridging
+- **perf-tester**: Testcontainers IBM MQ — validates MQ send/receive and latency tracking
+- **config-server**: No containers — validates config serving via REST API
+- **api-gateway**: WireMock stubs — validates gateway routing to backends
+
+Feature files: `src/componentTest/resources/features/*.feature`
+Reports: `build/reports/cucumber/cucumber-report.html`
 
 ## Coding Standards
 
@@ -363,7 +386,9 @@ OCI images are built via `./gradlew bootBuildImage` (Cloud Native Buildpacks) �
 perf-demo/
 ├── build.gradle              # Root build with shared config + bootBuildImage
 ├── settings.gradle           # Module includes
-├── compose.yaml              # Docker Compose orchestration (references pre-built images)
+├── infrastructure/
+│   ├── compose.yaml          # Docker Compose orchestration (references pre-built images)
+│   ├── runLocalDocker.bat    # Script to build images and run Docker Compose locally
 ├── config-repo/              # Spring Cloud Config files (served by config-server)
 │   ├── application.yml       # Shared config for all services
 │   ├── application-kubernetes.yml
@@ -812,7 +837,7 @@ Kubernetes deployment uses **ArgoCD** with the **App of Apps** pattern. A root A
 | Wave | Services | Rationale |
 |------|----------|-----------|
 | **0** | ibm-mq, oracle, redis, kafka | Infrastructure — databases & message brokers |
-| **1** | prometheus, oracle-exporter, loki, promtail, grafana, sonarqube | Monitoring stack |
+| **1** | prometheus, oracle-exporter, loki, promtail, grafana, sonarqube, trivy-operator | Monitoring & security scanning |
 | **2** | config-server | Configuration — all Spring Boot apps depend on it |
 | **3** | ibm-mq-consumer, kafka-consumer, perf-tester | Applications |
 | **4** | perf-ui, kafdrop, redis-commander, kafka-exporter | UI & tools |
@@ -852,7 +877,7 @@ infrastructure/argocd/
 ├── deployArgo.bat            # Bootstrap script (installs ArgoCD + deploys apps)
 ├── project.yaml              # AppProject (RBAC scoping)
 ├── root-app.yaml             # Root Application (deploys child apps)
-└── apps/                     # One Application CR per service (20 files)
+└── apps/                     # One Application CR per service (21 files)
     ├── ibm-mq.yaml           # wave 0
     ├── oracle.yaml           # wave 0
     ├── redis.yaml            # wave 0
@@ -863,6 +888,7 @@ infrastructure/argocd/
     ├── promtail.yaml         # wave 1
     ├── grafana.yaml          # wave 1
     ├── sonarqube.yaml        # wave 1
+    ├── trivy-operator.yaml   # wave 1
     ├── config-server.yaml    # wave 2
     ├── ibm-mq-consumer.yaml  # wave 3
     ├── kafka-consumer.yaml   # wave 3
@@ -874,6 +900,24 @@ infrastructure/argocd/
     ├── api-gateway.yaml      # wave 5
     └── ingress.yaml          # wave 6
 ```
+
+### Trivy Operator (Container Image Scanning)
+
+Trivy Operator (Aqua Security, Apache 2.0) runs as a Kubernetes operator at sync wave 1, automatically scanning container images for CVEs, exposed secrets, and misconfigurations when pods are created or updated. Results are stored as `VulnerabilityReport` CRDs.
+
+**Viewing scan results:**
+```bash
+# List all vulnerability reports
+kubectl get vulnerabilityreports -n perf-demo
+
+# Inspect a specific pod's report
+kubectl get vulnerabilityreport -n perf-demo -l trivy-operator.resource.name=<pod-name> -o yaml
+
+# Query Prometheus metrics
+# trivy_image_vulnerabilities — counts by severity
+```
+
+**Configuration:** Deployed via the official Aqua Helm chart (pinned to v0.27.0) referenced directly from the ArgoCD Application in `infrastructure/argocd/apps/trivy-operator.yaml`. Scans only the `perf-demo` namespace with `ignoreUnfixed: true` to reduce noise.
 
 ### Helm Chart Structure
 

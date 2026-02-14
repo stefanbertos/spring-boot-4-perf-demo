@@ -150,6 +150,56 @@ subprojects {
         dependsOn jacocoTestCoverageVerification
     }
 
+    // ==================== Component Test Source Set ====================
+    sourceSets {
+        componentTest {
+            java.srcDir 'src/componentTest/java'
+            resources.srcDir 'src/componentTest/resources'
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+        }
+    }
+
+    configurations {
+        componentTestImplementation.extendsFrom implementation
+        componentTestRuntimeOnly.extendsFrom runtimeOnly
+        componentTestAnnotationProcessor.extendsFrom annotationProcessor
+        componentTestCompileOnly.extendsFrom compileOnly
+    }
+
+    dependencies {
+        componentTestImplementation 'io.cucumber:cucumber-java:7.20.1'
+        componentTestImplementation 'io.cucumber:cucumber-spring:7.20.1'
+        componentTestImplementation 'io.cucumber:cucumber-junit-platform-engine:7.20.1'
+        componentTestImplementation 'org.junit.platform:junit-platform-suite'
+        componentTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+        componentTestImplementation 'org.springframework.boot:spring-boot-testcontainers'
+        componentTestImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
+        componentTestImplementation 'org.testcontainers:testcontainers'
+        componentTestImplementation 'org.testcontainers:junit-jupiter'
+        componentTestImplementation 'org.testcontainers:kafka'
+        componentTestImplementation 'org.awaitility:awaitility:4.2.2'
+        componentTestCompileOnly 'org.projectlombok:lombok'
+        componentTestAnnotationProcessor 'org.projectlombok:lombok'
+    }
+
+    tasks.register('componentTest', Test) {
+        description = 'Runs Cucumber BDD component tests with Testcontainers.'
+        group = 'verification'
+        testClassesDirs = sourceSets.componentTest.output.classesDirs
+        classpath = sourceSets.componentTest.runtimeClasspath
+        useJUnitPlatform()
+        shouldRunAfter tasks.named('test')
+    }
+
+    // Exclude componentTest sources from Checkstyle and PMD
+    tasks.withType(Checkstyle).configureEach {
+        exclude '**/componentTest/**'
+    }
+    tasks.withType(Pmd).configureEach {
+        exclude '**/componentTest/**'
+    }
+
     configurations {
         compileOnly {
             extendsFrom annotationProcessor

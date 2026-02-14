@@ -1,7 +1,7 @@
 services:
   config-server:
     build:
-      context: ./config-server
+      context: ../config-server
       dockerfile: Dockerfile
     ports:
       - "8888:8888"
@@ -10,7 +10,7 @@ services:
       SPRING_PROFILES_ACTIVE: native
       CONFIG_REPO_PATH: /config-repo
     volumes:
-      - ./config-repo:/config-repo:ro
+      - ../config-repo:/config-repo:ro
     mem_limit: 1g
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 1"]
@@ -21,7 +21,7 @@ services:
 
   perf-tester:
     build:
-      context: ./perf-tester
+      context: ../perf-tester
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -44,7 +44,7 @@ services:
 
   ibm-mq-consumer:
     build:
-      context: ./ibm-mq-consumer
+      context: ../ibm-mq-consumer
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
@@ -63,7 +63,7 @@ services:
 
   kafka-consumer:
     build:
-      context: ./kafka-consumer
+      context: ../kafka-consumer
       dockerfile: Dockerfile
     ports:
       - "8082:8082"
@@ -81,7 +81,7 @@ services:
 
   api-gateway:
     build:
-      context: ./api-gateway
+      context: ../api-gateway
       dockerfile: Dockerfile
     ports:
       - "8090:8090"
@@ -115,7 +115,7 @@ services:
 
   perf-ui:
     build:
-      context: ./perf-ui
+      context: ../perf-ui
       dockerfile: Dockerfile
     ports:
       - "3001:80"
@@ -187,14 +187,14 @@ services:
       - "9443:9443"
       - "9157:9157"
     volumes:
-      - ./infrastructure/docker/mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
+      - ./docker/mq-config/20-create-queues.mqsc:/etc/mqm/20-create-queues.mqsc
 
   prometheus:
     image: prom/prometheus:v3.1.0
     ports:
       - "9090:9090"
     volumes:
-      - ./infrastructure/docker/prometheus:/etc/prometheus
+      - ./docker/prometheus:/etc/prometheus
 
   loki:
     image: grafana/loki:3.3.2
@@ -202,7 +202,7 @@ services:
       - "3100:3100"
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes:
-      - ./infrastructure/docker/loki:/etc/loki
+      - ./docker/loki:/etc/loki
       - loki-data:/loki
 
   kafdrop:
@@ -237,8 +237,8 @@ services:
       GF_SECURITY_COOKIE_SAMESITE: disabled
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./infrastructure/docker/grafana/provisioning:/etc/grafana/provisioning
-      - ./infrastructure/docker/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - renderer
       - prometheus

@@ -30,17 +30,33 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
+      - name: Generate aggregated JaCoCo report
+        if: always()
+        run: ./gradlew jacocoAggregatedReport --no-daemon
+
+      - name: Archive boot JARs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-jars
+          path: |
+            perf-tester/build/libs/*.jar
+            ibm-mq-consumer/build/libs/*.jar
+            kafka-consumer/build/libs/*.jar
+            api-gateway/build/libs/*.jar
+            config-server/build/libs/*.jar
+
       - name: Archive Checkstyle reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: checkstyle-reports
           path: |
-            perf-tester/build/reports/checkstyle/main.html
-            ibm-mq-consumer/build/reports/checkstyle/main.html
-            kafka-consumer/build/reports/checkstyle/main.html
-            api-gateway/build/reports/checkstyle/main.html
-            config-server/build/reports/checkstyle/main.html
+            perf-tester/build/reports/checkstyle/
+            ibm-mq-consumer/build/reports/checkstyle/
+            kafka-consumer/build/reports/checkstyle/
+            api-gateway/build/reports/checkstyle/
+            config-server/build/reports/checkstyle/
 
       - name: Archive PMD reports
         if: always()
@@ -48,11 +64,11 @@ jobs:
         with:
           name: pmd-reports
           path: |
-            perf-tester/build/reports/pmd/main.html
-            ibm-mq-consumer/build/reports/pmd/main.html
-            kafka-consumer/build/reports/pmd/main.html
-            api-gateway/build/reports/pmd/main.html
-            config-server/build/reports/pmd/main.html
+            perf-tester/build/reports/pmd/
+            ibm-mq-consumer/build/reports/pmd/
+            kafka-consumer/build/reports/pmd/
+            api-gateway/build/reports/pmd/
+            config-server/build/reports/pmd/
 
       - name: Archive JaCoCo reports
         if: always()
@@ -60,13 +76,20 @@ jobs:
         with:
           name: jacoco-reports
           path: |
-            perf-tester/build/reports/jacoco/test/html/
-            ibm-mq-consumer/build/reports/jacoco/test/html/
-            kafka-consumer/build/reports/jacoco/test/html/
-            api-gateway/build/reports/jacoco/test/html/
-            config-server/build/reports/jacoco/test/html/
+            perf-tester/build/reports/jacoco/
+            ibm-mq-consumer/build/reports/jacoco/
+            kafka-consumer/build/reports/jacoco/
+            api-gateway/build/reports/jacoco/
+            config-server/build/reports/jacoco/
 
-      - name: Archive test reports
+      - name: Archive aggregated JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-aggregated-report
+          path: build/reports/jacoco/aggregated/
+
+      - name: Archive test reports (HTML)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -77,6 +100,42 @@ jobs:
             kafka-consumer/build/reports/tests/
             api-gateway/build/reports/tests/
             config-server/build/reports/tests/
+
+      - name: Archive test results (XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-xml
+          path: |
+            perf-tester/build/test-results/
+            ibm-mq-consumer/build/test-results/
+            kafka-consumer/build/test-results/
+            api-gateway/build/test-results/
+            config-server/build/test-results/
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Test Results
+          path: '**/build/test-results/test/*.xml'
+          reporter: java-junit
+
+      - name: Run component tests
+        if: success()
+        run: ./gradlew componentTest --no-daemon
+
+      - name: Archive Cucumber reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-reports
+          path: |
+            perf-tester/build/reports/cucumber/
+            ibm-mq-consumer/build/reports/cucumber/
+            kafka-consumer/build/reports/cucumber/
+            api-gateway/build/reports/cucumber/
+            config-server/build/reports/cucumber/
 
       - name: Archive technical documentation (PDF)
         uses: actions/upload-artifact@v4
@@ -89,3 +148,13 @@ jobs:
         with:
           name: technical-documentation-html
           path: build/docs/html/
+
+      - name: Archive Gradle build scans and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports
+          path: |
+            build/reports/
+            !build/reports/jacoco/
+            !build/reports/dependency-check-report.*

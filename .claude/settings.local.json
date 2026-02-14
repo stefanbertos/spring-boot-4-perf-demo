@@ -67,7 +67,8 @@
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(find:*)"
     ]
   }
 }

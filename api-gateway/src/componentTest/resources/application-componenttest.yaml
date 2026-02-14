@@ -1,0 +1,28 @@
+spring:
+  config:
+    import:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: perf-tester
+              uri: ${PERF_TESTER_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/**
+              filters:
+                - StripPrefix=0
+            - id: config-server
+              uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+              predicates:
+                - Path=/config,/config/**
+              filters:
+                - StripPrefix=1
+
+server:
+  port: 0
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG

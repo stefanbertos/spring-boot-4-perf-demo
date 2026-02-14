@@ -1,26 +1,19 @@
 spring:
-  application:
-    name: ibm-mq-consumer
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+    import:
   docker:
     compose:
-      file: ../infrastructure/compose.yaml
+      enabled: false
   jms:
     pool:
       enabled: true
-      max-connections: 20
-      max-sessions-per-connection: 10
+      max-connections: 5
+      max-sessions-per-connection: 5
   kafka:
-    bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: com.example.ibmmqconsumer.serialization.AvroSerializer
       acks: 1
-      compression-type: lz4
-      properties:
-        linger.ms: 5
-        batch.size: 65536
     consumer:
       group-id: ibm-mq-consumer-group
       auto-offset-reset: earliest
@@ -29,12 +22,20 @@ spring:
 
 app:
   mq:
+    queue:
+      inbound: DEV.QUEUE.2
+      outbound: DEV.QUEUE.1
+  kafka:
+    topic:
+      request: mq-requests
+      response: mq-responses
+    consumer:
+      concurrency: 1
 
 logging:
   level:
     root: INFO
-    com.example.ibmmqconsumer: INFO
-    org.springframework: INFO
+    com.example.ibmmqconsumer: DEBUG
     org.apache.kafka: WARN
-    com.ibm.mq: INFO
-    com.ibm.msg: INFO
+    com.ibm.mq: WARN
+    com.ibm.msg: WARN

@@ -20,4 +20,7 @@
 
     <!-- Suppress all checks for Avro-generated code -->
     <suppress checks=".*" files=".*/com/example/avro/.*"/>
+
+    <!-- Suppress all checks for component test sources -->
+    <suppress checks=".*" files=".*/componentTest/.*"/>
 </suppressions>

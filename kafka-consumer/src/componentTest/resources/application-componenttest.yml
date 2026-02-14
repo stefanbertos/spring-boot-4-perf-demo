@@ -1,21 +1,14 @@
 spring:
-  application:
-    name: kafka-consumer
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+    import:
   docker:
     compose:
-      file: ../infrastructure/compose.yaml
+      enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: com.example.kafkaconsumer.serialization.AvroSerializer
       acks: 1
-      compression-type: lz4
-      properties:
-        linger.ms: 5
-        batch.size: 65536
     consumer:
       group-id: kafka-consumer-group
       auto-offset-reset: earliest
@@ -28,11 +21,10 @@ app:
       request: mq-requests
       response: mq-responses
     consumer:
-      concurrency: 20
+      concurrency: 1
 
 logging:
   level:
     root: INFO
-    com.example.kafkaconsumer: INFO
-    org.springframework: INFO
+    com.example.kafkaconsumer: DEBUG
     org.apache.kafka: WARN

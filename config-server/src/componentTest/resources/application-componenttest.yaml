@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:./config-repo
+
+server:
+  port: 0
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.config: DEBUG

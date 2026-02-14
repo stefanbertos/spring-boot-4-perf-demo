@@ -48,17 +48,17 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 1. Build and start all services:
    ```bash
-   docker compose up --build
+   docker compose -f infrastructure/compose.yaml up --build
    ```
 
 2. Or use the convenience script (builds, creates images, starts everything):
    ```bash
-   runLocalDocker.bat
+   infrastructure\runLocalDocker.bat
    ```
 
 3. Or run infrastructure only and start apps locally:
    ```bash
-   docker compose up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
+   docker compose -f infrastructure/compose.yaml up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
    ```
 
    Then run each module (start config-server first):
