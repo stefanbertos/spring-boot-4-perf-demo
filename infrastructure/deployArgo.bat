@@ -7,6 +7,7 @@ echo ============================================
 echo.
 
 set ARGOCD_NAMESPACE=argocd
+set APP_NAMESPACE=perf-demo
 set ARGOCD_VERSION=stable
 
 :: Check if kubectl is installed
@@ -84,10 +85,16 @@ for /f "tokens=*" %%p in ('kubectl -n %ARGOCD_NAMESPACE% get secret argocd-initi
 for /f "tokens=*" %%d in ('powershell -Command "[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('%ENCODED_PW%'))"') do set ARGOCD_PW=%%d
 
 :: ============================================
-:: Step 7: Start port-forward in new window
+:: Step 7: Start ArgoCD port-forward
 :: ============================================
-echo [7/7] Starting port-forward to ArgoCD UI...
+echo [7/7] Starting ArgoCD port-forward...
 start "ArgoCD Port-Forward" cmd /k "kubectl port-forward svc/argocd-server -n %ARGOCD_NAMESPACE% 8443:443"
+
+:: Detect ingress URL
+set INGRESS_HOST=localhost
+for /f "tokens=*" %%h in ('kubectl get ingress perf-demo-ingress -n %APP_NAMESPACE% -o jsonpath^="{.status.loadBalancer.ingress[0].ip}" 2^>nul') do (
+    if not "%%h"=="" set INGRESS_HOST=%%h
+)
 
 echo ============================================
 echo  ArgoCD Deployment Complete!
@@ -95,11 +102,28 @@ echo ============================================
 echo.
 echo ArgoCD is running in namespace: %ARGOCD_NAMESPACE%
 echo.
-echo ArgoCD UI:     https://localhost:8443
-echo Admin user:    admin
-echo Admin password: %ARGOCD_PW%
+echo ArgoCD UI:      https://localhost:8443
+echo Admin user:     admin
+echo Admin password:  %ARGOCD_PW%
 echo.
-echo Port-forward is running in a separate window.
+echo ============================================
+echo  Service URLs (via Ingress)
+echo ============================================
+echo.
+echo   ArgoCD           https://localhost:8443           (port-forward)
+echo   Perf UI          http://%INGRESS_HOST%/
+echo   Grafana          http://%INGRESS_HOST%/grafana          (admin / admin)
+echo   Prometheus       http://%INGRESS_HOST%/prometheus
+echo   Kafdrop          http://%INGRESS_HOST%/kafdrop
+echo   IBM MQ Console   http://%INGRESS_HOST%/ibmmq            (admin / passw0rd)
+echo   Redis Commander  http://%INGRESS_HOST%/redis-commander
+echo   SonarQube        http://%INGRESS_HOST%/sonar            (admin / admin)
+echo   Perf Tester API  http://%INGRESS_HOST%/api
+echo   Config Server    http://%INGRESS_HOST%/config
+echo   Loki (Grafana)   http://%INGRESS_HOST%/loki
+echo.
+echo All services are routed through the NGINX Ingress -^> API Gateway.
+echo ArgoCD port-forward is running in a separate window.
 echo ArgoCD will now automatically sync all child applications
 echo in wave order (0 through 6). Monitor progress in the UI.
 echo.

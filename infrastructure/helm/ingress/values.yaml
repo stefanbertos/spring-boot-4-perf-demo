@@ -1,10 +1,15 @@
 enabled: true
 
-className: ""
+className: nginx
 
 host: localhost
 
-annotations: {}
+annotations:
+  nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+  nginx.ingress.kubernetes.io/websocket-services: perf-api-gateway
+  nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
 tls:
   enabled: false

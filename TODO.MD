@@ -1,6 +1,4 @@
-after argo deployment is it possible to show all the urls for ui ?
-
-grafana dashboards are wrong for
+use igrafana dashboards are wrong for
 
 implement functionality in perf-tester ui - make better ui design, with most moderns principles, make sure to use ui library  or create internal ui component library for button, link, menu, table, dialog based on some material design or so, in future if i want to build a second ui i would use the libraries
 add some tool to guarrail quality in perf-ui similar like checkstyle, pmd, sonar etc so the rules are enforced and add standard react ts rules as default
