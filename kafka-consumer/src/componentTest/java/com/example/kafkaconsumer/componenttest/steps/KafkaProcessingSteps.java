@@ -48,8 +48,8 @@ public class KafkaProcessingSteps {
                     new NewTopic(responseTopic, 1, (short) 1)
             );
             admin.createTopics(topics).all().whenComplete((v, e) -> { }).toCompletionStage().toCompletableFuture().join();
-        } catch (Exception e) {
-            // Topics may already exist from a previous scenario
+        } catch (Exception ignored) {
+            // topics may already exist
         }
 
         // Create a consumer for the response topic
@@ -72,6 +72,7 @@ public class KafkaProcessingSteps {
         sendMessage(topic, content, Map.of());
     }
 
+    @SuppressWarnings("PMD.UseObjectForClearerAPI")
     @When("a message with content {string} and header {string} = {string} is sent to topic {string}")
     public void aMessageWithHeaderIsSentToTopic(String content, String headerName, String headerValue, String topic) {
         sendMessage(topic, content, Map.of(headerName, headerValue));
@@ -88,7 +89,7 @@ public class KafkaProcessingSteps {
     public void aMessageAppearsWithContent(int timeoutSeconds, String topic, String expectedContent) {
         var messages = pollMessages(timeoutSeconds);
         assertThat(messages)
-                .extracting(r -> r.value().getContent().toString())
+                .extracting(r -> String.valueOf(r.value().getContent()))
                 .contains(expectedContent);
     }
 
@@ -110,7 +111,7 @@ public class KafkaProcessingSteps {
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() -> {
                     var records = consumer.poll(Duration.ofMillis(200));
-                    records.forEach(r -> allMessages.add(r.value().getContent().toString()));
+                    records.forEach(r -> allMessages.add(String.valueOf(r.value().getContent())));
                     assertThat(allMessages).hasSize(expectedCount);
                 });
         assertThat(allMessages).allMatch(content -> content.endsWith(suffix));

@@ -30,14 +30,13 @@ public class MqToKafkaSteps {
 
     private final JmsTemplate jmsTemplate;
     private final KafkaAdmin kafkaAdmin;
+    private KafkaConsumer<String, MqMessage> consumer;
+    private final List<ConsumerRecord<String, MqMessage>> receivedMessages = new ArrayList<>();
 
     public MqToKafkaSteps(JmsTemplate jmsTemplate, KafkaAdmin kafkaAdmin) {
         this.jmsTemplate = jmsTemplate;
         this.kafkaAdmin = kafkaAdmin;
     }
-
-    private KafkaConsumer<String, MqMessage> consumer;
-    private final List<ConsumerRecord<String, MqMessage>> receivedMessages = new ArrayList<>();
 
     @Before("@mq-to-kafka")
     public void setupConsumer() {
@@ -76,7 +75,7 @@ public class MqToKafkaSteps {
                     var records = consumer.poll(Duration.ofMillis(200));
                     records.forEach(receivedMessages::add);
                     assertThat(receivedMessages)
-                            .extracting(r -> r.value().getContent().toString())
+                            .extracting(r -> String.valueOf(r.value().getContent()))
                             .contains(expectedContent);
                 });
     }

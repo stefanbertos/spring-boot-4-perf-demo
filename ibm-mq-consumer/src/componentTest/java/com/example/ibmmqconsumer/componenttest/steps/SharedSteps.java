@@ -20,8 +20,8 @@ public class SharedSteps {
         try (var admin = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
             admin.createTopics(List.of(new NewTopic(topic, 1, (short) 1)))
                     .all().whenComplete((v, e) -> { }).toCompletionStage().toCompletableFuture().join();
-        } catch (Exception e) {
-            // Topic may already exist
+        } catch (Exception ignored) {
+            // topic may already exist
         }
     }
 }

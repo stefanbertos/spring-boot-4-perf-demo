@@ -30,6 +30,7 @@ public class KafkaToMqSteps {
         this.kafkaAdmin = kafkaAdmin;
     }
 
+    @SuppressWarnings("PMD.UseObjectForClearerAPI")
     @When("a Kafka message with content {string} and header {string} = {string} is sent to {string}")
     public void aKafkaMessageWithHeaderIsSentTo(String content, String headerName, String headerValue, String topic) {
         sendKafkaMessage(topic, content, Map.of(headerName, headerValue));

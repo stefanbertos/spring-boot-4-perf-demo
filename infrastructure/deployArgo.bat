@@ -32,7 +32,7 @@ echo.
 :: Step 2: Install ArgoCD into its namespace
 :: ============================================
 echo [2/5] Installing ArgoCD (%ARGOCD_VERSION%) into namespace %ARGOCD_NAMESPACE%...
-kubectl apply -n %ARGOCD_NAMESPACE% -f https://raw.githubusercontent.com/argoproj/argo-cd/%ARGOCD_VERSION%/manifests/install.yaml
+kubectl apply --server-side -n %ARGOCD_NAMESPACE% -f https://raw.githubusercontent.com/argoproj/argo-cd/%ARGOCD_VERSION%/manifests/install.yaml
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install ArgoCD
     exit /b 1
