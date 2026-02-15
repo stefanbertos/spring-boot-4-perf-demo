@@ -38,7 +38,7 @@ jvm:
 resources:
   requests:
     memory: "512Mi"
-    cpu: "250m"
+    cpu: "500m"
   limits:
     memory: "2Gi"
-    cpu: "500m"
+    cpu: "2000m"
