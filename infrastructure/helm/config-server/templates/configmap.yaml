@@ -335,14 +335,6 @@ data:
                   filters:
                     - StripPrefix=0
 
-                # Perf-Tester Swagger UI and OpenAPI docs
-                - id: perf-tester-swagger
-                  uri: http://perf-perf-tester:8080
-                  predicates:
-                    - Path=/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
-                  filters:
-                    - StripPrefix=0
-
                 - id: sonar
                   uri: http://perf-sonarqube:9000
                   predicates:
@@ -506,14 +498,6 @@ data:
                   uri: http://perf-perf-tester:8080
                   predicates:
                     - Path=/api/**
-                  filters:
-                    - StripPrefix=0
-
-                # Perf-Tester Swagger UI and OpenAPI docs
-                - id: perf-tester-swagger
-                  uri: http://perf-perf-tester:8080
-                  predicates:
-                    - Path=/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
                   filters:
                     - StripPrefix=0
 

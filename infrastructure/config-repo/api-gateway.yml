@@ -82,14 +82,6 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Perf-Tester Swagger UI and OpenAPI docs
-            - id: perf-tester-swagger
-              uri: ${PERF_TESTER_URL:http://localhost:8080}
-              predicates:
-                - Path=/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
-              filters:
-                - StripPrefix=0
-
             # Sonar - has web context configured
             - id: sonar
               uri: ${SONAR_URL:http://localhost:9000}
