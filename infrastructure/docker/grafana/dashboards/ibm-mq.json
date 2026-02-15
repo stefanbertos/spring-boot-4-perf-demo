@@ -11,8 +11,16 @@
     {
       "title": "Messages Put Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -29,8 +37,16 @@
     {
       "title": "Messages Get Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -47,8 +63,16 @@
     {
       "title": "Bytes Put Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -65,8 +89,16 @@
     {
       "title": "Bytes Get Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_destructive_get_bytes_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -83,8 +115,16 @@
     {
       "title": "Commits / Rollbacks Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_commit_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -105,8 +145,16 @@
     {
       "title": "Failed Operations Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "rate(ibmmq_qmgr_failed_mqput_total{job=\"ibm-mq\"}[$__rate_interval])",
@@ -131,8 +179,16 @@
     {
       "title": "Queue Manager CPU Load",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_cpu_load_one_minute_average_percentage{job=\"ibm-mq\"}",
@@ -154,8 +210,16 @@
     {
       "title": "Log Write Latency",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_log_write_latency_seconds{job=\"ibm-mq\"}",
@@ -172,8 +236,16 @@
     {
       "title": "Connections",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_mqconn_mqconnx_total{job=\"ibm-mq\"}",
@@ -190,8 +262,16 @@
     {
       "title": "Total Messages Put",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_mqput_mqput1_total{job=\"ibm-mq\"}",
@@ -208,8 +288,16 @@
     {
       "title": "Total Messages Get",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_destructive_get_total{job=\"ibm-mq\"}",
@@ -226,8 +314,16 @@
     {
       "title": "Log Space Used %",
       "type": "gauge",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
           "expr": "ibmmq_qmgr_log_primary_space_in_use_percentage{job=\"ibm-mq\"}",
@@ -241,9 +337,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "red", "value": 90 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
             ]
           }
         },
@@ -257,7 +362,7 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-5m",
     "to": "now"
   },
   "title": "IBM MQ",
