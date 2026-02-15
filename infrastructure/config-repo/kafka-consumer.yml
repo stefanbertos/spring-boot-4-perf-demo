@@ -43,4 +43,4 @@ management:
 
 logging:
   level:
-    com.example.kafkaconsumer: INFO
+    org.apache.kafka: WARN

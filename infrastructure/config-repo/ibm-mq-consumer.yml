@@ -61,4 +61,5 @@ management:
 
 logging:
   level:
-    com.example.ibmmqconsumer: INFO
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO

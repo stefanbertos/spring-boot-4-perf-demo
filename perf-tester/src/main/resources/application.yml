@@ -28,7 +28,7 @@ app:
 logging:
   level:
     root: INFO
-    com.example.perftester: INFO
+    com.example: INFO
     org.springframework: INFO
     org.apache.kafka: WARN
     com.ibm.mq: INFO

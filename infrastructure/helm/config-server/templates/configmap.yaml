@@ -144,7 +144,6 @@ data:
         org.springframework.jms: INFO
         com.ibm.mq: INFO
         com.ibm.msg: INFO
-        com.example.perftester: INFO
 
   ibm-mq-consumer.yml: |
     server:
@@ -210,7 +209,8 @@ data:
 
     logging:
       level:
-        com.example.ibmmqconsumer: INFO
+        com.ibm.mq: INFO
+        com.ibm.msg: INFO
 
   kafka-consumer.yml: |
     server:
@@ -257,7 +257,7 @@ data:
 
     logging:
       level:
-        com.example.kafkaconsumer: INFO
+        org.apache.kafka: WARN
 
   api-gateway.yml: |
     server:

@@ -33,6 +33,6 @@ app:
 logging:
   level:
     root: INFO
-    com.example.kafkaconsumer: INFO
+    com.example: INFO
     org.springframework: INFO
     org.apache.kafka: WARN
