@@ -18,9 +18,30 @@ if %errorlevel% neq 0 (
 )
 
 :: ============================================
-:: Step 1: Create ArgoCD namespace
+:: Step 1: Build application and Docker images
 :: ============================================
-echo [1/7] Creating namespace %ARGOCD_NAMESPACE%...
+echo [1/8] Building application and Docker images...
+pushd "%~dp0.."
+call gradlew.bat build -x componentTest -x generateDocs
+if %errorlevel% neq 0 (
+    echo ERROR: Gradle build failed
+    popd
+    exit /b 1
+)
+call gradlew.bat dockerBuildAll
+if %errorlevel% neq 0 (
+    echo ERROR: Docker image build failed
+    popd
+    exit /b 1
+)
+popd
+echo      All images built successfully.
+echo.
+
+:: ============================================
+:: Step 2: Create ArgoCD namespace
+:: ============================================
+echo [2/8] Creating namespace %ARGOCD_NAMESPACE%...
 kubectl create namespace %ARGOCD_NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace %ARGOCD_NAMESPACE%
@@ -30,9 +51,9 @@ echo      Namespace %ARGOCD_NAMESPACE% ready.
 echo.
 
 :: ============================================
-:: Step 2: Install ArgoCD into its namespace
+:: Step 3: Install ArgoCD into its namespace
 :: ============================================
-echo [2/7] Installing ArgoCD (%ARGOCD_VERSION%) into namespace %ARGOCD_NAMESPACE%...
+echo [3/8] Installing ArgoCD (%ARGOCD_VERSION%) into namespace %ARGOCD_NAMESPACE%...
 kubectl apply --server-side -n %ARGOCD_NAMESPACE% -f https://raw.githubusercontent.com/argoproj/argo-cd/%ARGOCD_VERSION%/manifests/install.yaml
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install ArgoCD
@@ -42,9 +63,9 @@ echo      ArgoCD manifests applied.
 echo.
 
 :: ============================================
-:: Step 3: Wait for ArgoCD to be ready
+:: Step 4: Wait for ArgoCD to be ready
 :: ============================================
-echo [3/7] Waiting for ArgoCD server to be ready...
+echo [4/8] Waiting for ArgoCD server to be ready...
 kubectl wait --for=condition=available deployment/argocd-server -n %ARGOCD_NAMESPACE% --timeout=300s
 if %errorlevel% neq 0 (
     echo ERROR: ArgoCD server did not become ready within 5 minutes
@@ -54,9 +75,9 @@ echo      ArgoCD server is ready.
 echo.
 
 :: ============================================
-:: Step 4: Apply AppProject
+:: Step 5: Apply AppProject
 :: ============================================
-echo [4/7] Applying ArgoCD AppProject...
+echo [5/8] Applying ArgoCD AppProject...
 kubectl apply -f "%~dp0argocd\project.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply AppProject
@@ -66,9 +87,9 @@ echo      AppProject 'perf-demo' created.
 echo.
 
 :: ============================================
-:: Step 5: Apply Root Application (App of Apps)
+:: Step 6: Apply Root Application (App of Apps)
 :: ============================================
-echo [5/7] Applying root Application (App of Apps)...
+echo [6/8] Applying root Application (App of Apps)...
 kubectl apply -f "%~dp0argocd\root-app.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply root Application
@@ -78,16 +99,16 @@ echo      Root Application 'perf-demo' created.
 echo.
 
 :: ============================================
-:: Step 6: Retrieve initial admin password
+:: Step 7: Retrieve initial admin password
 :: ============================================
-echo [6/7] Retrieving ArgoCD admin password...
+echo [7/8] Retrieving ArgoCD admin password...
 for /f "tokens=*" %%p in ('kubectl -n %ARGOCD_NAMESPACE% get secret argocd-initial-admin-secret -o jsonpath^="{.data.password}"') do set ENCODED_PW=%%p
 for /f "tokens=*" %%d in ('powershell -Command "[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('%ENCODED_PW%'))"') do set ARGOCD_PW=%%d
 
 :: ============================================
-:: Step 7: Start ArgoCD port-forward
+:: Step 8: Start ArgoCD port-forward
 :: ============================================
-echo [7/7] Starting ArgoCD port-forward...
+echo [8/8] Starting ArgoCD port-forward...
 start "ArgoCD Port-Forward" cmd /k "kubectl port-forward svc/argocd-server -n %ARGOCD_NAMESPACE% 8443:443"
 
 :: Detect ingress URL

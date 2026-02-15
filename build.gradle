@@ -245,6 +245,17 @@ subprojects {
         }
     }
 
+    // ==================== Docker Image Build ====================
+    if (file("${projectDir}/Dockerfile").exists()) {
+        tasks.register('dockerBuild', Exec) {
+            group = 'docker'
+            description = "Builds Docker image for ${project.name}"
+            dependsOn tasks.named('bootJar')
+            workingDir projectDir
+            commandLine 'docker', 'build', '-t', "${project.name}:latest", '.'
+        }
+    }
+
     // Log active build profile
     tasks.register('showProfile') {
         group = 'help'
@@ -393,4 +404,13 @@ tasks.register('generateDocs') {
 // Include documentation generation in the build
 tasks.named('build') {
     dependsOn 'generateDocs'
+}
+
+// ==================== Docker Image Build (all modules + perf-ui) ====================
+tasks.register('dockerBuildAll', Exec) {
+    group = 'docker'
+    description = 'Builds all Docker images (Spring Boot modules + perf-ui)'
+    dependsOn subprojects.findAll { it.tasks.findByName('dockerBuild') }.collect { it.tasks.named('dockerBuild') }
+    workingDir file('perf-ui')
+    commandLine 'docker', 'build', '-t', 'perf-ui:latest', '.'
 }

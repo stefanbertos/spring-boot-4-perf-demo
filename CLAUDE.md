@@ -42,11 +42,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Clean build
 ./gradlew clean build
 
-# Build OCI images via Buildpacks (replaces Dockerfiles)
-./gradlew bootBuildImage
+# Build all Docker images (Spring Boot modules + perf-ui)
+./gradlew dockerBuildAll
 
 # Build single module image
-./gradlew :perf-tester:bootBuildImage
+./gradlew :perf-tester:dockerBuild
 
 # Run with Docker Compose (images must be built first)
 docker compose -f infrastructure/docker/compose.yaml up
@@ -60,7 +60,7 @@ Multi-module Spring Boot 4.0 application for MQ and Kafka performance testing.
 - **Spring Cloud Config Server** with filesystem backend for centralized configuration
 - **Spring Actuator** with Prometheus metrics export
 - **Lombok** for boilerplate reduction
-- **Cloud Native Buildpacks** via `bootBuildImage` for OCI image builds (no Dockerfiles)
+- **Dockerfiles** per module for OCI image builds (`./gradlew dockerBuildAll`)
 - **Docker Compose** for IBM MQ, Kafka, Prometheus, Grafana
 - **IBM MQ** with mq-jms-spring-boot-starter:4.0.1
 - **Kafka** with spring-boot-starter-kafka
@@ -380,11 +380,11 @@ Request a free API key at https://nvd.nist.gov/developers/request-an-api-key
 
 ### Project Structure
 
-OCI images are built via `./gradlew bootBuildImage` (Cloud Native Buildpacks) — no Dockerfiles. JMS connection pooling is auto-configured by the MQ starter via `spring.jms.pool.*` properties — no custom `JmsConfig` classes.
+OCI images are built via `./gradlew dockerBuildAll` using Dockerfiles in each module. JMS connection pooling is auto-configured by the MQ starter via `spring.jms.pool.*` properties — no custom `JmsConfig` classes.
 
 ```
 perf-demo/
-├── build.gradle              # Root build with shared config + bootBuildImage
+├── build.gradle              # Root build with shared config + dockerBuildAll
 ├── settings.gradle           # Module includes
 ├── infrastructure/
 │   ├── runLocalDocker.bat    # Build images and start Docker Compose
@@ -631,15 +631,13 @@ JAVA_TOOL_OPTIONS="-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.
 
 | Layer | Location | Purpose |
 |-------|----------|---------|
-| Buildpacks | `bootBuildImage.environment` in `build.gradle` | `BP_JVM_VERSION` only; JVM flags set at runtime |
-| Docker Compose | `environment: JAVA_TOOL_OPTIONS: "..."` | Overrides buildpack defaults for local Docker Compose |
+| Dockerfile | `ENV JAVA_TOOL_OPTIONS` in each module's `Dockerfile` | Baked into the image as default |
+| Docker Compose | `environment: JAVA_TOOL_OPTIONS: "..."` | Overrides Dockerfile default for local Docker Compose |
 | Helm values.yaml | `jvm.options: "..."` | Override for Kubernetes deployments |
 | Helm deployment.yaml | `env: JAVA_TOOL_OPTIONS` from values | Injected into pod containers |
 | build.gradle | `bootRun.jvmArgs` | Local development via `./gradlew bootRun` |
 
-**Note:** Paketo Buildpacks set `JAVA_TOOL_OPTIONS` as a `.default` via the CNB launcher. Setting `JAVA_TOOL_OPTIONS` at runtime (Docker Compose, Helm) **completely replaces** the buildpack default, so our flags take full effect.
-
-**When changing JVM options, update all runtime layers** (Docker Compose, Helm values.yaml).
+**When changing JVM options, update all runtime layers** (Dockerfiles, Docker Compose, Helm values.yaml).
 
 **ZGC Memory Requirements (Required):**
 - ZGC uses multi-mapped memory regions and has higher non-heap overhead than G1GC
@@ -886,7 +884,7 @@ kubectl delete appproject perf-demo -n argocd
 ```
 
 **Container images** must be pre-built and available before deploying:
-- For local clusters: `./gradlew bootBuildImage && minikube image load <image>:latest`
+- For local clusters (Rancher Desktop): `./gradlew dockerBuildAll` (images are built directly into the local Docker daemon)
 - For remote clusters: push to a container registry and update `helm.valuesObject.image.repository` in the child Application manifests
 
 **When adding a new Helm chart, always:**
