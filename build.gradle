@@ -411,6 +411,6 @@ tasks.register('dockerBuildAll', Exec) {
     group = 'docker'
     description = 'Builds all Docker images (Spring Boot modules + perf-ui)'
     dependsOn subprojects.findAll { it.tasks.findByName('dockerBuild') }.collect { it.tasks.named('dockerBuild') }
-    workingDir file('perf-ui')
-    commandLine 'docker', 'build', '-t', 'perf-ui:latest', '.'
+    workingDir file('.')
+    commandLine 'docker', 'build', '-t', 'perf-ui:latest', '-f', 'perf-ui/Dockerfile', '.'
 }

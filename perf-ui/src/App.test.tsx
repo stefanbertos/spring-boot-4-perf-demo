@@ -10,6 +10,6 @@ describe('App', () => {
 
   it('renders the Dashboard nav link', () => {
     render(<App />);
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 });

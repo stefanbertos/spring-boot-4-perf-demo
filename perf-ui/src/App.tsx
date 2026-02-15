@@ -1,8 +1,6 @@
-import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline, theme, ThemeProvider } from 'perf-ui-components';
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
-import theme from './theme';
 
 export default function App() {
   return (

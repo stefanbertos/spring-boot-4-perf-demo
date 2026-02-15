@@ -1,8 +1,6 @@
 grafana dashboards are wrong for
 
-change of debug level doesnt work 
-[2026-02-15  11:24:55]	2026-02-15T10:24:55.718Z  INFO 1 --- [perf-tester] [at-handler-1167] c.e.p.admin.LoggingAdminService          : Set log level for 'com.example' to DEBUG
-[2026-02-15  11:24:55]	2026-02-15T10:24:55.718Z  INFO 1 --- [perf-tester] [at-handler-1167] c.e.perftester.rest.PerfController       : Debug mode enabled for 'com.example' (previous level: INFO)
+the e2e performance on rancher desktop kubernetes is only 40tps what is wrong?
 
 remove rest swagger ui
 

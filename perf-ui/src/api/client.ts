@@ -45,8 +45,7 @@ export async function post<T>(
 
   if (body !== undefined) {
     headers['Content-Type'] = contentType;
-    serializedBody =
-      contentType === 'application/json' ? JSON.stringify(body) : String(body);
+    serializedBody = contentType === 'application/json' ? JSON.stringify(body) : String(body);
   }
 
   const response = await fetch(url, {

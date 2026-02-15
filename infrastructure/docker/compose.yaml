@@ -144,8 +144,8 @@ services:
 
   perf-ui:
     build:
-      context: ../../perf-ui
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: perf-ui/Dockerfile
     ports:
       - "5173:80"
     environment:

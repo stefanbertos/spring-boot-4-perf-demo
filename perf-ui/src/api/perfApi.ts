@@ -20,8 +20,7 @@ export function sendTest(params: {
 }): Promise<void> {
   const query = new URLSearchParams();
   if (params.count != null) query.set('count', String(params.count));
-  if (params.timeoutSeconds != null)
-    query.set('timeoutSeconds', String(params.timeoutSeconds));
+  if (params.timeoutSeconds != null) query.set('timeoutSeconds', String(params.timeoutSeconds));
   if (params.delayMs != null) query.set('delayMs', String(params.delayMs));
   if (params.testId) query.set('testId', params.testId);
 
@@ -54,10 +53,7 @@ export function getLogLevel(loggerName?: string): Promise<LogLevelResponse> {
   return get(`/api/admin/logging/level${query}`);
 }
 
-export function setLogLevel(
-  level: string,
-  loggerName?: string,
-): Promise<LogLevelResponse> {
+export function setLogLevel(level: string, loggerName?: string): Promise<LogLevelResponse> {
   const params = new URLSearchParams({ level });
   if (loggerName) params.set('loggerName', loggerName);
   return post(`/api/admin/logging/level?${params}`);
@@ -69,10 +65,7 @@ export function getTopicInfo(topicName: string): Promise<TopicInfo> {
   return get(`/api/admin/kafka/topics?topicName=${encodeURIComponent(topicName)}`);
 }
 
-export function resizeTopic(
-  topicName: string,
-  partitions: number,
-): Promise<TopicInfo> {
+export function resizeTopic(topicName: string, partitions: number): Promise<TopicInfo> {
   const params = new URLSearchParams({
     topicName,
     partitions: String(partitions),
@@ -86,10 +79,7 @@ export function getQueueInfo(queueName: string): Promise<QueueInfo> {
   return get(`/api/admin/mq/queues?queueName=${encodeURIComponent(queueName)}`);
 }
 
-export function changeQueueMaxDepth(
-  queueName: string,
-  maxDepth: number,
-): Promise<QueueInfo> {
+export function changeQueueMaxDepth(queueName: string, maxDepth: number): Promise<QueueInfo> {
   const params = new URLSearchParams({
     queueName,
     maxDepth: String(maxDepth),

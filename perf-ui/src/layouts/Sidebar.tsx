@@ -1,46 +1,79 @@
-import {
-  BeakerIcon,
-  ChartBarIcon,
-  ClipboardDocumentListIcon,
-  Cog6ToothIcon,
-  HomeIcon,
-} from '@heroicons/react/24/outline';
-import { NavLink } from 'react-router-dom';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ScienceIcon from '@mui/icons-material/Science';
+import SpeedIcon from '@mui/icons-material/Speed';
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Typography from '@mui/material/Typography';
+import { NavLink, useLocation } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Dashboard', to: '/', icon: HomeIcon },
-  { name: 'Send Test', to: '/send', icon: BeakerIcon },
-  { name: 'Test Runs', to: '/test-runs', icon: ChartBarIcon },
-  { name: 'Admin', to: '/admin', icon: Cog6ToothIcon },
+  { name: 'Dashboard', to: '/', icon: DashboardIcon },
+  { name: 'Send Test', to: '/send', icon: ScienceIcon },
+  { name: 'Test Runs', to: '/test-runs', icon: AssessmentIcon },
+  { name: 'Admin', to: '/admin', icon: AdminPanelSettingsIcon },
 ];
 
 export default function Sidebar() {
-  return (
-    <aside className="flex h-screen w-64 flex-col bg-gray-900 text-white">
-      <div className="flex h-16 items-center gap-2 px-6">
-        <ClipboardDocumentListIcon className="h-7 w-7 text-blue-400" />
-        <span className="text-lg font-bold tracking-tight">Perf Tester</span>
-      </div>
+  const location = useLocation();
 
-      <nav className="mt-4 flex-1 space-y-1 px-3">
+  const isActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(to);
+  };
+
+  return (
+    <Box
+      component="aside"
+      sx={{
+        width: 256,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'grey.900',
+        color: 'common.white',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: 64, px: 3 }}>
+        <SpeedIcon sx={{ fontSize: 28, color: 'primary.light' }} />
+        <Typography variant="subtitle1" fontWeight="bold" letterSpacing="-0.025em">
+          Perf Tester
+        </Typography>
+      </Box>
+
+      <List component="nav" sx={{ mt: 1, px: 1.5, flex: 1 }}>
         {navigation.map((item) => (
-          <NavLink
+          <ListItemButton
             key={item.to}
+            component={NavLink}
             to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              }`
-            }
+            selected={isActive(item.to)}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              color: 'grey.400',
+              '&.Mui-selected': {
+                bgcolor: 'grey.800',
+                color: 'common.white',
+                '&:hover': { bgcolor: 'grey.700' },
+              },
+              '&:hover': { bgcolor: 'grey.800', color: 'common.white' },
+            }}
           >
-            <item.icon className="h-5 w-5" />
-            {item.name}
-          </NavLink>
+            <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
+              <item.icon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={item.name}
+              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+            />
+          </ListItemButton>
         ))}
-      </nav>
-    </aside>
+      </List>
+    </Box>
   );
 }
