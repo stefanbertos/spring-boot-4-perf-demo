@@ -1,15 +1,10 @@
 enabled: true
 
-className: nginx
+className: traefik
 
 host: localhost
 
-annotations:
-  nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-  nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-  nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-  nginx.ingress.kubernetes.io/websocket-services: perf-api-gateway
-  nginx.ingress.kubernetes.io/ssl-redirect: "false"
+annotations: {}
 
 tls:
   enabled: false
