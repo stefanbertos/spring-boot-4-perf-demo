@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Performance testing demo project
   sourceRepos:
-    - 'https://github.com/<org>/spring-boot-4-perf-demo.git'
+    - 'https://github.com/stefanbertos/spring-boot-4-perf-demo.git'
     - 'https://aquasecurity.github.io/helm-charts'
   destinations:
     - namespace: perf-demo

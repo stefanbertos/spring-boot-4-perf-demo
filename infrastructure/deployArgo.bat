@@ -19,7 +19,7 @@ if %errorlevel% neq 0 (
 :: ============================================
 :: Step 1: Create ArgoCD namespace
 :: ============================================
-echo [1/5] Creating namespace %ARGOCD_NAMESPACE%...
+echo [1/7] Creating namespace %ARGOCD_NAMESPACE%...
 kubectl create namespace %ARGOCD_NAMESPACE% --dry-run=client -o yaml | kubectl apply -f -
 if %errorlevel% neq 0 (
     echo ERROR: Failed to create namespace %ARGOCD_NAMESPACE%
@@ -31,7 +31,7 @@ echo.
 :: ============================================
 :: Step 2: Install ArgoCD into its namespace
 :: ============================================
-echo [2/5] Installing ArgoCD (%ARGOCD_VERSION%) into namespace %ARGOCD_NAMESPACE%...
+echo [2/7] Installing ArgoCD (%ARGOCD_VERSION%) into namespace %ARGOCD_NAMESPACE%...
 kubectl apply --server-side -n %ARGOCD_NAMESPACE% -f https://raw.githubusercontent.com/argoproj/argo-cd/%ARGOCD_VERSION%/manifests/install.yaml
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install ArgoCD
@@ -43,7 +43,7 @@ echo.
 :: ============================================
 :: Step 3: Wait for ArgoCD to be ready
 :: ============================================
-echo [3/5] Waiting for ArgoCD server to be ready...
+echo [3/7] Waiting for ArgoCD server to be ready...
 kubectl wait --for=condition=available deployment/argocd-server -n %ARGOCD_NAMESPACE% --timeout=300s
 if %errorlevel% neq 0 (
     echo ERROR: ArgoCD server did not become ready within 5 minutes
@@ -55,7 +55,7 @@ echo.
 :: ============================================
 :: Step 4: Apply AppProject
 :: ============================================
-echo [4/5] Applying ArgoCD AppProject...
+echo [4/7] Applying ArgoCD AppProject...
 kubectl apply -f "%~dp0argocd\project.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply AppProject
@@ -67,7 +67,7 @@ echo.
 :: ============================================
 :: Step 5: Apply Root Application (App of Apps)
 :: ============================================
-echo [5/5] Applying root Application (App of Apps)...
+echo [5/7] Applying root Application (App of Apps)...
 kubectl apply -f "%~dp0argocd\root-app.yaml"
 if %errorlevel% neq 0 (
     echo ERROR: Failed to apply root Application
@@ -76,19 +76,30 @@ if %errorlevel% neq 0 (
 echo      Root Application 'perf-demo' created.
 echo.
 
+:: ============================================
+:: Step 6: Retrieve initial admin password
+:: ============================================
+echo [6/7] Retrieving ArgoCD admin password...
+for /f "tokens=*" %%p in ('kubectl -n %ARGOCD_NAMESPACE% get secret argocd-initial-admin-secret -o jsonpath^="{.data.password}"') do set ENCODED_PW=%%p
+for /f "tokens=*" %%d in ('powershell -Command "[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('%ENCODED_PW%'))"') do set ARGOCD_PW=%%d
+
+:: ============================================
+:: Step 7: Start port-forward in new window
+:: ============================================
+echo [7/7] Starting port-forward to ArgoCD UI...
+start "ArgoCD Port-Forward" cmd /k "kubectl port-forward svc/argocd-server -n %ARGOCD_NAMESPACE% 8443:443"
+
 echo ============================================
 echo  ArgoCD Deployment Complete!
 echo ============================================
 echo.
 echo ArgoCD is running in namespace: %ARGOCD_NAMESPACE%
 echo.
-echo To access the ArgoCD UI:
-echo   kubectl port-forward svc/argocd-server -n %ARGOCD_NAMESPACE% 8443:443
-echo   Then open: https://localhost:8443
+echo ArgoCD UI:     https://localhost:8443
+echo Admin user:    admin
+echo Admin password: %ARGOCD_PW%
 echo.
-echo To get the initial admin password:
-echo   kubectl -n %ARGOCD_NAMESPACE% get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-echo.
+echo Port-forward is running in a separate window.
 echo ArgoCD will now automatically sync all child applications
 echo in wave order (0 through 6). Monitor progress in the UI.
 echo.

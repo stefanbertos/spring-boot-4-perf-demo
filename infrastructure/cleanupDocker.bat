@@ -10,7 +10,7 @@ echo.
 :: Step 1: Stop and remove containers, networks, volumes
 :: ============================================
 echo [1/2] Stopping containers, removing networks and volumes...
-docker compose -f infrastructure/docker/compose.yaml down -v
+docker compose -f docker/compose.yaml down -v
 if %ERRORLEVEL% NEQ 0 (
     echo WARNING: docker compose down had issues, continuing cleanup...
 )
@@ -35,6 +35,6 @@ echo  Docker Compose Cleanup Complete!
 echo ============================================
 echo.
 echo All containers, networks, volumes, and images have been removed.
-echo Run 'infrastructure\runLocalDocker.bat' to rebuild everything.
+echo Run 'runLocalDocker.bat' to rebuild everything.
 
 endlocal

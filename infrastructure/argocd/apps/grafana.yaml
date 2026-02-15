@@ -10,7 +10,7 @@ metadata:
 spec:
   project: perf-demo
   source:
-    repoURL: https://github.com/<org>/spring-boot-4-perf-demo.git
+    repoURL: https://github.com/stefanbertos/spring-boot-4-perf-demo.git
     targetRevision: HEAD
     path: infrastructure/helm/grafana
   destination:
