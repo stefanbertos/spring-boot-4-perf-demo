@@ -1,6 +1,7 @@
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import MonitorIcon from '@mui/icons-material/Monitor';
 import ScienceIcon from '@mui/icons-material/Science';
 import SpeedIcon from '@mui/icons-material/Speed';
 import Box from '@mui/material/Box';
@@ -15,6 +16,7 @@ const navigation = [
   { name: 'Dashboard', to: '/', icon: DashboardIcon },
   { name: 'Send Test', to: '/send', icon: ScienceIcon },
   { name: 'Test Runs', to: '/test-runs', icon: AssessmentIcon },
+  { name: 'Dashboards', to: '/dashboards', icon: MonitorIcon },
   { name: 'Admin', to: '/admin', icon: AdminPanelSettingsIcon },
 ];
 

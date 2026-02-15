@@ -358,6 +358,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
+  "tags": ["ibm-mq", "messaging", "infrastructure"],
   "templating": {
     "list": []
   },

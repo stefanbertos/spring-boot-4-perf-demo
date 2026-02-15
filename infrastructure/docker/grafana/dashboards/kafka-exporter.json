@@ -167,9 +167,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": [
-    "kafka"
-  ],
+  "tags": ["kafka", "messaging", "infrastructure"],
   "templating": {
     "list": []
   },

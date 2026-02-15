@@ -77,6 +77,6 @@ echo   - AppProject 'perf-demo'
 echo   - Namespace '%APP_NAMESPACE%' and all its resources
 echo.
 echo.
-echo To redeploy, run: infrastructure\deployArgo.bat
+echo To redeploy, run: deployArgo.bat
 
 endlocal

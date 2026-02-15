@@ -11,16 +11,8 @@
     {
       "title": "Database Up",
       "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "oracledb_up{job=\"oracle\"}",
@@ -33,14 +25,8 @@
             {
               "type": "value",
               "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
               }
             }
           ],
@@ -52,68 +38,40 @@
     {
       "title": "Active Sessions",
       "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "oracledb_sessions_active{job=\"oracle\"}",
+          "expr": "oracledb_sessions_value{job=\"oracle\", status=\"ACTIVE\"}",
           "legendFormat": "Active"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "short" },
         "overrides": []
       }
     },
     {
-      "title": "Total Sessions",
+      "title": "Inactive Sessions",
       "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "oracledb_sessions_total{job=\"oracle\"}",
-          "legendFormat": "Total"
+          "expr": "oracledb_sessions_value{job=\"oracle\", status=\"INACTIVE\"}",
+          "legendFormat": "Inactive"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "short" },
         "overrides": []
       }
     },
     {
       "title": "Tablespace Usage %",
       "type": "gauge",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "(oracledb_tablespace_bytes{job=\"oracle\"} / oracledb_tablespace_max_bytes{job=\"oracle\"}) * 100",
@@ -127,18 +85,9 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
             ]
           }
         },
@@ -148,72 +97,44 @@
     {
       "title": "Sessions Over Time",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "oracledb_sessions_active{job=\"oracle\"}",
+          "expr": "oracledb_sessions_value{job=\"oracle\", status=\"ACTIVE\"}",
           "legendFormat": "Active"
         },
         {
-          "expr": "oracledb_sessions_total{job=\"oracle\"}",
-          "legendFormat": "Total"
+          "expr": "oracledb_sessions_value{job=\"oracle\", status=\"INACTIVE\"}",
+          "legendFormat": "Inactive"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "short" },
         "overrides": []
       }
     },
     {
       "title": "Wait Time by Class",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(oracledb_wait_time_seconds{job=\"oracle\"}[$__rate_interval])",
+          "expr": "rate(oracledb_wait_time_value{job=\"oracle\"}[$__rate_interval])",
           "legendFormat": "{{wait_class}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        },
+        "defaults": { "unit": "s" },
         "overrides": []
       }
     },
     {
       "title": "Tablespace Used Bytes",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 12
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "oracledb_tablespace_bytes{job=\"oracle\"}",
@@ -221,25 +142,15 @@
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
+        "defaults": { "unit": "bytes" },
         "overrides": []
       }
     },
     {
       "title": "Tablespace Free Bytes",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 12
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "oracledb_tablespace_free{job=\"oracle\"}",
@@ -247,167 +158,94 @@
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
+        "defaults": { "unit": "bytes" },
         "overrides": []
       }
     },
     {
-      "title": "Physical I/O Reads",
+      "title": "Activity - Execute Count",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(oracledb_physical_reads_total{job=\"oracle\"}[$__rate_interval])",
-          "legendFormat": "Reads/s"
+          "expr": "rate(oracledb_activity_execute_count{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Executes/s"
+        },
+        {
+          "expr": "rate(oracledb_activity_parse_count_total{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Parses/s"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        },
+        "defaults": { "unit": "ops" },
         "overrides": []
       }
     },
     {
-      "title": "Physical I/O Writes",
+      "title": "Activity - Commits & Rollbacks",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 20
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(oracledb_physical_writes_total{job=\"oracle\"}[$__rate_interval])",
-          "legendFormat": "Writes/s"
+          "expr": "rate(oracledb_activity_user_commits{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Commits/s"
+        },
+        {
+          "expr": "rate(oracledb_activity_user_rollbacks{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Rollbacks/s"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "Buffer Cache Hit Ratio",
-      "type": "gauge",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 28
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "oracledb_buffer_cache_hit_ratio{job=\"oracle\"} * 100",
-          "legendFormat": "Hit Ratio"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 80
-              },
-              {
-                "color": "green",
-                "value": 95
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "Redo Log Space Requests",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 28
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "rate(oracledb_redo_log_space_requests_total{job=\"oracle\"}[$__rate_interval])",
-          "legendFormat": "Requests/s"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        },
+        "defaults": { "unit": "ops" },
         "overrides": []
       }
     },
     {
       "title": "Process Count",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 28
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "oracledb_process_count{job=\"oracle\"}",
-          "legendFormat": "Processes"
+          "expr": "oracledb_resource_current_utilization{job=\"oracle\", resource_name=\"processes\"}",
+          "legendFormat": "Current"
+        },
+        {
+          "expr": "oracledb_resource_limit_value{job=\"oracle\", resource_name=\"processes\"}",
+          "legendFormat": "Limit"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
+        "defaults": { "unit": "short" },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Physical I/O",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(oracledb_physical_reads_value{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Reads/s"
         },
+        {
+          "expr": "rate(oracledb_physical_writes_value{job=\"oracle\"}[$__rate_interval])",
+          "legendFormat": "Writes/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" },
         "overrides": []
       }
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": [
-    "oracle",
-    "database"
-  ],
+  "tags": ["oracle", "database"],
   "templating": {
     "list": []
   },

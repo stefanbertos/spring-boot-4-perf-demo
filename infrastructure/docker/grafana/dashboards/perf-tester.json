@@ -522,134 +522,82 @@
         "y": 53
       },
       "panels": [],
-      "title": "Tomcat",
+      "title": "HTTP Server",
       "type": "row"
     },
     {
-      "title": "Tomcat Threads",
+      "title": "HTTP Request Rate",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 54
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 54 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_threads_current_threads{job=\"perf-tester\"}",
-          "legendFormat": "Current"
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"perf-tester\"}[$__rate_interval]))",
+          "legendFormat": "Total Requests/s"
         },
         {
-          "expr": "tomcat_threads_busy_threads{job=\"perf-tester\"}",
-          "legendFormat": "Busy"
-        },
-        {
-          "expr": "tomcat_threads_config_max_threads{job=\"perf-tester\"}",
-          "legendFormat": "Max"
+          "expr": "sum by(uri) (rate(http_server_requests_seconds_count{job=\"perf-tester\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "reqps" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Connections",
+      "title": "HTTP Response Time (avg)",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 54
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 54 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_connections_current_connections{job=\"perf-tester\"}",
-          "legendFormat": "Current"
-        },
-        {
-          "expr": "tomcat_connections_keepalive_current_connections{job=\"perf-tester\"}",
-          "legendFormat": "Keep-Alive"
+          "expr": "rate(http_server_requests_seconds_sum{job=\"perf-tester\"}[$__rate_interval]) / rate(http_server_requests_seconds_count{job=\"perf-tester\"}[$__rate_interval])",
+          "legendFormat": "{{method}} {{uri}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "s" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Sessions",
+      "title": "HTTP Responses by Status",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 62
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 62 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_sessions_active_current_sessions{job=\"perf-tester\"}",
-          "legendFormat": "Active"
-        },
-        {
-          "expr": "rate(tomcat_sessions_created_sessions_total{job=\"perf-tester\"}[$__rate_interval])",
-          "legendFormat": "Created/s"
-        },
-        {
-          "expr": "rate(tomcat_sessions_expired_sessions_total{job=\"perf-tester\"}[$__rate_interval])",
-          "legendFormat": "Expired/s"
+          "expr": "sum by(status) (rate(http_server_requests_seconds_count{job=\"perf-tester\"}[$__rate_interval]))",
+          "legendFormat": "{{status}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "reqps" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Traffic",
+      "title": "JVM Threads (Virtual + Platform)",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 62
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 62 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(tomcat_global_sent_bytes_total{job=\"perf-tester\"}[$__rate_interval])",
-          "legendFormat": "Sent"
+          "expr": "jvm_threads_live_threads{job=\"perf-tester\"}",
+          "legendFormat": "Live Threads"
         },
         {
-          "expr": "rate(tomcat_global_received_bytes_total{job=\"perf-tester\"}[$__rate_interval])",
-          "legendFormat": "Received"
+          "expr": "jvm_threads_peak_threads{job=\"perf-tester\"}",
+          "legendFormat": "Peak Threads"
+        },
+        {
+          "expr": "rate(jvm_threads_started_threads_total{job=\"perf-tester\"}[$__rate_interval])",
+          "legendFormat": "Started/s"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "Bps"
-        },
+        "defaults": { "unit": "short" },
         "overrides": []
       }
     },
@@ -1449,6 +1397,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
+  "tags": ["spring-boot", "application", "perf-tester"],
   "templating": {
     "list": []
   },

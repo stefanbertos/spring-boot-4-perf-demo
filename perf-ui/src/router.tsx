@@ -3,6 +3,7 @@ import { RootLayout } from '@/layouts';
 import {
   AdminPage,
   DashboardPage,
+  DashboardsPage,
   NotFoundPage,
   SendTestPage,
   TestRunDetailPage,
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: 'send', element: <SendTestPage /> },
       { path: 'test-runs', element: <TestRunsPage /> },
       { path: 'test-runs/:id', element: <TestRunDetailPage /> },
+      { path: 'dashboards', element: <DashboardsPage /> },
       { path: 'admin', element: <AdminPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

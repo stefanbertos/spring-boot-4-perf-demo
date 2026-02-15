@@ -418,134 +418,82 @@
         "y": 44
       },
       "panels": [],
-      "title": "Tomcat",
+      "title": "HTTP Server",
       "type": "row"
     },
     {
-      "title": "Tomcat Threads",
+      "title": "HTTP Request Rate",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 45
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 45 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_threads_current_threads{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "{{instance}} Current"
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
+          "legendFormat": "Total Requests/s"
         },
         {
-          "expr": "tomcat_threads_busy_threads{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "{{instance}} Busy"
-        },
-        {
-          "expr": "tomcat_threads_config_max_threads{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "{{instance}} Max"
+          "expr": "sum by(uri) (rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "reqps" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Connections",
+      "title": "HTTP Response Time (avg)",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 45
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 45 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_connections_current_connections{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "Current"
-        },
-        {
-          "expr": "tomcat_connections_keepalive_current_connections{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "Keep-Alive"
+          "expr": "rate(http_server_requests_seconds_sum{job=\"ibm-mq-consumer\"}[$__rate_interval]) / rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval])",
+          "legendFormat": "{{method}} {{uri}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "s" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Sessions",
+      "title": "HTTP Responses by Status",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 53
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 53 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "tomcat_sessions_active_current_sessions{job=\"ibm-mq-consumer\"}",
-          "legendFormat": "Active"
-        },
-        {
-          "expr": "rate(tomcat_sessions_created_sessions_total{job=\"ibm-mq-consumer\"}[$__rate_interval])",
-          "legendFormat": "Created/s"
-        },
-        {
-          "expr": "rate(tomcat_sessions_expired_sessions_total{job=\"ibm-mq-consumer\"}[$__rate_interval])",
-          "legendFormat": "Expired/s"
+          "expr": "sum by(status) (rate(http_server_requests_seconds_count{job=\"ibm-mq-consumer\"}[$__rate_interval]))",
+          "legendFormat": "{{status}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
+        "defaults": { "unit": "reqps" },
         "overrides": []
       }
     },
     {
-      "title": "Tomcat Traffic",
+      "title": "JVM Threads (Virtual + Platform)",
       "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 53
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 53 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(tomcat_global_sent_bytes_total{job=\"ibm-mq-consumer\"}[$__rate_interval])",
-          "legendFormat": "Sent"
+          "expr": "jvm_threads_live_threads{job=\"ibm-mq-consumer\"}",
+          "legendFormat": "Live Threads"
         },
         {
-          "expr": "rate(tomcat_global_received_bytes_total{job=\"ibm-mq-consumer\"}[$__rate_interval])",
-          "legendFormat": "Received"
+          "expr": "jvm_threads_peak_threads{job=\"ibm-mq-consumer\"}",
+          "legendFormat": "Peak Threads"
+        },
+        {
+          "expr": "rate(jvm_threads_started_threads_total{job=\"ibm-mq-consumer\"}[$__rate_interval])",
+          "legendFormat": "Started/s"
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "Bps"
-        },
+        "defaults": { "unit": "short" },
         "overrides": []
       }
     },
@@ -1790,6 +1738,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
+  "tags": ["spring-boot", "application", "ibm-mq-consumer"],
   "templating": {
     "list": []
   },

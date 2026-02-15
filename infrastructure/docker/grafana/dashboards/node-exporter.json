@@ -189,6 +189,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
+  "tags": ["node-exporter", "host", "infrastructure"],
   "templating": {
     "list": []
   },
