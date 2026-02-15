@@ -139,7 +139,7 @@ echo   Kafdrop          http://%INGRESS_HOST%/kafdrop
 echo   IBM MQ Console   http://%INGRESS_HOST%/ibmmq            (admin / passw0rd)
 echo   Redis Commander  http://%INGRESS_HOST%/redis-commander
 echo   SonarQube        http://%INGRESS_HOST%/sonar            (admin / admin)
-echo   Swagger UI       http://%INGRESS_HOST%/swagger-ui/index.html  (direct to perf-tester)
+echo   Swagger UI       http://%INGRESS_HOST%/api/swagger-ui/index.html  (direct to perf-tester)
 echo   Perf Tester API  http://%INGRESS_HOST%/api
 echo   Config Server    http://%INGRESS_HOST%/config
 echo   Loki (Grafana)   http://%INGRESS_HOST%/loki

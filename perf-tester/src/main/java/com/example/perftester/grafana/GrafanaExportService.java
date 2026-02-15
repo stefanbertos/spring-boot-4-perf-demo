@@ -86,8 +86,7 @@ public class GrafanaExportService {
             try {
                 var result = exportDashboard(dashboard, fromMs, toMs, timestamp, exportDir);
                 exported.add(result);
-                log.info("Exported dashboard '{}' to: {}", dashboard.title(), result.filePath());
-                log.info("Dashboard URL: {}", result.url());
+                log.info("Exported dashboard '{}' to: {} url:{}", dashboard.title(), result.filePath(), result.url());
             } catch (Exception e) {
                 log.error("Failed to export dashboard '{}': {}", dashboard.title(), e.getMessage());
                 // Add entry with URL only (no file)

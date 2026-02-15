@@ -1,8 +1,8 @@
 grafana dashboards are wrong for
 
-implement functionality in perf-tester ui - make better ui design, with most moderns principles, make sure to use ui library  or create internal ui component library for button, link, menu, table, dialog based on some material design or so, in future if i want to build a second ui i would use the libraries
-add some tool to guadrail quality in perf-ui similar like checkstyle, pmd, sonar etc so the rules are enforced and add standard react ts rules as default
-
+change of debug level doesnt work 
+[2026-02-15  11:24:55]	2026-02-15T10:24:55.718Z  INFO 1 --- [perf-tester] [at-handler-1167] c.e.p.admin.LoggingAdminService          : Set log level for 'com.example' to DEBUG
+[2026-02-15  11:24:55]	2026-02-15T10:24:55.718Z  INFO 1 --- [perf-tester] [at-handler-1167] c.e.perftester.rest.PerfController       : Debug mode enabled for 'com.example' (previous level: INFO)
 
 remove rest swagger ui
 

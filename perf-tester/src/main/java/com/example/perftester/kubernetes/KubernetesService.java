@@ -85,8 +85,6 @@ public class KubernetesService {
                 () -> client.services().inNamespace(namespace).list());
         exportResource(exportDir, "configmaps.json",
                 () -> client.configMaps().inNamespace(namespace).list());
-        exportResource(exportDir, "secrets.json",
-                () -> client.secrets().inNamespace(namespace).list());
         exportResource(exportDir, "persistent-volume-claims.json",
                 () -> client.persistentVolumeClaims().inNamespace(namespace).list());
         exportResource(exportDir, "ingresses.json",
