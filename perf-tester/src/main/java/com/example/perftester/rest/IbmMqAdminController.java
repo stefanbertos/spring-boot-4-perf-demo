@@ -1,5 +1,7 @@
 package com.example.perftester.rest;
 
+import java.util.List;
+
 import com.example.perftester.admin.IbmMqAdminService;
 import com.example.perftester.admin.IbmMqAdminService.QueueInfo;
 import jakarta.validation.constraints.Min;
@@ -30,6 +32,12 @@ public class IbmMqAdminController {
         ibmMqAdminService.changeQueueMaxDepth(queueName, maxDepth);
         var info = ibmMqAdminService.getQueueInfo(queueName);
         return ResponseEntity.ok(info);
+    }
+
+    @GetMapping("/queues/list")
+    public ResponseEntity<List<QueueInfo>> listQueues() throws Exception {
+        var queues = ibmMqAdminService.listQueues();
+        return ResponseEntity.ok(queues);
     }
 
     @GetMapping("/queues")

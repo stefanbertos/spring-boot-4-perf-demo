@@ -1,6 +1,8 @@
 package com.example.perftester.admin;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import com.ibm.mq.MQQueueManager;
@@ -43,6 +45,30 @@ public class IbmMqAdminService {
         } else {
             throw new IllegalArgumentException("Invalid conn-name format: " + connName
                     + ". Expected format: host(port)");
+        }
+    }
+
+    public List<QueueInfo> listQueues() throws Exception {
+        var agent = createAgent();
+        try {
+            var request = new PCFMessage(CMQCFC.MQCMD_INQUIRE_Q);
+            request.addParameter(CMQC.MQCA_Q_NAME, "*");
+            request.addParameter(CMQC.MQIA_Q_TYPE, CMQC.MQQT_LOCAL);
+            var responses = agent.send(request);
+            var queues = new ArrayList<QueueInfo>();
+            for (var response : responses) {
+                var name = response.getStringParameterValue(CMQC.MQCA_Q_NAME).trim();
+                if (name.startsWith("SYSTEM.") || name.startsWith("AMQ.")) {
+                    continue;
+                }
+                var currentDepth = response.getIntParameterValue(CMQC.MQIA_CURRENT_Q_DEPTH);
+                var maxDepth = response.getIntParameterValue(CMQC.MQIA_MAX_Q_DEPTH);
+                queues.add(new QueueInfo(name, currentDepth, maxDepth));
+            }
+            queues.sort((a, b) -> a.queueName().compareTo(b.queueName()));
+            return queues;
+        } finally {
+            agent.disconnect();
         }
     }
 

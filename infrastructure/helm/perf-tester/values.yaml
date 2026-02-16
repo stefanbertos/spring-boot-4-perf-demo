@@ -37,6 +37,9 @@ prometheus:
     port: "8080"
     job: perf-tester
 
+kafka:
+  bootstrapServers: perf-kafka:9092
+
 redis:
   host: perf-redis
   port: 6379

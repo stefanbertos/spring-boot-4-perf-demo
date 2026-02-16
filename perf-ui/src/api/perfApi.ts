@@ -17,12 +17,16 @@ export function sendTest(params: {
   timeoutSeconds?: number;
   delayMs?: number;
   testId?: string;
+  exportStatistics?: boolean;
+  debug?: boolean;
 }): Promise<void> {
   const query = new URLSearchParams();
   if (params.count != null) query.set('count', String(params.count));
   if (params.timeoutSeconds != null) query.set('timeoutSeconds', String(params.timeoutSeconds));
   if (params.delayMs != null) query.set('delayMs', String(params.delayMs));
   if (params.testId) query.set('testId', params.testId);
+  if (params.exportStatistics) query.set('exportStatistics', 'true');
+  if (params.debug) query.set('debug', 'true');
 
   const qs = query.toString();
   return post(`/api/perf/send${qs ? `?${qs}` : ''}`, params.message, 'text/plain');
@@ -61,6 +65,10 @@ export function setLogLevel(level: string, loggerName?: string): Promise<LogLeve
 
 // ── Kafka Admin ────────────────────────────────────────────────────
 
+export function listTopics(): Promise<TopicInfo[]> {
+  return get('/api/admin/kafka/topics/list');
+}
+
 export function getTopicInfo(topicName: string): Promise<TopicInfo> {
   return get(`/api/admin/kafka/topics?topicName=${encodeURIComponent(topicName)}`);
 }
@@ -74,6 +82,10 @@ export function resizeTopic(topicName: string, partitions: number): Promise<Topi
 }
 
 // ── IBM MQ Admin ───────────────────────────────────────────────────
+
+export function listQueues(): Promise<QueueInfo[]> {
+  return get('/api/admin/mq/queues/list');
+}
 
 export function getQueueInfo(queueName: string): Promise<QueueInfo> {
   return get(`/api/admin/mq/queues?queueName=${encodeURIComponent(queueName)}`);

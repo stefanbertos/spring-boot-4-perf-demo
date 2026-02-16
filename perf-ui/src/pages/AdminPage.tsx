@@ -3,9 +3,10 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Alert, Button, Card, PageHeader, Select, Tabs, TextField } from 'perf-ui-components';
 import type { SelectChangeEvent, TabItem } from 'perf-ui-components';
+import type { SelectOption } from 'perf-ui-components';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
-import { changeQueueMaxDepth, resizeTopic, setLogLevel } from '@/api';
+import { useEffect, useState } from 'react';
+import { changeQueueMaxDepth, listQueues, listTopics, resizeTopic, setLogLevel } from '@/api';
 
 const logLevels = [
   { value: 'TRACE', label: 'TRACE' },
@@ -78,10 +79,33 @@ function LoggingTab() {
 }
 
 function KafkaTab() {
-  const [topicName, setTopicName] = useState('mq-requests');
+  const [topicOptions, setTopicOptions] = useState<SelectOption[]>([]);
+  const [topicName, setTopicName] = useState('');
   const [partitions, setPartitions] = useState('3');
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    listTopics()
+      .then((topics) => {
+        const options = topics.map((t) => ({
+          value: t.topicName,
+          label: `${t.topicName} (${t.partitions} partitions)`,
+        }));
+        setTopicOptions(options);
+        if (options.length > 0) {
+          setTopicName(options[0].value);
+        }
+      })
+      .catch((err) => {
+        setResult({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to load topics',
+        });
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -110,12 +134,13 @@ function KafkaTab() {
       </Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
-          <TextField
+          <Select
             label="Topic Name"
             value={topicName}
-            onChange={(e) => setTopicName(e.target.value)}
+            options={topicOptions}
+            onChange={(e: SelectChangeEvent) => setTopicName(e.target.value)}
             fullWidth
-            required
+            disabled={loading}
           />
           <TextField
             label="Partitions"
@@ -131,7 +156,11 @@ function KafkaTab() {
               {result.text}
             </Alert>
           )}
-          <Button type="submit" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
+          <Button
+            type="submit"
+            disabled={submitting || loading || !topicName}
+            sx={{ alignSelf: 'flex-start' }}
+          >
             {submitting ? 'Resizing...' : 'Resize Topic'}
           </Button>
         </Stack>
@@ -141,10 +170,33 @@ function KafkaTab() {
 }
 
 function IbmMqTab() {
-  const [queueName, setQueueName] = useState('DEV.QUEUE.1');
+  const [queueOptions, setQueueOptions] = useState<SelectOption[]>([]);
+  const [queueName, setQueueName] = useState('');
   const [maxDepth, setMaxDepth] = useState('5000');
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    listQueues()
+      .then((queues) => {
+        const options = queues.map((q) => ({
+          value: q.queueName,
+          label: `${q.queueName} (depth: ${q.currentDepth}/${q.maxDepth})`,
+        }));
+        setQueueOptions(options);
+        if (options.length > 0) {
+          setQueueName(options[0].value);
+        }
+      })
+      .catch((err) => {
+        setResult({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to load queues',
+        });
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -173,12 +225,13 @@ function IbmMqTab() {
       </Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
-          <TextField
+          <Select
             label="Queue Name"
             value={queueName}
-            onChange={(e) => setQueueName(e.target.value)}
+            options={queueOptions}
+            onChange={(e: SelectChangeEvent) => setQueueName(e.target.value)}
             fullWidth
-            required
+            disabled={loading}
           />
           <TextField
             label="Max Depth"
@@ -194,7 +247,11 @@ function IbmMqTab() {
               {result.text}
             </Alert>
           )}
-          <Button type="submit" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
+          <Button
+            type="submit"
+            disabled={submitting || loading || !queueName}
+            sx={{ alignSelf: 'flex-start' }}
+          >
             {submitting ? 'Applying...' : 'Set Max Depth'}
           </Button>
         </Stack>

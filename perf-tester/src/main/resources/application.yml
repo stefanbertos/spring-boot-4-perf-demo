@@ -25,6 +25,26 @@ app:
     prometheus-buffer-seconds: 60
     prometheus-step-seconds: 15
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 logging:
   level:
     root: INFO

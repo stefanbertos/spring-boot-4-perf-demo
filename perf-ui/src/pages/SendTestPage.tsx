@@ -1,4 +1,6 @@
 import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import { Alert, Button, Card, PageHeader, TextField } from 'perf-ui-components';
 import type { FormEvent } from 'react';
@@ -11,6 +13,8 @@ export default function SendTestPage() {
   const [timeout, setTimeout] = useState('30');
   const [delay, setDelay] = useState('0');
   const [testId, setTestId] = useState('');
+  const [exportStatistics, setExportStatistics] = useState(false);
+  const [debug, setDebug] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -26,6 +30,8 @@ export default function SendTestPage() {
         timeoutSeconds: Number(timeout),
         delayMs: Number(delay),
         testId: testId || undefined,
+        exportStatistics,
+        debug,
       });
       setResult({ type: 'success', text: `Test started with ${count} messages` });
     } catch (err) {
@@ -87,6 +93,21 @@ export default function SendTestPage() {
                 value={testId}
                 onChange={(e) => setTestId(e.target.value)}
                 fullWidth
+              />
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={exportStatistics}
+                    onChange={(e) => setExportStatistics(e.target.checked)}
+                  />
+                }
+                label="Export Statistics"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={debug} onChange={(e) => setDebug(e.target.checked)} />}
+                label="Debug Mode"
               />
             </Stack>
             {result && (

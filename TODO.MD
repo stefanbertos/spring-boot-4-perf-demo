@@ -1,5 +1,5 @@
-add possibility to upload test templates and maintanance
-
-add integration into jira to create a automatic ticket
-
-add external api or enhance the current one so as well some other automation tool can call the perf tester like robo framework etc and perform the test, get results etc
+in perf-ui - Send Test, add management for testcases, where you can upload the testcase, delete it, update it, and autopopulate it into the input field or use freetext and save it, the backend should use the persistent db, oracle, liquibase scripts etc
+remove swagger ui config and dependency
+in perf-ui when user click on the send button i would like to see some progress, ideally based on the testexecution progresss, so the data needs to be somehow propagated to the ui about progress either some websocket or some other alternative with some nice way of notifing user about that
+in perf-ui TestRun is not implemented, make sure that after each test oracle table is updated with proper results statics, but keep the whole zip only on pvc. In ui then display the table with runs so we can easily see diffs. Also add possibility to cleanup run from db and disk when user clicks on delete.
+If user was a detailed diff make sure to extract the zip file and perform diff of each files and provide the list of different files, and diff content of everything.

@@ -1,5 +1,7 @@
 package com.example.perftester.rest;
 
+import java.util.List;
+
 import com.example.perftester.admin.KafkaAdminService;
 import com.example.perftester.admin.KafkaAdminService.TopicInfo;
 import jakarta.validation.constraints.Min;
@@ -30,6 +32,12 @@ public class KafkaAdminController {
         kafkaAdminService.resizeTopic(topicName, partitions);
         var info = kafkaAdminService.getTopicInfo(topicName);
         return ResponseEntity.ok(info);
+    }
+
+    @GetMapping("/topics/list")
+    public ResponseEntity<List<TopicInfo>> listTopics() throws Exception {
+        var topics = kafkaAdminService.listTopics();
+        return ResponseEntity.ok(topics);
     }
 
     @GetMapping("/topics")

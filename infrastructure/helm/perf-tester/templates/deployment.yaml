@@ -80,6 +80,22 @@ spec:
               value: {{ .Values.redis.host }}
             - name: SPRING_DATA_REDIS_PORT
               value: "{{ .Values.redis.port }}"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+            - name: APP_KAFKA_BOOTSTRAPSERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+            - name: APP_HEALTHCHECK_KAFKA_HOST
+              value: perf-kafka
+            - name: APP_HEALTHCHECK_KAFKA_PORT
+              value: "9092"
+            - name: APP_HEALTHCHECK_MQ_HOST
+              value: perf-ibm-mq
+            - name: APP_HEALTHCHECK_MQ_PORT
+              value: "1414"
+            - name: APP_HEALTHCHECK_ORACLE_HOST
+              value: perf-oracle
+            - name: APP_HEALTHCHECK_ORACLE_PORT
+              value: "1521"
             - name: APP_HEALTHCHECK_REDIS_HOST
               value: {{ .Values.redis.host }}
             - name: APP_HEALTHCHECK_REDIS_PORT

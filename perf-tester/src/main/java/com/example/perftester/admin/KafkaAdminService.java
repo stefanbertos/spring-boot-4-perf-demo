@@ -9,6 +9,7 @@ import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.ListTopicsOptions;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,27 @@ public class KafkaAdminService implements AutoCloseable {
         adminClient.createPartitions(newPartitions).all()
                 .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         log.info("Resized topic '{}' to {} partitions", topicName, partitions);
+    }
+
+    public List<TopicInfo> listTopics()
+            throws ExecutionException, InterruptedException, TimeoutException {
+        var options = new ListTopicsOptions().listInternal(false);
+        var topicNames = adminClient.listTopics(options).names()
+                .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        var filteredNames = topicNames.stream()
+                .filter(name -> !name.startsWith("_"))
+                .sorted()
+                .toList();
+
+        if (filteredNames.isEmpty()) {
+            return List.of();
+        }
+
+        var descriptions = adminClient.describeTopics(filteredNames)
+                .allTopicNames().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        return filteredNames.stream()
+                .map(name -> new TopicInfo(name, descriptions.get(name).partitions().size()))
+                .toList();
     }
 
     public TopicInfo getTopicInfo(String topicName)
