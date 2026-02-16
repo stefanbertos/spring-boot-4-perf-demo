@@ -23,7 +23,7 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100)",
+          "expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\"}[$__rate_interval])) * 100)",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -50,11 +50,11 @@
       },
       "targets": [
         {
-          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "expr": "node_memory_MemTotal_bytes{job=\"node-exporter\"} - node_memory_MemAvailable_bytes{job=\"node-exporter\"}",
           "legendFormat": "Used"
         },
         {
-          "expr": "node_memory_MemTotal_bytes",
+          "expr": "node_memory_MemTotal_bytes{job=\"node-exporter\"}",
           "legendFormat": "Total"
         }
       ],
@@ -80,7 +80,7 @@
       },
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100)",
+          "expr": "100 - ((node_filesystem_avail_bytes{job=\"node-exporter\", mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"node-exporter\", mountpoint=\"/\"}) * 100)",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -107,11 +107,11 @@
       },
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total[$__rate_interval])",
+          "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\"}[$__rate_interval])",
           "legendFormat": "Receive {{device}}"
         },
         {
-          "expr": "rate(node_network_transmit_bytes_total[$__rate_interval])",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\"}[$__rate_interval])",
           "legendFormat": "Transmit {{device}}"
         }
       ],
@@ -137,15 +137,15 @@
       },
       "targets": [
         {
-          "expr": "node_load1",
+          "expr": "node_load1{job=\"node-exporter\"}",
           "legendFormat": "1m"
         },
         {
-          "expr": "node_load5",
+          "expr": "node_load5{job=\"node-exporter\"}",
           "legendFormat": "5m"
         },
         {
-          "expr": "node_load15",
+          "expr": "node_load15{job=\"node-exporter\"}",
           "legendFormat": "15m"
         }
       ],
@@ -171,11 +171,11 @@
       },
       "targets": [
         {
-          "expr": "rate(node_disk_read_bytes_total[$__rate_interval])",
+          "expr": "rate(node_disk_read_bytes_total{job=\"node-exporter\"}[$__rate_interval])",
           "legendFormat": "Read {{device}}"
         },
         {
-          "expr": "rate(node_disk_written_bytes_total[$__rate_interval])",
+          "expr": "rate(node_disk_written_bytes_total{job=\"node-exporter\"}[$__rate_interval])",
           "legendFormat": "Write {{device}}"
         }
       ],

@@ -586,6 +586,42 @@ public UserResponse getUserById(Long id) { ... }
 public void transferFunds(Long from, Long to, BigDecimal amount) { ... }
 ```
 
+### JPA Concurrent Access with SELECT FOR UPDATE (Required)
+
+When multiple threads or pods compete for the same rows (e.g., job queues, claim-next-item patterns), use pessimistic locking with `LIMIT` and `SKIP LOCKED` to avoid contention:
+
+```java
+public interface TaskRepository extends JpaRepository<Task, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")) // SKIP LOCKED
+    @Query("SELECT t FROM Task t WHERE t.status = :status ORDER BY t.createdAt ASC LIMIT :limit")
+    List<Task> findAndLockNextBatch(@Param("status") TaskStatus status, @Param("limit") int limit);
+}
+```
+
+**Rules:**
+- Always use `@Lock(LockModeType.PESSIMISTIC_WRITE)` for SELECT FOR UPDATE — never hand-write `FOR UPDATE` in JPQL
+- Use `@QueryHints` with `jakarta.persistence.lock.timeout` set to `"-2"` (SKIP LOCKED) so competing consumers skip already-locked rows instead of blocking
+- Use `LIMIT` in JPQL (JPA 3.1+) or `Pageable` parameter to bound the result set — never lock unbounded rows
+- The calling service method **must** be `@Transactional` (not `readOnly`) — the lock is held for the transaction duration
+- Prefer `SKIP LOCKED` over `NOWAIT` (`"-1"`) in queue-like patterns — `NOWAIT` throws an exception on contention, `SKIP LOCKED` silently skips
+
+```java
+@Transactional
+public List<Task> claimNextBatch(int batchSize) {
+    var tasks = taskRepository.findAndLockNextBatch(TaskStatus.PENDING, batchSize);
+    tasks.forEach(t -> t.setStatus(TaskStatus.PROCESSING));
+    return tasks;
+}
+```
+
+**Anti-patterns to avoid:**
+- `@Transactional(readOnly = true)` with `@Lock(PESSIMISTIC_WRITE)` — read-only transactions cannot acquire write locks
+- SELECT FOR UPDATE without LIMIT — locks the entire result set, causing excessive contention
+- SELECT FOR UPDATE without SKIP LOCKED in multi-consumer scenarios — threads block each other instead of processing different rows
+- Holding the lock across slow operations (HTTP calls, message sends) — keep the transaction short, update state, commit, then do the slow work
+
 ### Avoid Static Utility Classes in Business Logic
 
 Static methods hide dependencies and make unit testing difficult. Prefer Spring-managed beans so dependencies can be injected and mocked.

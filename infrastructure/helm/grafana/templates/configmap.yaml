@@ -13,6 +13,7 @@ data:
         type: prometheus
         access: proxy
         url: {{ .Values.datasources.prometheus.url }}
+        uid: prometheus
         isDefault: true
         editable: false
       {{- end }}

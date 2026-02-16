@@ -25,7 +25,7 @@ scrape_configs:
     static_configs:
       - targets: ['ibm-mq:9157']
 
-  - job_name: 'kafka-exporter'
+  - job_name: 'kafka'
     metrics_path: '/metrics'
     static_configs:
       - targets: ['kafka-exporter:9308']

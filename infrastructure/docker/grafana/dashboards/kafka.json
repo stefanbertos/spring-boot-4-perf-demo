@@ -23,7 +23,7 @@
       },
       "targets": [
         {
-          "expr": "count(kafka_brokers)",
+          "expr": "count(kafka_brokers{job=\"kafka\"})",
           "legendFormat": "Brokers"
         }
       ],
@@ -49,7 +49,7 @@
       },
       "targets": [
         {
-          "expr": "count(kafka_topic_partitions)",
+          "expr": "count(kafka_topic_partitions{job=\"kafka\"})",
           "legendFormat": "Topics"
         }
       ],
@@ -75,7 +75,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kafka_topic_partitions)",
+          "expr": "sum(kafka_topic_partitions{job=\"kafka\"})",
           "legendFormat": "Partitions"
         }
       ],
@@ -101,7 +101,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kafka_topic_partition_under_replicated_partition)",
+          "expr": "sum(kafka_topic_partition_under_replicated_partition{job=\"kafka\"})",
           "legendFormat": "Under Replicated"
         }
       ],
