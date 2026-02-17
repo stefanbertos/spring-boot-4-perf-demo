@@ -52,14 +52,12 @@ The main entry point for the application, providing REST APIs for sending test m
 * Expose REST endpoints for message submission
 * Send messages to IBM MQ (DEV.QUEUE.2)
 * Listen for processed responses on IBM MQ (DEV.QUEUE.1)
-* Provide Swagger UI for API exploration
 * Export metrics via Prometheus endpoint
 
 *Key Technologies:*
 
 * Spring Boot 4.0 with WebMVC
 * Spring JMS for MQ connectivity
-* SpringDoc OpenAPI for documentation
 * Micrometer for observability
 
 === ibm-mq-consumer (Port 8081)

@@ -55,3 +55,25 @@ export async function post<T>(
   });
   return handleResponse<T>(response);
 }
+
+export async function postFormData<T>(url: string, formData: FormData): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+  return handleResponse<T>(response);
+}
+
+export async function put<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(response);
+}
+
+export async function del<T>(url: string): Promise<T> {
+  const response = await fetch(url, { method: 'DELETE' });
+  return handleResponse<T>(response);
+}

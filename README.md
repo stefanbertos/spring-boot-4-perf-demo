@@ -102,8 +102,6 @@ infrastructure\cleanupKubernetes.bat
 | IBM MQ Console | http://localhost/ibmmq | admin / passw0rd |
 | SonarQube | http://localhost/sonar | admin / admin |
 | Config Server | http://localhost/config | - |
-| Swagger UI | http://localhost/api/swagger-ui/index.html | - |
-| API Docs | http://localhost/api/v3/api-docs | - |
 
 ### Direct Access (Docker Compose)
 
@@ -118,7 +116,6 @@ infrastructure\cleanupKubernetes.bat
 | IBM MQ Console | https://localhost:9443/ibmmq/console | admin / passw0rd |
 | SonarQube | http://localhost:9001 | admin / admin |
 | Config Server | http://localhost:8888 | - |
-| Swagger UI | http://localhost:8080/swagger-ui/index.html | - |
 | Redis | localhost:6379 | - |
 | Oracle DB | localhost:1521/XEPDB1 | perfuser / perfpass |
 

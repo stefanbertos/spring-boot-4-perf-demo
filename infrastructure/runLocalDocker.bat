@@ -39,7 +39,6 @@ echo   - Kafdrop:         http://localhost:9000/kafdrop
 echo   - Redis Commander: http://localhost:8083/redis-commander
 echo   - Loki:            http://localhost:3100
 echo   - Tempo:           http://localhost:3200
-echo   - Swagger UI:      http://localhost:8080/swagger-ui/index.html
 echo   - MQ Console:      https://localhost:9443/ibmmq/console (admin/passw0rd)
 echo   - SonarQube:       http://localhost:9001 (admin/admin)
 echo   - Config Server:   http://localhost:8888

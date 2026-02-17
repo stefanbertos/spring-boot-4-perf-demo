@@ -1,16 +1,22 @@
 export { ApiError } from './client';
 export {
   changeQueueMaxDepth,
+  createTestCase,
+  deleteTestCase,
   getLogLevel,
   getQueueInfo,
+  getTestCase,
   listQueues,
   getTestRunMessages,
   getTestRunMetrics,
   getTestRunSummary,
   getTestRuns,
   getTopicInfo,
+  listTestCases,
   listTopics,
   resizeTopic,
   sendTest,
   setLogLevel,
+  updateTestCase,
+  uploadTestCase,
 } from './perfApi';

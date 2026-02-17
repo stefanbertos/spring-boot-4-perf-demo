@@ -1,9 +1,11 @@
-import { get, post } from './client';
+import { del, get, post, postFormData, put } from './client';
 import type {
   LogLevelResponse,
   MessageResponse,
   MetricResponse,
   QueueInfo,
+  TestCaseDetail,
+  TestCaseSummary,
   TestRunResponse,
   TestRunSummaryResponse,
   TopicInfo,
@@ -97,4 +99,33 @@ export function changeQueueMaxDepth(queueName: string, maxDepth: number): Promis
     maxDepth: String(maxDepth),
   });
   return post(`/api/admin/mq/queues/depth?${params}`);
+}
+
+// ── Test Cases ────────────────────────────────────────────────────
+
+export function listTestCases(): Promise<TestCaseSummary[]> {
+  return get('/api/test-cases');
+}
+
+export function getTestCase(id: number): Promise<TestCaseDetail> {
+  return get(`/api/test-cases/${id}`);
+}
+
+export function createTestCase(name: string, message: string): Promise<TestCaseDetail> {
+  return post('/api/test-cases', { name, message });
+}
+
+export function updateTestCase(id: number, name: string, message: string): Promise<TestCaseDetail> {
+  return put(`/api/test-cases/${id}`, { name, message });
+}
+
+export function deleteTestCase(id: number): Promise<void> {
+  return del(`/api/test-cases/${id}`);
+}
+
+export function uploadTestCase(name: string, file: File): Promise<TestCaseDetail> {
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('file', file);
+  return postFormData('/api/test-cases/upload', formData);
 }

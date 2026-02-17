@@ -1,5 +1,9 @@
 # perf-tester Kubernetes profile configuration
 spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+    username: ${SPRING_DATASOURCE_USERNAME:perfuser}
+    password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:perf-redis}

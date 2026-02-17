@@ -1,5 +1,6 @@
-in perf-ui - Send Test, add management for testcases, where you can upload the testcase, delete it, update it, and autopopulate it into the input field or use freetext and save it, the backend should use the persistent db, oracle, liquibase scripts etc
-remove swagger ui config and dependency
+move code from perf ui and components to perf-tester folder strucure, so its develop and deployed as one application, usually it goes into resources and via some gradle plugin the build is done and then static page is served so then it dockerized properly
+add some bat script into the perf-ui which would start local dev but against the kubernetes endpoints for url http://localhost:5173/admin and second script against local docker compose
 in perf-ui when user click on the send button i would like to see some progress, ideally based on the testexecution progresss, so the data needs to be somehow propagated to the ui about progress either some websocket or some other alternative with some nice way of notifing user about that
-in perf-ui TestRun is not implemented, make sure that after each test oracle table is updated with proper results statics, but keep the whole zip only on pvc. In ui then display the table with runs so we can easily see diffs. Also add possibility to cleanup run from db and disk when user clicks on delete.
+in perf-ui TestRun is not implemented, make sure that after each test oracle table is updated with proper results statics, but keep the whole zip only on pvc. In ui then display the table with runs so we can easily see diffs. Also add possibility to cleanup run from db and disk when user clicks on delete.And of course for the run all logs from loki or other should be visible in details page
 If user was a detailed diff make sure to extract the zip file and perform diff of each files and provide the list of different files, and diff content of everything.
+Put important metrics into database from prometheus or how to compare it?

@@ -64,6 +64,17 @@ data:
       address: 0.0.0.0
 
     spring:
+      datasource:
+        url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+        username: perfuser
+        password: perfpass
+        driver-class-name: oracle.jdbc.OracleDriver
+      jpa:
+        hibernate:
+          ddl-auto: validate
+        open-in-view: false
+      liquibase:
+        change-log: classpath:db/changelog/db.changelog-master.xml
       data:
         redis:
           host: perf-redis
@@ -395,6 +406,10 @@ data:
   perf-tester-kubernetes.yml: |
     # perf-tester Kubernetes profile configuration
     spring:
+      datasource:
+        url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+        username: ${SPRING_DATASOURCE_USERNAME:perfuser}
+        password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
       data:
         redis:
           host: ${SPRING_DATA_REDIS_HOST:perf-redis}

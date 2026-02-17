@@ -230,9 +230,6 @@ Verify access to all web interfaces:
 |===
 |Service |URL
 
-|Swagger UI
-|http://localhost:8080/swagger-ui/index.html
-
 |Grafana
 |http://localhost:3000 (admin/admin)
 

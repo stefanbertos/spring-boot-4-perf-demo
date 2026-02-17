@@ -2,7 +2,7 @@
 
 == Overview
 
-The perf-tester module exposes REST APIs for performance testing, Kafka topic administration, IBM MQ queue administration, and runtime log level management. All APIs are documented using OpenAPI 3.0 specification.
+The perf-tester module exposes REST APIs for performance testing, Kafka topic administration, IBM MQ queue administration, and runtime log level management.
 
 == Base URL
 
@@ -19,18 +19,6 @@ The perf-tester module exposes REST APIs for performance testing, Kafka topic ad
 |Kubernetes (via Gateway)
 |http://localhost/api
 |===
-
-== Interactive Documentation
-
-Access Swagger UI for interactive API exploration:
-
-* *Local:* http://localhost:8080/swagger-ui/index.html
-* *Kubernetes:* http://localhost/api/swagger-ui/index.html
-
-OpenAPI JSON specification:
-
-* *Local:* http://localhost:8080/v3/api-docs
-* *Kubernetes:* http://localhost/api/v3/api-docs
 
 == Performance Testing API
 

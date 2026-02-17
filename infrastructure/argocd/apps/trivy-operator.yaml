@@ -21,6 +21,29 @@ spec:
         trivy:
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           ignoreUnfixed: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256M
+            limits:
+              cpu: "1"
+              memory: 1Gi
+        scanJob:
+          podTemplateContainerSecurityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+          volumes:
+            - name: docker-sock
+              hostPath:
+                path: /var/run/docker.sock
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+              readOnly: true
         serviceMonitor:
           enabled: true
         targetNamespaces: "perf-demo"

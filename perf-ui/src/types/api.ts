@@ -69,3 +69,17 @@ export interface QueueInfo {
   currentDepth: number;
   maxDepth: number;
 }
+
+export interface TestCaseSummary {
+  id: number;
+  name: string;
+  updatedAt: string;
+}
+
+export interface TestCaseDetail {
+  id: number;
+  name: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}

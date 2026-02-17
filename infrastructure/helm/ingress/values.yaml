@@ -14,6 +14,3 @@ services:
   gateway:
     name: perf-api-gateway
     port: 8090
-  swagger:
-    name: perf-perf-tester
-    port: 8080

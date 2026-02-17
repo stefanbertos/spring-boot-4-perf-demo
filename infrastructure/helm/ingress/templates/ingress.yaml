@@ -18,22 +18,7 @@ spec:
     - host: {{ .Values.host }}
       http:
         paths:
-          # Swagger UI and OpenAPI docs - route directly to perf-tester
-          - path: /swagger-ui
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.swagger.name }}
-                port:
-                  number: {{ .Values.services.swagger.port }}
-          - path: /v3/api-docs
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.services.swagger.name }}
-                port:
-                  number: {{ .Values.services.swagger.port }}
-          # Route all other traffic through API Gateway
+          # Route all traffic through API Gateway
           - path: /
             pathType: Prefix
             backend:

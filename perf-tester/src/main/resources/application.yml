@@ -6,6 +6,17 @@ spring:
   docker:
     compose:
       file: ../infrastructure/docker/compose.yaml
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: perfuser
+    password: perfpass
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
   jms:
     pool:
       enabled: true

@@ -72,7 +72,12 @@
       "Bash(grep:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(python3:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl:*)"
     ]
   }
 }
