@@ -126,7 +126,11 @@ subprojects {
                     '*.admin.*',
                     '*AdminController',
                     '*AdminController$*',
-                    '*AdminController.*'
+                    '*AdminController.*',
+                    '*TestCaseController',
+                    '*TestCaseController$*',
+                    '*TestCaseController.*',
+                    '*GlobalExceptionHandler'
                 ]
                 limit {
                     minimum = 0.8  // 80% coverage required per class
