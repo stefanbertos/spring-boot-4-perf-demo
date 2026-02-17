@@ -77,7 +77,8 @@
       "Bash(npx prettier:*)",
       "Bash(python3:*)",
       "Bash(kubectl apply:*)",
-      "Bash(kubectl:*)"
+      "Bash(kubectl:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

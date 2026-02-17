@@ -18,6 +18,22 @@ spec:
         operator:
           scanJobsConcurrentLimit: 3
           scanJobsRetryDelay: 30s
+        trivyOperator:
+          scanJobPodTemplateContainerSecurityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+          scanJobCustomVolumes:
+            - name: docker-sock
+              hostPath:
+                path: /var/run/docker.sock
+          scanJobCustomVolumesMount:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+              readOnly: true
         trivy:
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           ignoreUnfixed: true
@@ -28,22 +44,6 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
-        scanJob:
-          podTemplateContainerSecurityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            privileged: false
-            readOnlyRootFilesystem: false
-          volumes:
-            - name: docker-sock
-              hostPath:
-                path: /var/run/docker.sock
-          volumeMounts:
-            - name: docker-sock
-              mountPath: /var/run/docker.sock
-              readOnly: true
         serviceMonitor:
           enabled: true
         targetNamespaces: "perf-demo"
