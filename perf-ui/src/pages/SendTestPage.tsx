@@ -19,6 +19,7 @@ import {
   PageHeader,
   Select,
   TextField,
+  Tooltip,
 } from 'perf-ui-components';
 import type { DataTableColumn } from 'perf-ui-components';
 import type { FormEvent } from 'react';
@@ -204,15 +205,21 @@ export default function SendTestPage() {
       align: 'right',
       render: (row) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <IconButton size="small" tooltip="Load" onClick={() => handleLoadTestCase(row)}>
-            <PlayArrowIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" tooltip="Edit" onClick={() => openEditDialog(row)}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" tooltip="Delete" onClick={() => setConfirmDeleteId(row.id)}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title="Load">
+            <IconButton size="small" onClick={() => handleLoadTestCase(row)}>
+              <PlayArrowIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit">
+            <IconButton size="small" onClick={() => openEditDialog(row)}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton size="small" onClick={() => setConfirmDeleteId(row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       ),
     },

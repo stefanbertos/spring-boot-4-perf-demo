@@ -18,6 +18,11 @@ spec:
         operator:
           scanJobsConcurrentLimit: 3
           scanJobsRetryDelay: 30s
+        podAnnotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "8080"
+          prometheus.io/path: "/metrics"
+          prometheus.io/job: "trivy-operator"
         trivyOperator:
           scanJobPodTemplateContainerSecurityContext:
             allowPrivilegeEscalation: false
@@ -45,7 +50,7 @@ spec:
               cpu: "1"
               memory: 1Gi
         serviceMonitor:
-          enabled: true
+          enabled: false
         targetNamespaces: "perf-demo"
   destination:
     server: https://kubernetes.default.svc

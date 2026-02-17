@@ -78,7 +78,8 @@
       "Bash(python3:*)",
       "Bash(kubectl apply:*)",
       "Bash(kubectl:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(wc:*)"
     ]
   }
 }
