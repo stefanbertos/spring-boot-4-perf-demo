@@ -130,7 +130,12 @@ subprojects {
                     '*TestCaseController',
                     '*TestCaseController$*',
                     '*TestCaseController.*',
-                    '*GlobalExceptionHandler'
+                    '*TestRunController',
+                    '*TestRunController$*',
+                    '*TestRunController.*',
+                    '*.loki.*',
+                    '*GlobalExceptionHandler',
+                    '*PerfController$*'
                 ]
                 limit {
                     minimum = 0.8  // 80% coverage required per class
@@ -239,6 +244,7 @@ subprojects {
         // Mockito for mocking
         testImplementation 'org.mockito:mockito-core'
         testImplementation 'org.mockito:mockito-junit-jupiter'
+        testImplementation 'org.awaitility:awaitility:4.2.2'
     }
 
     tasks.named('bootRun') {

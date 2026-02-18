@@ -114,6 +114,8 @@ data:
         export-path: ./prometheus-exports
       export:
         path: ./test-exports
+      loki:
+        url: http://localhost:3100
       perf:
         metrics-propagation-delay-ms: 16000
         tps-window-ms: 60000
@@ -424,6 +426,8 @@ data:
         export-enabled: true
       kafka:
         bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:perf-kafka:9092}
+      loki:
+        url: ${LOKI_URL:http://perf-loki:3100}
       grafana:
         url: ${GRAFANA_URL:http://perf-grafana:3000}
       prometheus:

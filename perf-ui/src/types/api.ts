@@ -1,33 +1,41 @@
 export interface TestRunResponse {
   id: number;
+  testRunId: string;
   testId: string;
   status: string;
   messageCount: number;
   completedCount: number;
-  failedCount: number;
-  startTime: string;
-  endTime: string | null;
-  durationMs: number | null;
   tps: number | null;
   avgLatencyMs: number | null;
   minLatencyMs: number | null;
   maxLatencyMs: number | null;
+  durationMs: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  zipFilePath: string | null;
 }
 
-export interface TestRunSummaryResponse {
+export interface TestRunDetailResponse {
   id: number;
+  testRunId: string;
   testId: string;
   status: string;
-  totalMessages: number;
-  sentCount: number;
-  receivedCount: number;
-  failedCount: number;
-  timeoutCount: number;
-  startTime: string;
-  endTime: string | null;
-  duration: string | null;
+  messageCount: number;
+  completedCount: number;
   tps: number | null;
   avgLatencyMs: number | null;
+  minLatencyMs: number | null;
+  maxLatencyMs: number | null;
+  durationMs: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  zipFilePath: string | null;
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
 }
 
 export interface MessageResponse {
@@ -68,6 +76,24 @@ export interface QueueInfo {
   queueName: string;
   currentDepth: number;
   maxDepth: number;
+}
+
+export interface TestStartResponse {
+  testRunId: string;
+}
+
+export interface TestProgressEvent {
+  testRunId: string;
+  status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'TIMEOUT' | 'FAILED';
+  sentCount: number;
+  completedCount: number;
+  totalCount: number;
+  progressPercent: number;
+  tps: number;
+  avgLatencyMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  elapsedSeconds: number;
 }
 
 export interface TestCaseSummary {

@@ -10,21 +10,29 @@ import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
+import com.example.perftester.perf.TestProgressEvent;
+import com.example.perftester.perf.TestStartResponse;
+import com.example.perftester.persistence.TestRun;
+import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.prometheus.PrometheusExportService;
 import com.example.perftester.prometheus.PrometheusExportService.PrometheusExportResult;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.io.Resource;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.boot.logging.LogLevel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -32,16 +40,18 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PerfControllerTest {
 
     @Mock
@@ -65,148 +75,154 @@ class PerfControllerTest {
     @Mock
     private LoggingAdminService loggingAdminService;
 
-    private final PerfProperties perfProperties = new PerfProperties(16000, 60000, 60000, 30000, 60, 15);
+    @Mock
+    private TestRunService testRunService;
 
     @TempDir
     Path tempDir;
 
+    // Use 100ms propagation delay so export tests don't take 16 seconds
+    private final PerfProperties perfProperties = new PerfProperties(100, 60000, 60000, 30000, 60, 15);
+
     private PerfController controller;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
-                kubernetesService, loggingAdminService, perfProperties);
+                kubernetesService, loggingAdminService, perfProperties, testRunService);
 
-        // Default mock for Kubernetes service
-        when(kubernetesService.exportClusterInfo()).thenReturn(null);
-
-        // sendMessage is @Async and returns CompletableFuture
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
+        var perfResult = new PerfTestResult(10, 0, 1.0, 10.0, 50.0, 10.0, 100.0);
+        when(performanceTracker.getResult()).thenReturn(perfResult);
+        var mockTestRun = new TestRun();
+        mockTestRun.setId(1L);
+        when(testRunService.createRun(anyString(), any(), anyInt())).thenReturn(mockTestRun);
+        when(performanceTracker.getProgressSnapshot()).thenReturn(
+                new TestProgressEvent("run-id", "RUNNING", 5, 3, 10, 30.0, 3.0, 50.0, 10.0, 100.0, 0.5));
+        when(kubernetesService.exportClusterInfo()).thenReturn(null);
     }
 
     @Test
-    void sendMessagesShouldReturnZipFile() throws InterruptedException, IOException {
-        PerfTestResult perfResult = new PerfTestResult(10, 0, 1.0, 10.0, 50.0, 10.0, 100.0);
-        PerfTestResult withDashboards = perfResult.withDashboardExports(List.of("http://grafana/d/1"), List.of("/path/to/file.png"));
-        PerfTestResult withPrometheus = withDashboards.withPrometheusExport("/path/to/prometheus.json");
+    void sendMessagesShouldReturnAcceptedWithTestRunId() {
+        ResponseEntity<TestStartResponse> response = controller.sendMessages(
+                "test message", 10, 1, 0, null, false, false);
 
-        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(performanceTracker.getResult()).thenReturn(perfResult);
-
-        DashboardExportResult dashboardExport = new DashboardExportResult(
-                List.of("http://grafana/d/1"), List.of("/path/to/file.png"));
-        when(grafanaExportService.exportDashboards(anyLong(), anyLong())).thenReturn(dashboardExport);
-
-        PrometheusExportResult prometheusExport = new PrometheusExportResult(
-                "/path/to/prometheus.json", "http://prometheus/query", null);
-        when(prometheusExportService.exportMetrics(anyLong(), anyLong(), anyString())).thenReturn(prometheusExport);
-
-        // Create a temp ZIP file for the test
-        Path tempZip = tempDir.resolve("test-id_20230101.zip");
-        Files.write(tempZip, "test content".getBytes());
-
-        PackageResult packageResult = new PackageResult("test-id_20230101.zip", tempZip.toString());
-        when(testResultPackager.packageResults(any(PerfTestResult.class), anyList(), anyString(), anyString(), anyLong(), anyLong()))
-                .thenReturn(packageResult);
-
-        ResponseEntity<Resource> response = controller.sendMessages("test message", 10, 1, 0, "test-id", true, false);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getHeaders().getContentDisposition().toString().contains("test-id_20230101.zip"));
-
-        verify(messageSender, times(10)).sendMessage(anyString());
-        verify(performanceTracker).startTest(10);
+        assertNotNull(response.getBody().testRunId());
     }
 
     @Test
-    void sendMessagesShouldHandleTimeout() throws InterruptedException, IOException {
-        PerfTestResult perfResult = new PerfTestResult(5, 5, 10.0, 0.5, 50.0, 10.0, 100.0);
+    void sendMessagesShouldStartTestAsynchronously() {
+        controller.sendMessages("test message", 10, 1, 0, null, false, false);
 
-        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(false);
-        when(performanceTracker.getResult()).thenReturn(perfResult);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(messageSender, times(10)).sendMessage(anyString()));
+    }
 
-        DashboardExportResult dashboardExport = new DashboardExportResult(List.of(), List.of());
+    @Test
+    void sendMessagesShouldCallStartTestWithGeneratedRunId() {
+        controller.sendMessages("test message", 5, 1, 0, null, false, false);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).startTest(anyInt(), anyString()));
+    }
+
+    @Test
+    void sendMessagesShouldSetStatusCompletedOnSuccess() {
+        controller.sendMessages("test message", 3, 1, 0, null, false, false);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).setStatus("COMPLETED"));
+    }
+
+    @Test
+    void sendMessagesShouldSetStatusTimeoutWhenNotAllReceived() throws Exception {
+        doReturn(false).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
+
+        controller.sendMessages("test message", 3, 1, 0, null, false, false);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).setStatus("TIMEOUT"));
+    }
+
+    @Test
+    void sendMessagesShouldExportArtifactsWhenExportStatisticsEnabled() throws IOException {
+        var dashboardExport = new DashboardExportResult(List.of(), List.of());
         when(grafanaExportService.exportDashboards(anyLong(), anyLong())).thenReturn(dashboardExport);
 
-        PrometheusExportResult prometheusExport = new PrometheusExportResult(null, null, "Connection refused");
+        var prometheusExport = new PrometheusExportResult(null, null, "No connection");
         when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
 
         Path tempZip = tempDir.resolve("test.zip");
         Files.write(tempZip, "content".getBytes());
-
-        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
         when(testResultPackager.packageResults(any(), anyList(), any(), any(), anyLong(), anyLong()))
-                .thenReturn(packageResult);
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        ResponseEntity<Resource> response = controller.sendMessages("test", 10, 1, 0, null, true, false);
+        controller.sendMessages("test message", 3, 1, 0, "test-id", true, false);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(grafanaExportService).exportDashboards(anyLong(), anyLong()));
     }
 
     @Test
-    void sendMessagesShouldApplyDelay() throws InterruptedException, IOException {
-        PerfTestResult perfResult = new PerfTestResult(2, 0, 0.5, 4.0, 50.0, 10.0, 100.0);
-
-        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(performanceTracker.getResult()).thenReturn(perfResult);
-
-        DashboardExportResult dashboardExport = new DashboardExportResult(List.of(), List.of());
-        when(grafanaExportService.exportDashboards(anyLong(), anyLong())).thenReturn(dashboardExport);
-
-        PrometheusExportResult prometheusExport = new PrometheusExportResult("/path/file.json", "url", null);
-        when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
-
-        Path tempZip = tempDir.resolve("test.zip");
-        Files.write(tempZip, "content".getBytes());
-
-        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
-        when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
-                .thenReturn(packageResult);
-
-        long startTime = System.currentTimeMillis();
-        controller.sendMessages("test", 2, 1, 10, "test-id", true, false);
-        long elapsed = System.currentTimeMillis() - startTime;
-
-        // Should take at least 10ms delay between 2 messages (10ms delay)
-        // Note: the test also has a 16 second sleep, so we check it completed
-        verify(messageSender, times(2)).sendMessage(anyString());
-    }
-
-    @Test
-    void sendMessagesShouldCleanupKubernetesDirectory() throws InterruptedException, IOException {
-        var kubeDir = tempDir.resolve("kubernetes-export");
-        Files.createDirectories(kubeDir);
-        Files.writeString(kubeDir.resolve("nodes.json"), "{}");
-        Files.writeString(kubeDir.resolve("pods.json"), "{}");
-        when(kubernetesService.exportClusterInfo()).thenReturn(kubeDir.toString());
-
-        PerfTestResult perfResult = new PerfTestResult(1, 0, 0.1, 10.0, 50.0, 10.0, 100.0);
-        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
-        when(performanceTracker.getResult()).thenReturn(perfResult);
-
+    void sendMessagesShouldCleanupExportedFilesAfterExport() throws IOException {
         var dashFile = tempDir.resolve("dashboard.png");
         Files.write(dashFile, "image".getBytes());
-
-        DashboardExportResult dashboardExport = new DashboardExportResult(
+        var dashboardExport = new DashboardExportResult(
                 List.of("http://grafana/d/1"), List.of(dashFile.toString()));
         when(grafanaExportService.exportDashboards(anyLong(), anyLong())).thenReturn(dashboardExport);
 
-        var promFile = tempDir.resolve("prom.json");
+        var promFile = tempDir.resolve("prometheus.json");
         Files.writeString(promFile, "{}");
-        PrometheusExportResult prometheusExport = new PrometheusExportResult(
+        var prometheusExport = new PrometheusExportResult(
                 promFile.toString(), "http://prometheus/query", null);
         when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
 
         Path tempZip = tempDir.resolve("test.zip");
         Files.write(tempZip, "content".getBytes());
-        PackageResult packageResult = new PackageResult("test.zip", tempZip.toString());
         when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
-                .thenReturn(packageResult);
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test", 1, 1, 0, "test-id", true, false);
+        controller.sendMessages("test message", 1, 1, 0, "test-id", true, false);
 
-        assertFalse(Files.exists(kubeDir));
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> {
+                    assertFalse(Files.exists(dashFile));
+                    assertFalse(Files.exists(promFile));
+                });
+    }
+
+    @Test
+    void sendMessagesShouldEnableDebugLoggingWhenDebugIsTrue() {
+        when(loggingAdminService.getLoggerConfiguration("com.example")).thenReturn(null);
+
+        controller.sendMessages("test message", 1, 1, 0, null, false, true);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(loggingAdminService).setLogLevel("com.example", LogLevel.DEBUG));
+    }
+
+    @Test
+    void streamProgressShouldReturnSseEmitter() {
+        var emitter = controller.streamProgress("some-test-run-id");
+
+        assertNotNull(emitter);
     }
 }

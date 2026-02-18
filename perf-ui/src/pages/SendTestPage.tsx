@@ -6,6 +6,8 @@ import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Collapse from '@mui/material/Collapse';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Grid from '@mui/material/Grid';
+import LinearProgress from '@mui/material/LinearProgress';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -13,6 +15,7 @@ import {
   Alert,
   Button,
   Card,
+  Chip,
   DataTable,
   Dialog,
   IconButton,
@@ -23,17 +26,18 @@ import {
 } from 'perf-ui-components';
 import type { DataTableColumn } from 'perf-ui-components';
 import type { FormEvent } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createTestCase,
   deleteTestCase,
   getTestCase,
   listTestCases,
   sendTest,
+  subscribeTestProgress,
   updateTestCase,
   uploadTestCase,
 } from '@/api';
-import type { TestCaseSummary } from '@/types/api';
+import type { TestCaseSummary, TestProgressEvent } from '@/types/api';
 
 // ── Test Case Manager ─────────────────────────────────────────────
 
@@ -67,6 +71,112 @@ interface TestCaseFormState {
 
 const INITIAL_FORM: TestCaseFormState = { mode: 'create', name: '', message: '', file: null };
 
+// ── Progress Panel ─────────────────────────────────────────────────
+
+interface StatItemProps {
+  label: string;
+  value: string;
+}
+
+function StatItem({ label, value }: StatItemProps) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight="bold">
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+interface ProgressPanelProps {
+  progress: TestProgressEvent;
+}
+
+function ProgressPanel({ progress }: ProgressPanelProps) {
+  const isActive = progress.status === 'RUNNING' || progress.status === 'IDLE';
+  const statusColor =
+    progress.status === 'COMPLETED'
+      ? 'success'
+      : progress.status === 'TIMEOUT'
+        ? 'warning'
+        : progress.status === 'FAILED'
+          ? 'error'
+          : 'primary';
+  const statusLabel =
+    progress.status === 'IDLE'
+      ? 'Starting...'
+      : progress.status === 'RUNNING'
+        ? 'Running...'
+        : progress.status;
+
+  return (
+    <Card sx={{ mt: 3 }}>
+      <Stack spacing={2}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography variant="subtitle1" fontWeight="bold">
+            Test Progress
+          </Typography>
+          <Chip label={statusLabel} color={statusColor} size="small" />
+        </Stack>
+
+        <Box>
+          <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              {progress.completedCount.toLocaleString()} / {progress.totalCount.toLocaleString()}{' '}
+              messages received
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {progress.progressPercent.toFixed(1)}%
+            </Typography>
+          </Stack>
+          <LinearProgress
+            variant={isActive && progress.progressPercent === 0 ? 'indeterminate' : 'determinate'}
+            value={Math.min(progress.progressPercent, 100)}
+            color={statusColor}
+            sx={{ height: 8, borderRadius: 4 }}
+          />
+        </Box>
+
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem
+              label="Sent"
+              value={`${progress.sentCount.toLocaleString()} / ${progress.totalCount.toLocaleString()}`}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem label="TPS" value={progress.tps.toFixed(1)} />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem
+              label="Avg Latency"
+              value={progress.avgLatencyMs > 0 ? `${progress.avgLatencyMs.toFixed(1)} ms` : '—'}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem
+              label="Min Latency"
+              value={progress.minLatencyMs > 0 ? `${progress.minLatencyMs.toFixed(1)} ms` : '—'}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem
+              label="Max Latency"
+              value={progress.maxLatencyMs > 0 ? `${progress.maxLatencyMs.toFixed(1)} ms` : '—'}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatItem label="Elapsed" value={`${progress.elapsedSeconds.toFixed(1)} s`} />
+          </Grid>
+        </Grid>
+      </Stack>
+    </Card>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function SendTestPage() {
@@ -80,6 +190,8 @@ export default function SendTestPage() {
   const [debug, setDebug] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [progress, setProgress] = useState<TestProgressEvent | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Test case manager state
   const { testCases, loading: testCasesLoading, refresh } = useTestCases();
@@ -90,15 +202,24 @@ export default function SendTestPage() {
   const [saving, setSaving] = useState(false);
   const [selectedTestCaseId, setSelectedTestCaseId] = useState('');
 
+  // Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      unsubscribeRef.current?.();
+    };
+  }, []);
+
   // ── Send test handler ────────────────────────────────────────────
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    unsubscribeRef.current?.();
     setSubmitting(true);
     setResult(null);
+    setProgress(null);
 
     try {
-      await sendTest({
+      const { testRunId } = await sendTest({
         message,
         count: Number(count),
         timeoutSeconds: Number(timeout),
@@ -107,14 +228,23 @@ export default function SendTestPage() {
         exportStatistics,
         debug,
       });
-      setResult({ type: 'success', text: `Test started with ${count} messages` });
+
+      const unsub = subscribeTestProgress(
+        testRunId,
+        (event) => setProgress(event),
+        () => setSubmitting(false),
+        () => {
+          setSubmitting(false);
+          setResult({ type: 'error', text: 'Lost connection to progress stream' });
+        },
+      );
+      unsubscribeRef.current = unsub;
     } catch (err) {
+      setSubmitting(false);
       setResult({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to send test',
+        text: err instanceof Error ? err.message : 'Failed to start test',
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -374,11 +504,14 @@ export default function SendTestPage() {
               </Alert>
             )}
             <Button type="submit" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
-              {submitting ? 'Sending...' : 'Send Test'}
+              {submitting ? 'Running...' : 'Send Test'}
             </Button>
           </Stack>
         </Box>
       </Card>
+
+      {/* Progress Panel */}
+      {progress && <ProgressPanel progress={progress} />}
 
       {/* Create/Edit/Upload Dialog */}
       <Dialog

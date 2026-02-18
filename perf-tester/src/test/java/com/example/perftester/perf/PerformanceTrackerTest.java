@@ -27,7 +27,7 @@ class PerformanceTrackerTest {
 
     @Test
     void startTestShouldInitializeState() {
-        tracker.startTest(10);
+        tracker.startTest(10, "test-run");
 
         PerfTestResult result = tracker.getResult();
         assertEquals(0, result.completedMessages());
@@ -36,7 +36,7 @@ class PerformanceTrackerTest {
 
     @Test
     void recordSendAndReceiveShouldTrackMessages() throws InterruptedException {
-        tracker.startTest(1);
+        tracker.startTest(1, "test-run");
 
         tracker.recordSend("msg-1");
         Thread.sleep(10); // Small delay to ensure measurable latency
@@ -50,7 +50,7 @@ class PerformanceTrackerTest {
 
     @Test
     void recordReceiveForUnknownMessageShouldNotCount() {
-        tracker.startTest(1);
+        tracker.startTest(1, "test-run");
 
         tracker.recordReceive("unknown-msg");
 
@@ -60,7 +60,7 @@ class PerformanceTrackerTest {
 
     @Test
     void awaitCompletionShouldReturnTrueWhenAllMessagesReceived() throws InterruptedException {
-        tracker.startTest(2);
+        tracker.startTest(2, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordSend("msg-2");
@@ -72,7 +72,7 @@ class PerformanceTrackerTest {
 
     @Test
     void awaitCompletionShouldReturnFalseOnTimeout() throws InterruptedException {
-        tracker.startTest(2);
+        tracker.startTest(2, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordReceive("msg-1");
@@ -88,7 +88,7 @@ class PerformanceTrackerTest {
 
     @Test
     void getResultShouldCalculateStatistics() throws InterruptedException {
-        tracker.startTest(3);
+        tracker.startTest(3, "test-run");
 
         for (int i = 0; i < 3; i++) {
             String msgId = "msg-" + i;
@@ -108,7 +108,7 @@ class PerformanceTrackerTest {
 
     @Test
     void getResultWithNoCompletedMessagesShouldReturnZeroLatency() {
-        tracker.startTest(1);
+        tracker.startTest(1, "test-run");
 
         PerfTestResult result = tracker.getResult();
         assertEquals(0, result.avgLatencyMs());
@@ -135,7 +135,7 @@ class PerformanceTrackerTest {
 
     @Test
     void minMaxLatencyShouldTrackExtremesCorrectly() throws InterruptedException {
-        tracker.startTest(3);
+        tracker.startTest(3, "test-run");
 
         // Send all messages first
         tracker.recordSend("fast");
@@ -156,7 +156,7 @@ class PerformanceTrackerTest {
 
     @Test
     void pendingMessagesShouldTrackUnreceivedMessages() {
-        tracker.startTest(3);
+        tracker.startTest(3, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordSend("msg-2");
@@ -170,7 +170,7 @@ class PerformanceTrackerTest {
 
     @Test
     void updateMinShouldNotUpdateWhenValueIsLarger() throws InterruptedException {
-        tracker.startTest(2);
+        tracker.startTest(2, "test-run");
 
         // First message with short latency
         tracker.recordSend("short");
@@ -192,7 +192,7 @@ class PerformanceTrackerTest {
 
     @Test
     void updateMaxShouldNotUpdateWhenValueIsSmaller() throws InterruptedException {
-        tracker.startTest(2);
+        tracker.startTest(2, "test-run");
 
         // First message with long latency
         tracker.recordSend("long");
@@ -221,5 +221,30 @@ class PerformanceTrackerTest {
         // Should not throw
         PerfTestResult result = tracker.getResult();
         assertEquals(1, result.completedMessages());
+    }
+
+    @Test
+    void getProgressSnapshotShouldReturnCurrentState() throws InterruptedException {
+        tracker.startTest(5, "snapshot-test");
+
+        tracker.recordSend("msg-1");
+        Thread.sleep(5);
+        tracker.recordReceive("msg-1");
+
+        var snapshot = tracker.getProgressSnapshot();
+        assertEquals("snapshot-test", snapshot.testRunId());
+        assertEquals("RUNNING", snapshot.status());
+        assertEquals(5, snapshot.totalCount());
+        assertTrue(snapshot.completedCount() >= 1);
+        assertTrue(snapshot.progressPercent() > 0);
+    }
+
+    @Test
+    void setStatusShouldUpdateStatus() {
+        tracker.startTest(1, "status-test");
+        assertEquals("RUNNING", tracker.getProgressSnapshot().status());
+
+        tracker.setStatus("COMPLETED");
+        assertEquals("COMPLETED", tracker.getProgressSnapshot().status());
     }
 }

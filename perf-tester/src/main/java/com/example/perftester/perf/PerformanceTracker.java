@@ -24,6 +24,9 @@ public class PerformanceTracker {
 
     private volatile CountDownLatch completionLatch;
     private volatile long testStartTime;
+    private volatile String currentTestRunId;
+    private volatile String currentStatus = "IDLE";
+    private volatile int totalMessages;
     private final AtomicLong completedCount = new AtomicLong(0);
     private final AtomicLong totalLatencyNanos = new AtomicLong(0);
     private final AtomicLong minLatencyNanos = new AtomicLong(Long.MAX_VALUE);
@@ -38,7 +41,7 @@ public class PerformanceTracker {
                 .register(meterRegistry);
     }
 
-    public void startTest(int messageCount) {
+    public void startTest(int messageCount, String testRunId) {
         inFlightMessages.clear();
         completionTimestamps.clear();
         completedCount.set(0);
@@ -47,7 +50,33 @@ public class PerformanceTracker {
         maxLatencyNanos.set(Long.MIN_VALUE);
         completionLatch = new CountDownLatch(messageCount);
         testStartTime = System.nanoTime();
-        log.info("Started performance test with {} messages", messageCount);
+        totalMessages = messageCount;
+        currentTestRunId = testRunId;
+        currentStatus = "RUNNING";
+        log.info("Started performance test: testRunId={}, messages={}", testRunId, messageCount);
+    }
+
+    public void setStatus(String status) {
+        this.currentStatus = status;
+    }
+
+    public TestProgressEvent getProgressSnapshot() {
+        var completed = completedCount.get();
+        var inFlight = inFlightMessages.size();
+        var sent = completed + inFlight;
+        var total = totalMessages;
+        var tps = calculateWindowedTps();
+        double avgLatencyMs = completed > 0 ? (totalLatencyNanos.get() / completed) / 1_000_000.0 : 0;
+        double minLatencyMs = minLatencyNanos.get() != Long.MAX_VALUE ? minLatencyNanos.get() / 1_000_000.0 : 0;
+        double maxLatencyMs = maxLatencyNanos.get() != Long.MIN_VALUE ? maxLatencyNanos.get() / 1_000_000.0 : 0;
+        double elapsedSeconds = (System.nanoTime() - testStartTime) / 1_000_000_000.0;
+        double progressPercent = total > 0 ? (completed * 100.0) / total : 0;
+        return new TestProgressEvent(
+                currentTestRunId, currentStatus,
+                sent, completed, total,
+                progressPercent, tps,
+                avgLatencyMs, minLatencyMs, maxLatencyMs,
+                elapsedSeconds);
     }
 
     public void recordSend(String messageId) {

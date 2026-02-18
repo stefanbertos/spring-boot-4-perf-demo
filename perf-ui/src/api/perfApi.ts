@@ -1,13 +1,14 @@
 import { del, get, post, postFormData, put } from './client';
 import type {
+  LogEntry,
   LogLevelResponse,
-  MessageResponse,
-  MetricResponse,
   QueueInfo,
   TestCaseDetail,
   TestCaseSummary,
+  TestProgressEvent,
+  TestRunDetailResponse,
   TestRunResponse,
-  TestRunSummaryResponse,
+  TestStartResponse,
   TopicInfo,
 } from '@/types/api';
 
@@ -21,7 +22,7 @@ export function sendTest(params: {
   testId?: string;
   exportStatistics?: boolean;
   debug?: boolean;
-}): Promise<void> {
+}): Promise<TestStartResponse> {
   const query = new URLSearchParams();
   if (params.count != null) query.set('count', String(params.count));
   if (params.timeoutSeconds != null) query.set('timeoutSeconds', String(params.timeoutSeconds));
@@ -31,7 +32,36 @@ export function sendTest(params: {
   if (params.debug) query.set('debug', 'true');
 
   const qs = query.toString();
-  return post(`/api/perf/send${qs ? `?${qs}` : ''}`, params.message, 'text/plain');
+  return post<TestStartResponse>(
+    `/api/perf/send${qs ? `?${qs}` : ''}`,
+    params.message,
+    'text/plain',
+  );
+}
+
+export function subscribeTestProgress(
+  testRunId: string,
+  onEvent: (event: TestProgressEvent) => void,
+  onComplete: () => void,
+  onError: (err: Event) => void,
+): () => void {
+  const source = new EventSource(`/api/perf/progress/${testRunId}`);
+
+  source.onmessage = (e) => {
+    const data = JSON.parse(e.data as string) as TestProgressEvent;
+    onEvent(data);
+    if (data.status === 'COMPLETED' || data.status === 'TIMEOUT' || data.status === 'FAILED') {
+      source.close();
+      onComplete();
+    }
+  };
+
+  source.onerror = (err) => {
+    source.close();
+    onError(err);
+  };
+
+  return () => source.close();
 }
 
 // ── Test Runs ──────────────────────────────────────────────────────
@@ -40,16 +70,20 @@ export function getTestRuns(): Promise<TestRunResponse[]> {
   return get('/api/perf/test-runs');
 }
 
-export function getTestRunSummary(id: number): Promise<TestRunSummaryResponse> {
+export function getTestRunSummary(id: number): Promise<TestRunDetailResponse> {
   return get(`/api/perf/test-runs/${id}`);
 }
 
-export function getTestRunMessages(id: number): Promise<MessageResponse[]> {
-  return get(`/api/perf/test-runs/${id}/messages`);
+export function deleteTestRun(id: number): Promise<void> {
+  return del(`/api/perf/test-runs/${id}`);
 }
 
-export function getTestRunMetrics(id: number): Promise<MetricResponse[]> {
-  return get(`/api/perf/test-runs/${id}/metrics`);
+export function downloadTestRunUrl(id: number): string {
+  return `/api/perf/test-runs/${id}/download`;
+}
+
+export function getTestRunLogs(id: number): Promise<LogEntry[]> {
+  return get(`/api/perf/test-runs/${id}/logs`);
 }
 
 // ── Logging Admin ──────────────────────────────────────────────────

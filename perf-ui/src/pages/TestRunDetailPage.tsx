@@ -1,61 +1,18 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DownloadIcon from '@mui/icons-material/Download';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
-import { Alert, Card, Chip, DataTable, Loading, PageHeader, Tabs } from 'perf-ui-components';
-import type { DataTableColumn, TabItem } from 'perf-ui-components';
+import { Alert, Card, Chip, Loading, PageHeader, Tabs } from 'perf-ui-components';
+import type { TabItem } from 'perf-ui-components';
 import { Link, useParams } from 'react-router-dom';
-import { getTestRunMessages, getTestRunMetrics, getTestRunSummary } from '@/api';
+import { downloadTestRunUrl, getTestRunLogs, getTestRunSummary } from '@/api';
 import { useApi } from '@/hooks';
-import type { MessageResponse, MetricResponse } from '@/types/api';
-
-const messageColumns: DataTableColumn<MessageResponse>[] = [
-  { id: 'id', label: 'ID', render: (row) => row.id },
-  { id: 'messageId', label: 'Message ID', render: (row) => row.messageId },
-  { id: 'correlationId', label: 'Correlation ID', render: (row) => row.correlationId },
-  {
-    id: 'status',
-    label: 'Status',
-    render: (row) => (
-      <Chip
-        label={row.status}
-        size="small"
-        color={
-          row.status === 'RECEIVED' ? 'success' : row.status === 'FAILED' ? 'error' : 'default'
-        }
-      />
-    ),
-  },
-  {
-    id: 'latency',
-    label: 'Latency',
-    align: 'right',
-    render: (row) => (row.latencyMs != null ? `${row.latencyMs} ms` : '-'),
-  },
-  {
-    id: 'sentAt',
-    label: 'Sent At',
-    render: (row) => new Date(row.sentAt).toLocaleTimeString(),
-  },
-];
-
-const metricColumns: DataTableColumn<MetricResponse>[] = [
-  { id: 'name', label: 'Metric', render: (row) => row.metricName },
-  { id: 'type', label: 'Type', render: (row) => row.metricType },
-  {
-    id: 'value',
-    label: 'Value',
-    align: 'right',
-    render: (row) => row.metricValue.toFixed(2),
-  },
-  { id: 'unit', label: 'Unit', render: (row) => row.metricUnit ?? '-' },
-  {
-    id: 'time',
-    label: 'Collected At',
-    render: (row) => new Date(row.collectedAt).toLocaleTimeString(),
-  },
-];
+import type { LogEntry } from '@/types/api';
 
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
@@ -70,6 +27,35 @@ function SummaryField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function LogsPanel({ logs, loading }: { logs: LogEntry[] | null; loading: boolean }) {
+  if (loading) return <Loading message="Loading logs..." />;
+  if (!logs || logs.length === 0) {
+    return <Typography color="text.secondary">No logs available.</Typography>;
+  }
+  return (
+    <List
+      dense
+      sx={{ fontFamily: 'monospace', fontSize: '0.8rem', maxHeight: 600, overflow: 'auto' }}
+    >
+      {logs.map((entry, idx) => (
+        <ListItem key={idx} disableGutters sx={{ py: 0 }}>
+          <ListItemText
+            primary={`${entry.timestamp}  [${entry.level}]  ${entry.message}`}
+            primaryTypographyProps={{
+              sx: {
+                fontFamily: 'monospace',
+                fontSize: '0.8rem',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              },
+            }}
+          />
+        </ListItem>
+      ))}
+    </List>
+  );
+}
+
 export default function TestRunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
@@ -79,14 +65,8 @@ export default function TestRunDetailPage() {
     loading: loadingSummary,
     error: errorSummary,
   } = useApi(() => getTestRunSummary(numericId), [numericId]);
-  const { data: messages, loading: loadingMessages } = useApi(
-    () => getTestRunMessages(numericId),
-    [numericId],
-  );
-  const { data: metrics, loading: loadingMetrics } = useApi(
-    () => getTestRunMetrics(numericId),
-    [numericId],
-  );
+
+  const { data: logs, loading: loadingLogs } = useApi(() => getTestRunLogs(numericId), [numericId]);
 
   if (loadingSummary) return <Loading message="Loading test run..." />;
   if (errorSummary) return <Alert severity="error">{errorSummary.message}</Alert>;
@@ -111,19 +91,10 @@ export default function TestRunDetailPage() {
               <SummaryField label="Status" value={summary.status} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Total Messages" value={String(summary.totalMessages)} />
+              <SummaryField label="Messages" value={String(summary.messageCount)} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Sent" value={String(summary.sentCount)} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Received" value={String(summary.receivedCount)} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Failed" value={String(summary.failedCount)} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Timeouts" value={String(summary.timeoutCount)} />
+              <SummaryField label="Completed" value={String(summary.completedCount)} />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <SummaryField
@@ -138,43 +109,49 @@ export default function TestRunDetailPage() {
               />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
-              <SummaryField label="Duration" value={summary.duration ?? '-'} />
+              <SummaryField
+                label="Min Latency"
+                value={summary.minLatencyMs != null ? `${summary.minLatencyMs.toFixed(0)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="Max Latency"
+                value={summary.maxLatencyMs != null ? `${summary.maxLatencyMs.toFixed(0)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="Duration"
+                value={
+                  summary.durationMs != null ? `${(summary.durationMs / 1000).toFixed(1)}s` : '-'
+                }
+              />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <SummaryField
                 label="Start Time"
-                value={new Date(summary.startTime).toLocaleString()}
+                value={new Date(summary.startedAt).toLocaleString()}
               />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <SummaryField
                 label="End Time"
-                value={summary.endTime ? new Date(summary.endTime).toLocaleString() : '-'}
+                value={summary.completedAt ? new Date(summary.completedAt).toLocaleString() : '-'}
               />
             </Grid>
+            {summary.testRunId && (
+              <Grid size={{ xs: 12 }}>
+                <SummaryField label="Test Run ID" value={summary.testRunId} />
+              </Grid>
+            )}
           </Grid>
         </Card>
       ),
     },
     {
-      label: 'Messages',
-      content: loadingMessages ? (
-        <Loading message="Loading messages..." />
-      ) : messages && messages.length > 0 ? (
-        <DataTable columns={messageColumns} rows={messages} keyExtractor={(row) => row.id} />
-      ) : (
-        <Typography color="text.secondary">No messages recorded.</Typography>
-      ),
-    },
-    {
-      label: 'Metrics',
-      content: loadingMetrics ? (
-        <Loading message="Loading metrics..." />
-      ) : metrics && metrics.length > 0 ? (
-        <DataTable columns={metricColumns} rows={metrics} keyExtractor={(row) => row.id} />
-      ) : (
-        <Typography color="text.secondary">No metrics recorded.</Typography>
-      ),
+      label: 'Logs',
+      content: <LogsPanel logs={logs} loading={loadingLogs} />,
     },
   ];
 
@@ -191,8 +168,24 @@ export default function TestRunDetailPage() {
         Back to Test Runs
       </MuiButton>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <PageHeader title={`Test Run #${id}`} subtitle={`Test ID: ${summary.testId}`} />
+        <PageHeader
+          title={`Test Run #${id}`}
+          subtitle={summary.testId ? `Test ID: ${summary.testId}` : `Run ID: ${summary.testRunId}`}
+        />
         <Chip label={summary.status} color={statusColor} sx={{ mt: -1 }} />
+        {summary.zipFilePath && (
+          <MuiButton
+            component="a"
+            href={downloadTestRunUrl(numericId)}
+            download
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            sx={{ mt: -1 }}
+          >
+            Download ZIP
+          </MuiButton>
+        )}
       </Box>
       <Tabs tabs={tabs} />
     </Box>

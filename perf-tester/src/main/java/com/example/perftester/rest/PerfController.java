@@ -3,12 +3,13 @@ package com.example.perftester.rest;
 import com.example.perftester.admin.LoggingAdminService;
 import com.example.perftester.config.PerfProperties;
 import com.example.perftester.export.TestResultPackager;
-import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
+import com.example.perftester.perf.TestStartResponse;
+import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.prometheus.PrometheusExportService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -17,24 +18,26 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -46,6 +49,8 @@ import java.util.concurrent.TimeUnit;
 public class PerfController {
 
     private static final String DEBUG_LOGGER = "com.example";
+    private static final long SSE_TIMEOUT_MS = 600_000L;
+    private static final long SSE_POLL_INTERVAL_MS = 500L;
 
     private final MessageSender messageSender;
     private final PerformanceTracker performanceTracker;
@@ -55,80 +60,118 @@ public class PerfController {
     private final KubernetesService kubernetesService;
     private final LoggingAdminService loggingAdminService;
     private final PerfProperties perfProperties;
+    private final TestRunService testRunService;
 
     /**
-     * Sends messages to IBM MQ for performance testing and optionally exports test artifacts.
-     *
-     * <p>When {@code exportStatistics} is true, waits for metrics propagation then exports
-     * Grafana dashboards, Prometheus metrics, and Kubernetes cluster info into a ZIP file
-     * returned as the response body.
-     *
-     * @param message          the message payload to send
-     * @param count            number of messages to send (1-100,000)
-     * @param timeoutSeconds   max seconds to wait for all responses (1-3,600)
-     * @param delayMs          delay between sends in milliseconds (0-60,000)
-     * @param testId           optional identifier for the test run
-     * @param exportStatistics if true, exports dashboards/metrics and returns a ZIP file
-     * @param debug            if true, switches {@code com.example} to DEBUG for the test duration
-     * @return ZIP resource with test results if exporting, otherwise 200 OK
+     * Starts a performance test asynchronously and returns a testRunId immediately.
+     * Progress can be streamed via GET /api/perf/progress/{testRunId}.
      */
     @PostMapping("/send")
-    public ResponseEntity<Resource> sendMessages(
+    public ResponseEntity<TestStartResponse> sendMessages(
             @RequestBody @NotBlank String message,
             @RequestParam(defaultValue = "1000") @Min(1) @Max(100000) int count,
             @RequestParam(defaultValue = "60") @Min(1) @Max(3600) int timeoutSeconds,
             @RequestParam(defaultValue = "0") @Min(0) @Max(60000) int delayMs,
             @RequestParam(required = false) String testId,
             @RequestParam(defaultValue = "false") boolean exportStatistics,
-            @RequestParam(defaultValue = "false") boolean debug) throws InterruptedException {
+            @RequestParam(defaultValue = "false") boolean debug) {
 
+        var testRunId = UUID.randomUUID().toString();
+        var request = new TestRunRequest(testRunId, message, count, timeoutSeconds, delayMs, testId, exportStatistics, debug);
+
+        Thread.ofVirtual().name("perf-test-" + testRunId).start(() -> runTestInBackground(request));
+
+        return ResponseEntity.accepted().body(new TestStartResponse(testRunId));
+    }
+
+    /**
+     * Streams real-time test progress as Server-Sent Events.
+     * Sends a progress update every 500ms until the test completes, times out, or fails.
+     */
+    @GetMapping(value = "/progress/{testRunId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamProgress(@PathVariable String testRunId) {
+        var emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        var scheduler = Executors.newSingleThreadScheduledExecutor(
+                Thread.ofVirtual().factory());
+
+        var future = scheduler.scheduleAtFixedRate(() -> {
+            try {
+                var snapshot = performanceTracker.getProgressSnapshot();
+                emitter.send(SseEmitter.event().data(snapshot, MediaType.APPLICATION_JSON));
+                var status = snapshot.status();
+                if ("COMPLETED".equals(status) || "TIMEOUT".equals(status) || "FAILED".equals(status)) {
+                    emitter.complete();
+                }
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            }
+        }, 0, SSE_POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
+
+        Runnable cleanup = () -> {
+            future.cancel(true);
+            scheduler.shutdown();
+        };
+        emitter.onCompletion(cleanup);
+        emitter.onError(e -> cleanup.run());
+        emitter.onTimeout(cleanup);
+
+        return emitter;
+    }
+
+    private void runTestInBackground(TestRunRequest req) {
         LogLevel previousLevel = null;
-        if (debug) {
+        if (req.debug()) {
             previousLevel = enableDebugLogging();
         }
-
+        var testRunEntity = testRunService.createRun(req.testRunId(), req.testId(), req.count());
         try {
-            return executeTest(message, count, timeoutSeconds, delayMs, testId, exportStatistics);
+            log.info("Starting async performance test: testRunId={}, count={}, timeout={}s, delay={}ms, testId={}",
+                    req.testRunId(), req.count(), req.timeoutSeconds(), req.delayMs(), req.testId());
+
+            performanceTracker.startTest(req.count(), req.testRunId());
+            long testStartTimeMs = System.currentTimeMillis();
+
+            var completed = runPerformanceTest(req.message(), req.count(), req.timeoutSeconds(), req.delayMs());
+            long testEndTimeMs = System.currentTimeMillis();
+
+            var finalStatus = completed ? "COMPLETED" : "TIMEOUT";
+            performanceTracker.setStatus(finalStatus);
+            var result = performanceTracker.getResult();
+
+            log.info("Test {}: testRunId={}, {}/{} messages, TPS={}, avgLatency={}ms",
+                    completed ? "completed" : "timed out",
+                    req.testRunId(), result.completedMessages(), req.count(),
+                    String.format("%.2f", result.tps()),
+                    String.format("%.2f", result.avgLatencyMs()));
+
+            String zipPath = null;
+            if (req.exportStatistics()) {
+                result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
+                Thread.sleep(perfProperties.metricsPropagationDelayMs());
+                var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, req.testId());
+                var packageResult = testResultPackager.packageResults(
+                        exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
+                        req.testId(), testStartTimeMs, testEndTimeMs);
+                zipPath = packageResult.savedPath();
+                log.info("Test results packaged: {} ({})", packageResult.filename(), zipPath);
+                cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
+                        exports.result().kubernetesExportFile());
+            }
+            testRunService.completeRun(testRunEntity.getId(), finalStatus, result, zipPath);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            performanceTracker.setStatus("FAILED");
+            testRunService.completeRun(testRunEntity.getId(), "FAILED", performanceTracker.getResult(), null);
+            log.error("Performance test interrupted: testRunId={}", req.testRunId());
+        } catch (Exception e) {
+            performanceTracker.setStatus("FAILED");
+            testRunService.completeRun(testRunEntity.getId(), "FAILED", performanceTracker.getResult(), null);
+            log.error("Performance test failed: testRunId={}", req.testRunId(), e);
         } finally {
-            if (debug && previousLevel != null) {
+            if (req.debug() && previousLevel != null) {
                 loggingAdminService.setLogLevel(DEBUG_LOGGER, previousLevel);
             }
         }
-    }
-
-    private ResponseEntity<Resource> executeTest(String message, int count, int timeoutSeconds,
-                                                  int delayMs, String testId,
-                                                  boolean exportStatistics) throws InterruptedException {
-        log.info("Starting performance test: {} messages, timeout {}s, delay {}ms, testId={}",
-                count, timeoutSeconds, delayMs, testId);
-
-        performanceTracker.startTest(count);
-
-        long testStartTimeMs = System.currentTimeMillis();
-        runPerformanceTest(message, count, timeoutSeconds, delayMs);
-        var result = performanceTracker.getResult();
-        long testEndTimeMs = System.currentTimeMillis();
-
-        if (exportStatistics) {
-            // Export Kubernetes cluster info and wait for metrics propagation
-            result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
-            Thread.sleep(perfProperties.metricsPropagationDelayMs());
-
-            // Export dashboards and metrics
-            var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, testId);
-
-            // Package and return response
-            var packageResult = testResultPackager.packageResults(
-                    exports.result(), exports.dashboardFiles(), exports.prometheusFile(),
-                    testId, testStartTimeMs, testEndTimeMs);
-
-            log.info("Test results packaged: {} ({})", packageResult.filename(), packageResult.savedPath());
-            cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
-                    exports.result().kubernetesExportFile());
-
-            return buildZipResponse(packageResult);
-        }
-        return ResponseEntity.ok().build();
     }
 
     private LogLevel enableDebugLogging() {
@@ -149,7 +192,6 @@ public class PerfController {
                 Thread.sleep(delayMs);
             }
         }
-        // this is here to wait until all messages are sent
         CompletableFuture.allOf(futures).join();
 
         log.info("All {} messages sent, waiting for responses...", count);
@@ -166,7 +208,8 @@ public class PerfController {
         return completed;
     }
 
-    private ExportContext exportTestArtifacts(PerfTestResult testResult, long startTime, long endTime, String testId) {
+    private ExportContext exportTestArtifacts(PerfTestResult testResult,
+                                              long startTime, long endTime, String testId) {
         log.info("Exporting Grafana dashboards...");
         var dashboardExport = grafanaExportService.exportDashboards(startTime, endTime);
         dashboardExport.dashboardUrls().forEach(url -> log.info("  Dashboard URL: {}", url));
@@ -188,27 +231,11 @@ public class PerfController {
         return new ExportContext(enrichedResult, dashboardFiles, prometheusFile);
     }
 
-    private ResponseEntity<Resource> buildZipResponse(PackageResult packageResult) {
-        var zipPath = Path.of(packageResult.savedPath());
-        var resource = new FileSystemResource(zipPath);
-
-        try {
-            long fileSize = Files.size(zipPath);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(fileSize)
-                    .body(resource);
-        } catch (IOException e) {
-            log.error("Failed to get file size: {}", e.getMessage());
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + packageResult.filename() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-        }
+    private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {
     }
 
-    private record ExportContext(PerfTestResult result, List<String> dashboardFiles, String prometheusFile) {
+    private record TestRunRequest(String testRunId, String message, int count, int timeoutSeconds,
+                                  int delayMs, String testId, boolean exportStatistics, boolean debug) {
     }
 
     private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile,
@@ -257,4 +284,5 @@ public class PerfController {
         int fileCount = dashboardFiles.size() + (prometheusFile != null ? 1 : 0) + (kubernetesFile != null ? 1 : 0);
         log.info("Cleaned up {} exported files", fileCount);
     }
+
 }

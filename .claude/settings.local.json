@@ -79,7 +79,9 @@
       "Bash(kubectl apply:*)",
       "Bash(kubectl:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(echo:*)",
+      "Bash(printf:*)"
     ]
   }
 }
