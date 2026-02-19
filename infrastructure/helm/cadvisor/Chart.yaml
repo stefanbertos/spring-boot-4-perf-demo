@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cadvisor
+description: cAdvisor - container resource usage and performance metrics exporter
+type: application
+version: 1.0.0
+appVersion: "0.51.0"

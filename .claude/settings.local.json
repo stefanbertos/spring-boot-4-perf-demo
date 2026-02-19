@@ -81,7 +81,12 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(wc:*)",
       "Bash(echo:*)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(env:*)",
+      "Bash(git -C \"C:/Users/stefa/IdeaProjects/spring-boot-4-perf-demo\" ls-files perf-ui/)",
+      "Bash(git -C \"C:/Users/stefa/IdeaProjects/spring-boot-4-perf-demo\" ls-files --others perf-ui/)",
+      "Bash(git -C:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)"
     ]
   }
 }

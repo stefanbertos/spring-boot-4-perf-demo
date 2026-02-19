@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-create-test-run-sequence" author="perf-tester">
+        <createSequence sequenceName="TEST_RUN_SEQ" startValue="1" incrementBy="1"/>
+    </changeSet>
+
+    <changeSet id="002-create-test-run-table" author="perf-tester">
+        <createTable tableName="TEST_RUN">
+            <column name="ID" type="NUMBER(19)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="TEST_RUN_ID" type="VARCHAR2(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TEST_ID" type="VARCHAR2(255)"/>
+            <column name="STATUS" type="VARCHAR2(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MESSAGE_COUNT" type="NUMBER(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMPLETED_COUNT" type="NUMBER(10)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TPS" type="NUMBER(10,2)"/>
+            <column name="AVG_LATENCY_MS" type="NUMBER(10,2)"/>
+            <column name="MIN_LATENCY_MS" type="NUMBER(10,2)"/>
+            <column name="MAX_LATENCY_MS" type="NUMBER(10,2)"/>
+            <column name="DURATION_MS" type="NUMBER(19)"/>
+            <column name="ZIP_FILE_PATH" type="VARCHAR2(1000)"/>
+            <column name="STARTED_AT" type="TIMESTAMP" defaultValueComputed="SYSTIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="COMPLETED_AT" type="TIMESTAMP"/>
+            <column name="CREATED_AT" type="TIMESTAMP" defaultValueComputed="SYSTIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

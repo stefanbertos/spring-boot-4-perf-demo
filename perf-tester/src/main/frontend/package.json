@@ -1,0 +1,8 @@
+{
+  "name": "perf-tester-frontend",
+  "private": true,
+  "workspaces": [
+    "components",
+    "app"
+  ]
+}

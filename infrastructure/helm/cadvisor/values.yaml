@@ -1,0 +1,23 @@
+image:
+  repository: gcr.io/cadvisor/cadvisor
+  tag: "v0.51.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+prometheus:
+  scrape: "true"
+  path: /metrics
+  port: "8080"
+  interval: 5s
+  job: cadvisor
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"

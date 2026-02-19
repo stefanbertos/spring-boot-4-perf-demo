@@ -118,7 +118,6 @@ services:
       KAFDROP_URL: http://kafdrop:9000
       REDIS_COMMANDER_URL: http://redis-commander:8081
       PERF_TESTER_URL: http://perf-tester:8080
-      PERF_UI_URL: http://perf-ui:80
       SONAR_URL: http://sonarqube:9000
     depends_on:
       config-server:
@@ -141,17 +140,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 60s
-
-  perf-ui:
-    build:
-      context: ../..
-      dockerfile: perf-ui/Dockerfile
-    ports:
-      - "5173:80"
-    environment:
-      API_GATEWAY_URL: api-gateway:8090
-    mem_limit: 256m
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine

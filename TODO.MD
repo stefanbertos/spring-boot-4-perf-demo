@@ -1,3 +1,1 @@
-move code from perf ui and components to perf-tester folder structure, so its develop and deployed as one application, usually it goes into resources and via some gradle plugin the build is done and then static page is served so then it dockerized properly
-
 If user wants a detailed diff make sure to extract the zip file and perform diff of each files and provide the list of different files, and diff content of everything, or would be diffing in prometheus, grafana a better idea? and just display that? 

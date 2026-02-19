@@ -85,8 +85,8 @@ spring:
               filters:
                 - StripPrefix=1
 
-            - id: perf-ui
-              uri: http://perf-ui:80
+            - id: perf-tester-spa
+              uri: http://perf-tester:8080
               predicates:
                 - Path=/**
               filters:

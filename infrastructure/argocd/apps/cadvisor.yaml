@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: perf-cadvisor
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: perf-demo
+  source:
+    repoURL: https://github.com/stefanbertos/spring-boot-4-perf-demo.git
+    targetRevision: HEAD
+    path: infrastructure/helm/cadvisor
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: perf-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

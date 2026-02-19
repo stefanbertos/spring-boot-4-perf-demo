@@ -1,9 +1,67 @@
+plugins {
+    id 'com.github.node-gradle.node'
+}
+
+// ==================== Frontend Build (React + Vite) ====================
+node {
+    version = '22.17.0'
+    npmVersion = '10.9.2'
+    download = true
+    workDir = layout.buildDirectory.dir('nodejs')
+    npmWorkDir = layout.buildDirectory.dir('npm')
+    nodeProjectDir = file("${projectDir}/src/main/frontend")
+}
+
+tasks.register('installFrontend', NpmTask) {
+    group = 'frontend'
+    description = 'Installs npm workspace dependencies'
+    args = ['install', '--prefer-offline']
+    inputs.files(
+        "${projectDir}/src/main/frontend/package.json",
+        "${projectDir}/src/main/frontend/components/package.json",
+        "${projectDir}/src/main/frontend/app/package.json"
+    )
+    outputs.dir("${projectDir}/src/main/frontend/node_modules")
+}
+
+tasks.register('buildFrontendComponents', NpmTask) {
+    group = 'frontend'
+    description = 'Builds the perf-ui-components library'
+    dependsOn 'installFrontend'
+    args = ['run', 'build', '--workspace=components']
+    inputs.dir("${projectDir}/src/main/frontend/components/src")
+    inputs.file("${projectDir}/src/main/frontend/components/package.json")
+    inputs.file("${projectDir}/src/main/frontend/components/vite.config.ts")
+    inputs.file("${projectDir}/src/main/frontend/components/tsconfig.json")
+    outputs.dir("${projectDir}/src/main/frontend/components/dist")
+}
+
+tasks.register('buildFrontendApp', NpmTask) {
+    group = 'frontend'
+    description = 'Builds the React SPA'
+    dependsOn 'buildFrontendComponents'
+    args = ['run', 'build', '--workspace=app']
+    inputs.dir("${projectDir}/src/main/frontend/app/src")
+    inputs.file("${projectDir}/src/main/frontend/app/package.json")
+    inputs.file("${projectDir}/src/main/frontend/app/vite.config.ts")
+    inputs.files(fileTree("${projectDir}/src/main/frontend/app").include('tsconfig*.json'))
+    outputs.dir("${projectDir}/src/main/frontend/app/dist")
+}
+
+tasks.named('processResources') {
+    dependsOn 'buildFrontendApp'
+    from("${projectDir}/src/main/frontend/app/dist") {
+        into 'static'
+    }
+}
+
+// ==================== Module Dependencies ====================
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
-implementation 'com.ibm.mq:mq-jms-spring-boot-starter:4.0.1'
+    implementation 'com.ibm.mq:mq-jms-spring-boot-starter:4.0.1'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'io.fabric8:kubernetes-client:7.2.0'
     implementation 'org.apache.kafka:kafka-clients'

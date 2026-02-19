@@ -98,9 +98,10 @@ spring:
               filters:
                 - StripPrefix=1
 
-            # Perf-UI SPA (catch-all, must be last)
-            - id: perf-ui
-              uri: ${PERF_UI_URL:http://localhost:3001}
+            # Perf-Tester SPA (catch-all for UI routes, must be last)
+            # Frontend is now bundled into perf-tester and served as static resources
+            - id: perf-tester-spa
+              uri: ${PERF_TESTER_URL:http://localhost:8080}
               predicates:
                 - Path=/**
               filters:

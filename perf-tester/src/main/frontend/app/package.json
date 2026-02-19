@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "cd .. && husky perf-ui/.husky"
+    "prepare": "cd ../../.. && husky src/main/frontend/app/.husky"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
