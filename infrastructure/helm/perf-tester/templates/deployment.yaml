@@ -92,10 +92,10 @@ spec:
               value: perf-ibm-mq
             - name: APP_HEALTHCHECK_MQ_PORT
               value: "1414"
-            - name: APP_HEALTHCHECK_ORACLE_HOST
-              value: perf-oracle
-            - name: APP_HEALTHCHECK_ORACLE_PORT
-              value: "1521"
+            - name: APP_HEALTHCHECK_POSTGRES_HOST
+              value: perf-postgres
+            - name: APP_HEALTHCHECK_POSTGRES_PORT
+              value: "5432"
             - name: APP_HEALTHCHECK_REDIS_HOST
               value: {{ .Values.redis.host }}
             - name: APP_HEALTHCHECK_REDIS_PORT

@@ -5,15 +5,13 @@ server:
 
 spring:
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    url: jdbc:postgresql://localhost:5432/perfdb
     username: perfuser
     password: perfpass
-    driver-class-name: oracle.jdbc.OracleDriver
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
-      naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
@@ -76,9 +74,9 @@ app:
     mq:
       host: localhost
       port: 1414
-    oracle:
+    postgres:
       host: localhost
-      port: 1521
+      port: 5432
     redis:
       host: localhost
       port: 6379

@@ -42,4 +42,4 @@ echo   - Tempo:           http://localhost:3200
 echo   - MQ Console:      https://localhost:9443/ibmmq/console (admin/passw0rd)
 echo   - SonarQube:       http://localhost:9001 (admin/admin)
 echo   - Config Server:   http://localhost:8888
-echo   - Oracle DB:       localhost:1521/XEPDB1 (perfuser/perfpass)
+echo   - PostgreSQL:      localhost:5432/perfdb (perfuser/perfpass)

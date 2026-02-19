@@ -30,7 +30,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 - **Gradle** multi-module build with Checkstyle and PMD
 - **IBM MQ** with mq-jms-spring-boot-starter
 - **Apache Kafka** for message streaming
-- **Oracle Database** for persistence
+- **PostgreSQL 17** for persistence
 - **Redis** for in-memory data store
 - **Observability**: Prometheus, Grafana, Loki, Tempo
 - **Code Quality**: SonarQube
@@ -63,7 +63,7 @@ perf-tester <- DEV.QUEUE.1 <- ibm-mq-consumer <- Kafka (mq-responses) <-------+
 
 4. Or run infrastructure only and start apps locally:
    ```bash
-   docker compose -f infrastructure/docker/compose.yaml up -d redis kafka ibm-mq oracle prometheus grafana loki tempo
+   docker compose -f infrastructure/docker/compose.yaml up -d redis kafka ibm-mq postgres prometheus grafana loki
    ```
 
    Then run each module (start config-server first):

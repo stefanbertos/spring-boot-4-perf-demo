@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
@@ -16,27 +15,26 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "TEST_CASE")
+@Table(name = "test_case")
 @Getter
 @Setter
 public class TestCase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "test_case_seq")
-    @SequenceGenerator(name = "test_case_seq", sequenceName = "TEST_CASE_SEQ", allocationSize = 1)
+    @SequenceGenerator(name = "test_case_seq", sequenceName = "test_case_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "text")
     private String message;
 
-    @Column(name = "CREATED_AT", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "UPDATED_AT", nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     @PrePersist

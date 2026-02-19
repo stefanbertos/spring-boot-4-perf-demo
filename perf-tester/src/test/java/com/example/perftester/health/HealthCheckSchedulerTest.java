@@ -16,7 +16,7 @@ class HealthCheckSchedulerTest {
     private MeterRegistry meterRegistry;
     private ServerSocket kafkaServer;
     private ServerSocket mqServer;
-    private ServerSocket oracleServer;
+    private ServerSocket postgresServer;
     private ServerSocket redisServer;
 
     @BeforeEach
@@ -24,7 +24,7 @@ class HealthCheckSchedulerTest {
         meterRegistry = new SimpleMeterRegistry();
         kafkaServer = new ServerSocket(0);
         mqServer = new ServerSocket(0);
-        oracleServer = new ServerSocket(0);
+        postgresServer = new ServerSocket(0);
         redisServer = new ServerSocket(0);
     }
 
@@ -32,7 +32,7 @@ class HealthCheckSchedulerTest {
     void tearDown() {
         closeServer(kafkaServer);
         closeServer(mqServer);
-        closeServer(oracleServer);
+        closeServer(postgresServer);
         closeServer(redisServer);
     }
 
@@ -46,11 +46,11 @@ class HealthCheckSchedulerTest {
         }
     }
 
-    private HealthCheckProperties createProperties(int kafkaPort, int mqPort, int oraclePort, int redisPort) {
+    private HealthCheckProperties createProperties(int kafkaPort, int mqPort, int postgresPort, int redisPort) {
         return new HealthCheckProperties(
                 new HealthCheckProperties.ServiceEndpoint("localhost", kafkaPort),
                 new HealthCheckProperties.ServiceEndpoint("localhost", mqPort),
-                new HealthCheckProperties.ServiceEndpoint("localhost", oraclePort),
+                new HealthCheckProperties.ServiceEndpoint("localhost", postgresPort),
                 new HealthCheckProperties.ServiceEndpoint("localhost", redisPort),
                 5000,
                 60000
@@ -61,7 +61,7 @@ class HealthCheckSchedulerTest {
         var properties = createProperties(
                 kafkaServer.getLocalPort(),
                 mqServer.getLocalPort(),
-                oracleServer.getLocalPort(),
+                postgresServer.getLocalPort(),
                 redisServer.getLocalPort()
         );
         return new HealthCheckScheduler(properties, meterRegistry);
@@ -87,7 +87,7 @@ class HealthCheckSchedulerTest {
 
         assertThat(meterRegistry.find("health.infra.status").tag("service", "kafka").gauge()).isNotNull();
         assertThat(meterRegistry.find("health.infra.status").tag("service", "ibm-mq").gauge()).isNotNull();
-        assertThat(meterRegistry.find("health.infra.status").tag("service", "oracle").gauge()).isNotNull();
+        assertThat(meterRegistry.find("health.infra.status").tag("service", "postgres").gauge()).isNotNull();
         assertThat(meterRegistry.find("health.infra.status").tag("service", "redis").gauge()).isNotNull();
     }
 
@@ -97,7 +97,7 @@ class HealthCheckSchedulerTest {
 
         assertThat(meterRegistry.find("health.ping.duration").tag("service", "kafka").timer()).isNotNull();
         assertThat(meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer()).isNotNull();
-        assertThat(meterRegistry.find("health.ping.duration").tag("service", "oracle").timer()).isNotNull();
+        assertThat(meterRegistry.find("health.ping.duration").tag("service", "postgres").timer()).isNotNull();
         assertThat(meterRegistry.find("health.ping.duration").tag("service", "redis").timer()).isNotNull();
     }
 
@@ -108,7 +108,7 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 1.0);
         assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("oracle", 1.0);
+        assertGaugeValue("postgres", 1.0);
         assertGaugeValue("redis", 1.0);
     }
 
@@ -119,7 +119,7 @@ class HealthCheckSchedulerTest {
         var properties = new HealthCheckProperties(
                 new HealthCheckProperties.ServiceEndpoint("localhost", 1),
                 new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", oracleServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", postgresServer.getLocalPort()),
                 new HealthCheckProperties.ServiceEndpoint("localhost", redisServer.getLocalPort()),
                 1000,
                 60000
@@ -129,7 +129,7 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 0.0);
         assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("oracle", 1.0);
+        assertGaugeValue("postgres", 1.0);
         assertGaugeValue("redis", 1.0);
     }
 
@@ -140,7 +140,7 @@ class HealthCheckSchedulerTest {
         var properties = new HealthCheckProperties(
                 new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
                 new HealthCheckProperties.ServiceEndpoint("localhost", 2),
-                new HealthCheckProperties.ServiceEndpoint("localhost", oracleServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", postgresServer.getLocalPort()),
                 new HealthCheckProperties.ServiceEndpoint("localhost", redisServer.getLocalPort()),
                 1000,
                 60000
@@ -150,13 +150,13 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 1.0);
         assertGaugeValue("ibm-mq", 0.0);
-        assertGaugeValue("oracle", 1.0);
+        assertGaugeValue("postgres", 1.0);
         assertGaugeValue("redis", 1.0);
     }
 
     @Test
-    void checkOracleShouldSetStatusToZeroOnFailure() throws IOException {
-        oracleServer.close();
+    void checkPostgresShouldSetStatusToZeroOnFailure() throws IOException {
+        postgresServer.close();
 
         var properties = new HealthCheckProperties(
                 new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
@@ -171,7 +171,7 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 1.0);
         assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("oracle", 0.0);
+        assertGaugeValue("postgres", 0.0);
         assertGaugeValue("redis", 1.0);
     }
 
@@ -182,7 +182,7 @@ class HealthCheckSchedulerTest {
         var properties = new HealthCheckProperties(
                 new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
                 new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", oracleServer.getLocalPort()),
+                new HealthCheckProperties.ServiceEndpoint("localhost", postgresServer.getLocalPort()),
                 new HealthCheckProperties.ServiceEndpoint("localhost", 4),
                 1000,
                 60000
@@ -192,7 +192,7 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 1.0);
         assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("oracle", 1.0);
+        assertGaugeValue("postgres", 1.0);
         assertGaugeValue("redis", 0.0);
     }
 
@@ -203,15 +203,15 @@ class HealthCheckSchedulerTest {
 
         var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
         var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
-        var oracleTimer = meterRegistry.find("health.ping.duration").tag("service", "oracle").timer();
+        var postgresTimer = meterRegistry.find("health.ping.duration").tag("service", "postgres").timer();
         var redisTimer = meterRegistry.find("health.ping.duration").tag("service", "redis").timer();
 
         assertThat(kafkaTimer).isNotNull();
         assertThat(kafkaTimer.count()).isEqualTo(1);
         assertThat(mqTimer).isNotNull();
         assertThat(mqTimer.count()).isEqualTo(1);
-        assertThat(oracleTimer).isNotNull();
-        assertThat(oracleTimer.count()).isEqualTo(1);
+        assertThat(postgresTimer).isNotNull();
+        assertThat(postgresTimer.count()).isEqualTo(1);
         assertThat(redisTimer).isNotNull();
         assertThat(redisTimer.count()).isEqualTo(1);
     }
@@ -223,15 +223,15 @@ class HealthCheckSchedulerTest {
 
         var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
         var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
-        var oracleTimer = meterRegistry.find("health.ping.duration").tag("service", "oracle").timer();
+        var postgresTimer = meterRegistry.find("health.ping.duration").tag("service", "postgres").timer();
         var redisTimer = meterRegistry.find("health.ping.duration").tag("service", "redis").timer();
 
         assertThat(kafkaTimer).isNotNull();
         assertThat(kafkaTimer.count()).isEqualTo(1);
         assertThat(mqTimer).isNotNull();
         assertThat(mqTimer.count()).isEqualTo(1);
-        assertThat(oracleTimer).isNotNull();
-        assertThat(oracleTimer.count()).isEqualTo(1);
+        assertThat(postgresTimer).isNotNull();
+        assertThat(postgresTimer.count()).isEqualTo(1);
         assertThat(redisTimer).isNotNull();
         assertThat(redisTimer.count()).isEqualTo(1);
     }
@@ -243,7 +243,7 @@ class HealthCheckSchedulerTest {
 
         assertGaugeValue("kafka", 0.0);
         assertGaugeValue("ibm-mq", 0.0);
-        assertGaugeValue("oracle", 0.0);
+        assertGaugeValue("postgres", 0.0);
         assertGaugeValue("redis", 0.0);
     }
 

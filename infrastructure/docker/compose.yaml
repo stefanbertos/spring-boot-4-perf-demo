@@ -41,6 +41,8 @@ services:
         condition: service_started
       kafka:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     mem_limit: 1g
     restart: unless-stopped
     healthcheck:
@@ -273,35 +275,22 @@ services:
     environment:
       ENABLE_METRICS: "true"
 
-  oracle:
-    image: gvenzl/oracle-xe:21-slim
+  postgres:
+    image: postgres:17-alpine
     ports:
-      - "1521:1521"
+      - "5432:5432"
     environment:
-      ORACLE_PASSWORD: oracle
-      APP_USER: perfuser
-      APP_USER_PASSWORD: perfpass
-    shm_size: 1g
+      POSTGRES_USER: perfuser
+      POSTGRES_PASSWORD: perfpass
+      POSTGRES_DB: perfdb
     volumes:
-      - oracle-data:/opt/oracle/oradata
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "healthcheck.sh"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
-
-  oracle-exporter:
-    image: ghcr.io/iamseth/oracledb_exporter:0.5.0
-    ports:
-      - "9161:9161"
-    environment:
-      DATA_SOURCE_NAME: perfuser/perfpass@oracle:1521/XEPDB1
-    depends_on:
-      oracle:
-        condition: service_healthy
-    mem_limit: 256m
-    restart: unless-stopped
+      test: ["CMD-SHELL", "pg_isready -U perfuser -d perfdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
   sonarqube:
     image: sonarqube:community
@@ -357,9 +346,8 @@ volumes:
   perf-tester-data:
   redis-data:
   grafana-data:
-
   loki-data:
-  oracle-data:
+  postgres-data:
   sonarqube-data:
   sonarqube-extensions:
   sonarqube-logs:

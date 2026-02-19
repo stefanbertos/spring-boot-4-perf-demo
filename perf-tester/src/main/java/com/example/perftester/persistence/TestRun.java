@@ -14,56 +14,56 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "TEST_RUN")
+@Table(name = "test_run")
 @Getter
 @Setter
 public class TestRun {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "test_run_seq")
-    @SequenceGenerator(name = "test_run_seq", sequenceName = "TEST_RUN_SEQ", allocationSize = 1)
+    @SequenceGenerator(name = "test_run_seq", sequenceName = "test_run_seq", allocationSize = 1)
     private Long id;
 
-    @Column(name = "TEST_RUN_ID", nullable = false, length = 36)
+    @Column(name = "test_run_id", nullable = false, length = 36)
     private String testRunId;
 
-    @Column(name = "TEST_ID")
+    @Column(name = "test_id")
     private String testId;
 
-    @Column(name = "STATUS", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private String status;
 
-    @Column(name = "MESSAGE_COUNT", nullable = false)
+    @Column(name = "message_count", nullable = false)
     private int messageCount;
 
-    @Column(name = "COMPLETED_COUNT", nullable = false)
+    @Column(name = "completed_count", nullable = false)
     private long completedCount;
 
-    @Column(name = "TPS")
+    @Column(name = "tps")
     private Double tps;
 
-    @Column(name = "AVG_LATENCY_MS")
+    @Column(name = "avg_latency_ms")
     private Double avgLatencyMs;
 
-    @Column(name = "MIN_LATENCY_MS")
+    @Column(name = "min_latency_ms")
     private Double minLatencyMs;
 
-    @Column(name = "MAX_LATENCY_MS")
+    @Column(name = "max_latency_ms")
     private Double maxLatencyMs;
 
-    @Column(name = "DURATION_MS")
+    @Column(name = "duration_ms")
     private Long durationMs;
 
-    @Column(name = "ZIP_FILE_PATH", length = 1000)
+    @Column(name = "zip_file_path", length = 1000)
     private String zipFilePath;
 
-    @Column(name = "STARTED_AT", nullable = false)
+    @Column(name = "started_at", nullable = false)
     private Instant startedAt;
 
-    @Column(name = "COMPLETED_AT")
+    @Column(name = "completed_at")
     private Instant completedAt;
 
-    @Column(name = "CREATED_AT", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @PrePersist

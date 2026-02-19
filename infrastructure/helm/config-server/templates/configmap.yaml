@@ -65,15 +65,13 @@ data:
 
     spring:
       datasource:
-        url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+        url: jdbc:postgresql://localhost:5432/perfdb
         username: perfuser
         password: perfpass
-        driver-class-name: oracle.jdbc.OracleDriver
+        driver-class-name: org.postgresql.Driver
       jpa:
         hibernate:
           ddl-auto: validate
-          naming:
-            physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         open-in-view: false
       liquibase:
         change-log: classpath:db/changelog/db.changelog-master.xml
@@ -136,9 +134,9 @@ data:
         mq:
           host: perf-ibm-mq
           port: 1414
-        oracle:
-          host: perf-oracle
-          port: 1521
+        postgres:
+          host: perf-postgres
+          port: 5432
         redis:
           host: perf-redis
           port: 6379
@@ -157,6 +155,8 @@ data:
 
     logging:
       level:
+        liquibase: INFO
+        org.springframework.boot.autoconfigure.liquibase: INFO
         org.springframework.jms: INFO
         com.ibm.mq: INFO
         com.ibm.msg: INFO
@@ -412,7 +412,7 @@ data:
     # perf-tester Kubernetes profile configuration
     spring:
       datasource:
-        url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@perf-oracle:1521/XEPDB1}
+        url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://perf-postgres:5432/perfdb}
         username: ${SPRING_DATASOURCE_USERNAME:perfuser}
         password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
       data:
@@ -442,9 +442,9 @@ data:
         mq:
           host: perf-ibm-mq
           port: 1414
-        oracle:
-          host: perf-oracle
-          port: 1521
+        postgres:
+          host: perf-postgres
+          port: 5432
         redis:
           host: perf-redis
           port: 6379
