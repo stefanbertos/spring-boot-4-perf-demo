@@ -1,1 +1,4 @@
+use flyway instead of liquibase
+
+
 If user wants a detailed diff make sure to extract the zip file and perform diff of each files and provide the list of different files, and diff content of everything, or would be diffing in prometheus, grafana a better idea? and just display that? 
