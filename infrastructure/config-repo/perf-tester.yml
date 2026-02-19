@@ -94,8 +94,14 @@ management:
         jms: 0.5,0.95,0.99
         mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99
 
+spring:
+  liquibase:
+    fail-on-error: true
+
 logging:
   level:
+    liquibase: INFO
+    org.springframework.boot.autoconfigure.liquibase: INFO
     org.springframework.jms: INFO
     com.ibm.mq: INFO
     com.ibm.msg: INFO
