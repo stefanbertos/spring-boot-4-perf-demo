@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postgres
+description: PostgreSQL database for perf-tester
+type: application
+version: 1.0.0
+appVersion: "17"
