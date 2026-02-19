@@ -17,6 +17,7 @@ spring:
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+    fail-on-error: true
   data:
     redis:
       host: localhost
@@ -93,10 +94,6 @@ management:
         http.server.requests: 0.5,0.95,0.99
         jms: 0.5,0.95,0.99
         mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99
-
-spring:
-  liquibase:
-    fail-on-error: true
 
 logging:
   level:
