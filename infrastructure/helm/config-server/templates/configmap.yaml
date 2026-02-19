@@ -72,6 +72,8 @@ data:
       jpa:
         hibernate:
           ddl-auto: validate
+          naming:
+            physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         open-in-view: false
       liquibase:
         change-log: classpath:db/changelog/db.changelog-master.xml
