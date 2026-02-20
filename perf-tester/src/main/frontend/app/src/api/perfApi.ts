@@ -1,5 +1,10 @@
 import { del, get, post, postFormData, put } from './client';
 import type {
+  ApplyResult,
+  DeploymentInfo,
+  InfraProfileDetail,
+  InfraProfileRequest,
+  InfraProfileSummary,
   LogEntry,
   LogLevelResponse,
   QueueInfo,
@@ -8,6 +13,9 @@ import type {
   TestProgressEvent,
   TestRunDetailResponse,
   TestRunResponse,
+  TestScenarioDetail,
+  TestScenarioRequest,
+  TestScenarioSummary,
   TestStartResponse,
   TopicInfo,
 } from '@/types/api';
@@ -20,6 +28,7 @@ export function sendTest(params: {
   timeoutSeconds?: number;
   delayMs?: number;
   testId?: string;
+  scenarioId?: number;
   exportGrafana?: boolean;
   exportPrometheus?: boolean;
   exportKubernetes?: boolean;
@@ -31,6 +40,7 @@ export function sendTest(params: {
   if (params.timeoutSeconds != null) query.set('timeoutSeconds', String(params.timeoutSeconds));
   if (params.delayMs != null) query.set('delayMs', String(params.delayMs));
   if (params.testId) query.set('testId', params.testId);
+  if (params.scenarioId != null) query.set('scenarioId', String(params.scenarioId));
   if (params.exportGrafana) query.set('exportGrafana', 'true');
   if (params.exportPrometheus) query.set('exportPrometheus', 'true');
   if (params.exportKubernetes) query.set('exportKubernetes', 'true');
@@ -141,6 +151,43 @@ export function changeQueueMaxDepth(queueName: string, maxDepth: number): Promis
   return post(`/api/admin/mq/queues/depth?${params}`);
 }
 
+// ── Kubernetes Admin ────────────────────────────────────────────────
+
+export function listDeployments(): Promise<DeploymentInfo[]> {
+  return get('/api/admin/kubernetes/deployments/list');
+}
+
+export function scaleDeployment(name: string, replicas: number): Promise<void> {
+  const params = new URLSearchParams({ name, replicas: String(replicas) });
+  return post(`/api/admin/kubernetes/deployments/scale?${params}`);
+}
+
+// ── Infra Profiles ─────────────────────────────────────────────────
+
+export function listInfraProfiles(): Promise<InfraProfileSummary[]> {
+  return get('/api/infra-profiles');
+}
+
+export function getInfraProfile(id: number): Promise<InfraProfileDetail> {
+  return get(`/api/infra-profiles/${id}`);
+}
+
+export function createInfraProfile(data: InfraProfileRequest): Promise<InfraProfileDetail> {
+  return post('/api/infra-profiles', data);
+}
+
+export function updateInfraProfile(id: number, data: InfraProfileRequest): Promise<InfraProfileDetail> {
+  return put(`/api/infra-profiles/${id}`, data);
+}
+
+export function deleteInfraProfile(id: number): Promise<void> {
+  return del(`/api/infra-profiles/${id}`);
+}
+
+export function applyInfraProfile(id: number): Promise<ApplyResult> {
+  return post(`/api/infra-profiles/${id}/apply`);
+}
+
 // ── Test Cases ────────────────────────────────────────────────────
 
 export function listTestCases(): Promise<TestCaseSummary[]> {
@@ -168,4 +215,26 @@ export function uploadTestCase(name: string, file: File): Promise<TestCaseDetail
   formData.append('name', name);
   formData.append('file', file);
   return postFormData('/api/test-cases/upload', formData);
+}
+
+// ── Test Scenarios ─────────────────────────────────────────────────
+
+export function listTestScenarios(): Promise<TestScenarioSummary[]> {
+  return get('/api/test-scenarios');
+}
+
+export function getTestScenario(id: number): Promise<TestScenarioDetail> {
+  return get(`/api/test-scenarios/${id}`);
+}
+
+export function createTestScenario(data: TestScenarioRequest): Promise<TestScenarioDetail> {
+  return post('/api/test-scenarios', data);
+}
+
+export function updateTestScenario(id: number, data: TestScenarioRequest): Promise<TestScenarioDetail> {
+  return put(`/api/test-scenarios/${id}`, data);
+}
+
+export function deleteTestScenario(id: number): Promise<void> {
+  return del(`/api/test-scenarios/${id}`);
 }

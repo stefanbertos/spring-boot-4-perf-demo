@@ -12,6 +12,7 @@ import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
 import com.example.perftester.perf.TestStartResponse;
 import com.example.perftester.persistence.TestRunService;
+import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -44,6 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+
 @Slf4j
 @Validated
 @RestController
@@ -66,6 +68,7 @@ public class PerfController {
     private final LoggingAdminService loggingAdminService;
     private final PerfProperties perfProperties;
     private final TestRunService testRunService;
+    private final TestScenarioService testScenarioService;
 
     /**
      * Starts a performance test asynchronously and returns a testRunId immediately.
@@ -77,16 +80,16 @@ public class PerfController {
             @RequestParam(defaultValue = "1000") @Min(1) @Max(100000) int count,
             @RequestParam(defaultValue = "60") @Min(1) @Max(3600) int timeoutSeconds,
             @RequestParam(defaultValue = "0") @Min(0) @Max(60000) int delayMs,
-            @RequestParam(required = false) String testId,
             @ModelAttribute ExportOptions exportOptions,
-            @RequestParam(defaultValue = "false") boolean debug) {
+            @ModelAttribute RunOptions runOptions) {
 
         var testRunId = UUID.randomUUID().toString();
-        var testRunEntity = testRunService.createRun(testRunId, testId, count);
+        var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), count);
         var request = new TestRunRequest(
-                testRunEntity.getId(), testRunId, message, count, timeoutSeconds, delayMs, testId,
-                exportOptions.exportGrafana(), exportOptions.exportPrometheus(),
-                exportOptions.exportKubernetes(), exportOptions.exportLogs(), debug);
+                testRunEntity.getId(), testRunId, message, count, timeoutSeconds, delayMs,
+                runOptions.testId(), exportOptions.exportGrafana(), exportOptions.exportPrometheus(),
+                exportOptions.exportKubernetes(), exportOptions.exportLogs(),
+                runOptions.debug(), runOptions.scenarioId());
 
         Thread.ofVirtual().name("perf-test-" + testRunId).start(() -> runTestInBackground(request));
 
@@ -140,7 +143,7 @@ public class PerfController {
             performanceTracker.startTest(req.count(), req.testRunId());
             long testStartTimeMs = System.currentTimeMillis();
 
-            var completed = runPerformanceTest(req.message(), req.count(), req.timeoutSeconds(), req.delayMs());
+            var completed = runPerformanceTest(req.message(), req.count(), req.timeoutSeconds(), req.delayMs(), req.scenarioId());
             long testEndTimeMs = System.currentTimeMillis();
 
             var finalStatus = completed ? "COMPLETED" : "TIMEOUT";
@@ -195,12 +198,18 @@ public class PerfController {
         return previousLevel;
     }
 
-    private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs)
-            throws InterruptedException {
+    private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs,
+                                       Long scenarioId) throws InterruptedException {
+        List<TestScenarioService.ScenarioMessage> pool = scenarioId != null
+                ? testScenarioService.buildMessagePool(scenarioId, count) : List.of();
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
-            var payload = message + "-" + i;
-            futures[i] = messageSender.sendMessage(payload);
+            if (!pool.isEmpty()) {
+                var msg = pool.get(i);
+                futures[i] = messageSender.sendMessage(msg.content() + "-" + i, msg.headers());
+            } else {
+                futures[i] = messageSender.sendMessage(message + "-" + i);
+            }
             if (delayMs > 0) {
                 Thread.sleep(delayMs);
             }
@@ -271,6 +280,16 @@ public class PerfController {
         }
     }
 
+    /**
+     * Holds run-specific options (testId, debug flag, scenarioId).
+     * Spring MVC binds these from query parameters via @ModelAttribute.
+     */
+    public record RunOptions(String testId, boolean debug, Long scenarioId) {
+        public RunOptions() {
+            this(null, false, null);
+        }
+    }
+
     private record ExportContext(PerfTestResult result, List<String> dashboardFiles,
                                  String prometheusFile, List<LogEntry> logEntries) {
     }
@@ -278,7 +297,8 @@ public class PerfController {
     private record TestRunRequest(Long entityId, String testRunId, String message, int count,
                                   int timeoutSeconds, int delayMs, String testId,
                                   boolean exportGrafana, boolean exportPrometheus,
-                                  boolean exportKubernetes, boolean exportLogs, boolean debug) {
+                                  boolean exportKubernetes, boolean exportLogs,
+                                  boolean debug, Long scenarioId) {
         boolean anyExport() {
             return exportGrafana || exportPrometheus || exportKubernetes || exportLogs;
         }

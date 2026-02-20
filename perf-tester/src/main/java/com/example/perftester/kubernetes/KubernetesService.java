@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -109,5 +110,26 @@ public class KubernetesService {
         } catch (Exception e) {
             log.warn("Failed to export {}: {}", filename, e.getMessage());
         }
+    }
+
+    public List<DeploymentInfo> listDeployments() {
+        var items = client.apps().deployments().inNamespace(namespace).list().getItems();
+        return items.stream()
+                .map(d -> {
+                    var spec = d.getSpec();
+                    var status = d.getStatus();
+                    var desired = spec != null && spec.getReplicas() != null ? spec.getReplicas() : 0;
+                    var ready = status != null && status.getReadyReplicas() != null ? status.getReadyReplicas() : 0;
+                    return new DeploymentInfo(d.getMetadata().getName(), namespace, desired, ready);
+                })
+                .toList();
+    }
+
+    public void scaleDeployment(String name, int replicas) {
+        client.apps().deployments().inNamespace(namespace).withName(name).scale(replicas);
+        log.info("Scaled deployment {} in namespace {} to {} replicas", name, namespace, replicas);
+    }
+
+    public record DeploymentInfo(String name, String namespace, int desiredReplicas, int readyReplicas) {
     }
 }

@@ -1,8 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from '@/layouts';
 import {
   AdminPage,
-  DashboardPage,
   DashboardsPage,
   NotFoundPage,
   SendTestPage,
@@ -14,7 +13,7 @@ const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <Navigate to="/dashboards" replace /> },
       { path: 'send', element: <SendTestPage /> },
       { path: 'test-runs', element: <TestRunsPage /> },
       { path: 'test-runs/:id', element: <TestRunDetailPage /> },

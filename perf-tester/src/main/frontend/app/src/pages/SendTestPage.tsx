@@ -34,12 +34,14 @@ import {
   downloadTestRunUrl,
   getTestCase,
   listTestCases,
+  listTestScenarios,
   sendTest,
   subscribeTestProgress,
   updateTestCase,
   uploadTestCase,
 } from '@/api';
-import type { TestCaseSummary, TestProgressEvent } from '@/types/api';
+import { InfraProfileManager, TestScenarioManager } from '@/components';
+import type { TestCaseSummary, TestProgressEvent, TestScenarioSummary } from '@/types/api';
 
 // ── Test Case Manager ─────────────────────────────────────────────
 
@@ -202,6 +204,8 @@ export default function SendTestPage() {
   const [currentTestRunDbId, setCurrentTestRunDbId] = useState<number | null>(null);
   const [exportWasRequested, setExportWasRequested] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
+  const [testScenarios, setTestScenarios] = useState<TestScenarioSummary[]>([]);
 
   // Test case manager state
   const { testCases, loading: testCasesLoading, refresh } = useTestCases();
@@ -219,6 +223,11 @@ export default function SendTestPage() {
     };
   }, []);
 
+  // Load scenarios for the run form selector
+  useEffect(() => {
+    listTestScenarios().then(setTestScenarios).catch(() => {});
+  }, []);
+
   // ── Send test handler ────────────────────────────────────────────
 
   const handleSubmit = async (e: FormEvent) => {
@@ -233,11 +242,12 @@ export default function SendTestPage() {
 
     try {
       const { id, testRunId } = await sendTest({
-        message,
+        message: selectedScenarioId != null ? 'scenario' : message,
         count: Number(count),
         timeoutSeconds: Number(timeout),
         delayMs: Number(delay),
         testId: testId || undefined,
+        scenarioId: selectedScenarioId ?? undefined,
         exportGrafana,
         exportPrometheus,
         exportKubernetes,
@@ -395,7 +405,13 @@ export default function SendTestPage() {
 
   return (
     <Box>
-      <PageHeader title="Send Test" subtitle="Configure and run a performance test" />
+      <PageHeader title="Run Test" subtitle="Configure and run a performance test" />
+
+      {/* Infra Profiles */}
+      <InfraProfileManager />
+
+      {/* Test Scenarios */}
+      <TestScenarioManager />
 
       {/* Test Case Manager */}
       <Card sx={{ mb: 3 }}>
@@ -446,6 +462,20 @@ export default function SendTestPage() {
               fullWidth
               size="small"
             />
+            <Select
+              label="Test Scenario (optional)"
+              value={selectedScenarioId != null ? String(selectedScenarioId) : ''}
+              options={[
+                { value: '', label: 'None — use message below' },
+                ...testScenarios.map((s) => ({ value: String(s.id), label: s.name })),
+              ]}
+              onChange={(e: SelectChangeEvent) => {
+                const val = e.target.value;
+                setSelectedScenarioId(val ? Number(val) : null);
+              }}
+              fullWidth
+              size="small"
+            />
             <Stack direction="row" spacing={1} alignItems="flex-start">
               <TextField
                 label="Message Content"
@@ -455,6 +485,7 @@ export default function SendTestPage() {
                 required
                 multiline
                 rows={3}
+                disabled={selectedScenarioId != null}
               />
               <Button
                 size="small"
@@ -547,10 +578,21 @@ export default function SendTestPage() {
                 />
               </Stack>
             </Box>
-            <FormControlLabel
-              control={<Checkbox checked={debug} onChange={(e) => setDebug(e.target.checked)} />}
-              label="Debug Mode"
-            />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Debug
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={debug}
+                    onChange={(e) => setDebug(e.target.checked)}
+                  />
+                }
+                label="Enable debug logging"
+              />
+            </Box>
             {result && (
               <Alert severity={result.type} onClose={() => setResult(null)}>
                 {result.text}
@@ -561,7 +603,7 @@ export default function SendTestPage() {
                 ? progress?.status === 'EXPORTING'
                   ? 'Exporting...'
                   : 'Running...'
-                : 'Send Test'}
+                : 'Run Test'}
             </Button>
           </Stack>
         </Box>

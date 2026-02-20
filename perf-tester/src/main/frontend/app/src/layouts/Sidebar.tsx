@@ -1,6 +1,5 @@
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import MonitorIcon from '@mui/icons-material/Monitor';
 import ScienceIcon from '@mui/icons-material/Science';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -13,8 +12,7 @@ import Typography from '@mui/material/Typography';
 import { NavLink, useLocation } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Dashboard', to: '/', icon: DashboardIcon },
-  { name: 'Send Test', to: '/send', icon: ScienceIcon },
+  { name: 'Run Test', to: '/send', icon: ScienceIcon },
   { name: 'Test Runs', to: '/test-runs', icon: AssessmentIcon },
   { name: 'Dashboards', to: '/dashboards', icon: MonitorIcon },
   { name: 'Admin', to: '/admin', icon: AdminPanelSettingsIcon },
@@ -23,10 +21,7 @@ const navigation = [
 export default function Sidebar() {
   const location = useLocation();
 
-  const isActive = (to: string) => {
-    if (to === '/') return location.pathname === '/';
-    return location.pathname.startsWith(to);
-  };
+  const isActive = (to: string) => location.pathname.startsWith(to);
 
   return (
     <Box
@@ -36,7 +31,7 @@ export default function Sidebar() {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'grey.900',
+        bgcolor: 'var(--nav-bg)',
         color: 'common.white',
       }}
     >
@@ -59,11 +54,11 @@ export default function Sidebar() {
               mb: 0.5,
               color: 'grey.400',
               '&.Mui-selected': {
-                bgcolor: 'grey.800',
+                bgcolor: 'var(--nav-active)',
                 color: 'common.white',
-                '&:hover': { bgcolor: 'grey.700' },
+                '&:hover': { bgcolor: 'var(--nav-hover)' },
               },
-              '&:hover': { bgcolor: 'grey.800', color: 'common.white' },
+              '&:hover': { bgcolor: 'var(--nav-hover)', color: 'common.white' },
             }}
           >
             <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>

@@ -110,3 +110,65 @@ export interface TestCaseDetail {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DeploymentInfo {
+  name: string;
+  namespace: string;
+  desiredReplicas: number;
+  readyReplicas: number;
+}
+
+export interface InfraProfileSummary {
+  id: number;
+  name: string;
+  updatedAt: string;
+}
+
+export interface InfraProfileDetail {
+  id: number;
+  name: string;
+  logLevels: Record<string, string>;
+  kafkaTopics: Record<string, number>;
+  kubernetesReplicas: Record<string, number>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InfraProfileRequest {
+  name: string;
+  logLevels: Record<string, string>;
+  kafkaTopics: Record<string, number>;
+  kubernetesReplicas: Record<string, number>;
+}
+
+export interface ApplyResult {
+  applied: string[];
+  errors: string[];
+}
+
+export interface TestScenarioSummary {
+  id: number;
+  name: string;
+  updatedAt: string;
+}
+
+export interface ScenarioEntryDto {
+  testCaseId: number;
+  testCaseName: string;
+  percentage: number;
+  headerName: string;
+  headerValue: string;
+}
+
+export interface TestScenarioDetail {
+  id: number;
+  name: string;
+  entries: ScenarioEntryDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TestScenarioRequest {
+  name: string;
+  entries: ScenarioEntryDto[];
+}

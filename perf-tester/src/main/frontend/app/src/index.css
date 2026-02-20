@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+:root {
+  /* Navigation sidebar color — change these to retheme the sidebar */
+  --nav-bg: #111827;     /* default: grey.900 (near-black) */
+  --nav-active: #1f2937; /* default: grey.800 */
+  --nav-hover: #1f2937;  /* default: grey.800 */
+}
+
 body {
   margin: 0;
   padding: 0;

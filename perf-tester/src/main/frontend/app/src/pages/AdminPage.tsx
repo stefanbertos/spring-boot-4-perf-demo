@@ -1,12 +1,14 @@
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import MuiTextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { Alert, Button, Card, PageHeader, Select, Tabs, TextField } from 'perf-ui-components';
-import type { SelectChangeEvent, TabItem } from 'perf-ui-components';
+import { Alert, Button, Card, DataTable, Loading, PageHeader, Select, Tabs, TextField } from 'perf-ui-components';
+import type { DataTableColumn, SelectChangeEvent, TabItem } from 'perf-ui-components';
 import type { SelectOption } from 'perf-ui-components';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
-import { changeQueueMaxDepth, listQueues, listTopics, resizeTopic, setLogLevel } from '@/api';
+import { changeQueueMaxDepth, listDeployments, listQueues, listTopics, resizeTopic, scaleDeployment, setLogLevel } from '@/api';
+import type { DeploymentInfo } from '@/types/api';
 
 const logLevels = [
   { value: 'TRACE', label: 'TRACE' },
@@ -260,16 +262,86 @@ function IbmMqTab() {
   );
 }
 
+function DeploymentScaleAction({ name }: { name: string }) {
+  const [replicas, setReplicas] = useState('4');
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleScale = async () => {
+    setSubmitting(true);
+    setResult(null);
+    try {
+      await scaleDeployment(name, Number(replicas));
+      setResult({ type: 'success', text: `Scaled to ${replicas}` });
+    } catch (err) {
+      setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to scale' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <MuiTextField
+        type="number"
+        value={replicas}
+        onChange={(e) => setReplicas(e.target.value)}
+        size="small"
+        sx={{ width: 80 }}
+        slotProps={{ htmlInput: { min: 0 } }}
+      />
+      <Button disabled={submitting} onClick={handleScale}>
+        {submitting ? 'Scaling...' : 'Scale'}
+      </Button>
+      {result && (
+        <Typography variant="caption" color={result.type === 'success' ? 'success.main' : 'error.main'}>
+          {result.text}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
+function KubernetesTab() {
+  const [deployments, setDeployments] = useState<DeploymentInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listDeployments()
+      .then(setDeployments)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load deployments'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const columns: DataTableColumn<DeploymentInfo>[] = [
+    { id: 'name', label: 'Deployment', minWidth: 150, render: (row) => row.name },
+    { id: 'namespace', label: 'Namespace', render: (row) => row.namespace },
+    { id: 'desired', label: 'Desired', render: (row) => String(row.desiredReplicas) },
+    { id: 'ready', label: 'Ready', render: (row) => String(row.readyReplicas) },
+    { id: 'scale', label: 'Scale To', minWidth: 240, render: (row) => <DeploymentScaleAction name={row.name} /> },
+  ];
+
+  if (loading) return <Loading message="Loading deployments..." />;
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (deployments.length === 0) {
+    return <Alert severity="info">No deployments found. Kubernetes may not be available in this environment.</Alert>;
+  }
+
+  return <DataTable columns={columns} rows={deployments} keyExtractor={(row) => row.name} />;
+}
+
 export default function AdminPage() {
   const tabs: TabItem[] = [
     { label: 'Logging', content: <LoggingTab /> },
     { label: 'Kafka', content: <KafkaTab /> },
     { label: 'IBM MQ', content: <IbmMqTab /> },
+    { label: 'Kubernetes', content: <KubernetesTab /> },
   ];
 
   return (
     <Box>
-      <PageHeader title="Admin" subtitle="Logging, Kafka, and IBM MQ administration" />
+      <PageHeader title="Admin" subtitle="Logging, Kafka, IBM MQ, and Kubernetes administration" />
       <Tabs tabs={tabs} />
     </Box>
   );

@@ -13,6 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,5 +70,18 @@ class MessageSenderTest {
         doThrow(exception).when(jmsTemplate).convertAndSend(anyString(), anyString(), any(MessagePostProcessor.class));
 
         assertThrows(RuntimeException.class, () -> messageSender.sendMessage("test payload"));
+    }
+
+    @Test
+    void sendMessageWithHeadersShouldSetJmsStringProperties() throws JMSException {
+        messageSender.sendMessage("test payload", Map.of("X-Type", "PERF"));
+
+        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+        verify(jmsTemplate).convertAndSend(eq("DEV.QUEUE.2"), anyString(), processorCaptor.capture());
+
+        MessagePostProcessor processor = processorCaptor.getValue();
+        Message result = processor.postProcessMessage(jmsMessage);
+        assertNotNull(result);
+        verify(jmsMessage).setStringProperty("X-Type", "PERF");
     }
 }
