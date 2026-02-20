@@ -1,5 +1,6 @@
 package com.example.perftester.export;
 
+import com.example.perftester.loki.LogEntry;
 import com.example.perftester.perf.PerfTestResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ public class TestResultPackager {
             PerfTestResult result,
             List<String> dashboardImageFiles,
             String prometheusExportFile,
+            List<LogEntry> logEntries,
             String testId,
             long testStartTimeMs,
             long testEndTimeMs) {
@@ -65,7 +67,7 @@ public class TestResultPackager {
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(zipPath)))) {
 
             // Add test summary/statistics file
-            var summaryContent = generateSummary(result, testId, testStartTimeMs, testEndTimeMs);
+            var summaryContent = generateSummary(result, logEntries, testId, testStartTimeMs, testEndTimeMs);
             addTextEntry(zos, "summary.txt", summaryContent);
 
             // Add dashboard images - stream from disk
@@ -78,6 +80,12 @@ public class TestResultPackager {
             // Add Prometheus export - stream from disk
             if (prometheusExportFile != null) {
                 addFileEntryStreaming(zos, Path.of(prometheusExportFile), "metrics/");
+            }
+
+            // Add application logs from Loki
+            if (logEntries != null && !logEntries.isEmpty()) {
+                var logContent = formatLogEntries(logEntries);
+                addTextEntry(zos, "logs/application.log", logContent);
             }
 
             // Add Kubernetes cluster info - stream from disk
@@ -111,7 +119,8 @@ public class TestResultPackager {
         return new PackageResult(filename, zipPath.toAbsolutePath().toString());
     }
 
-    private String generateSummary(PerfTestResult result, String testId, long testStartTimeMs, long testEndTimeMs) {
+    private String generateSummary(PerfTestResult result, List<LogEntry> logEntries,
+                                   String testId, long testStartTimeMs, long testEndTimeMs) {
         var sb = new StringBuilder();
         sb.append("═══════════════════════════════════════════════════════════════\n");
         sb.append("                    PERFORMANCE TEST SUMMARY\n");
@@ -176,10 +185,21 @@ public class TestResultPackager {
                 sb.append(String.format("  • kubernetes/%s%n", kubernetesPath.getFileName()));
             }
         }
+        if (logEntries != null && !logEntries.isEmpty()) {
+            sb.append(String.format("  • logs/application.log (%d entries)%n", logEntries.size()));
+        }
 
         sb.append("\n═══════════════════════════════════════════════════════════════\n");
         sb.append(String.format("Generated: %s%n", Instant.now()));
 
+        return sb.toString();
+    }
+
+    private String formatLogEntries(List<LogEntry> logEntries) {
+        var sb = new StringBuilder();
+        for (var entry : logEntries) {
+            sb.append(String.format("%-30s %-5s %s%n", entry.timestamp(), entry.level(), entry.message()));
+        }
         return sb.toString();
     }
 

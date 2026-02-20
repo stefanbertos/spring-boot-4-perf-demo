@@ -32,6 +32,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
     volumes:
       - perf-tester-data:/data/exports
+      - perf-tester-h2:/data/h2
     depends_on:
       config-server:
         condition: service_healthy
@@ -40,8 +41,6 @@ services:
       redis:
         condition: service_started
       kafka:
-        condition: service_healthy
-      postgres:
         condition: service_healthy
     mem_limit: 1g
     restart: unless-stopped
@@ -218,6 +217,10 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=http://localhost:8090/prometheus'
+      - '--web.route-prefix=/prometheus'
 
   loki:
     image: grafana/loki:3.3.2
@@ -227,6 +230,15 @@ services:
     volumes:
       - ./loki:/etc/loki
       - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./loki/promtail.yaml:/etc/promtail/promtail.yaml
+    command: ["-config.file=/etc/promtail/promtail.yaml"]
+    depends_on:
+      - loki
 
   kafdrop:
     image: obsidiandynamics/kafdrop:4.0.2
@@ -248,7 +260,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_RENDERING_SERVER_URL: http://renderer:8084/render
+      GF_RENDERING_SERVER_URL: http://renderer:8081/render
       GF_RENDERING_CALLBACK_URL: http://grafana:3000/
       GF_LOG_FILTERS: rendering:debug
       GF_SECURITY_ALLOW_EMBEDDING: "true"
@@ -274,23 +286,6 @@ services:
       - "8084:8081"
     environment:
       ENABLE_METRICS: "true"
-
-  postgres:
-    image: postgres:17-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: perfuser
-      POSTGRES_PASSWORD: perfpass
-      POSTGRES_DB: perfdb
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U perfuser -d perfdb"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
 
   sonarqube:
     image: sonarqube:community
@@ -344,10 +339,10 @@ services:
 
 volumes:
   perf-tester-data:
+  perf-tester-h2:
   redis-data:
   grafana-data:
   loki-data:
-  postgres-data:
   sonarqube-data:
   sonarqube-extensions:
   sonarqube-logs:

@@ -6,19 +6,19 @@ scrape_configs:
     scrape_interval: 1s
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8080']
+      - targets: ['perf-tester:8080']
 
   - job_name: 'ibm-mq-consumer'
     scrape_interval: 1s
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8081']
+      - targets: ['ibm-mq-consumer:8081']
 
   - job_name: 'kafka-consumer'
     scrape_interval: 1s
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8082']
+      - targets: ['kafka-consumer:8082']
 
   - job_name: 'ibm-mq'
     metrics_path: '/metrics'

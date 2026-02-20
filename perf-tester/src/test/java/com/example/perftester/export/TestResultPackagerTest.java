@@ -37,6 +37,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 "test-id",
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -57,6 +58,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 null,
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -78,6 +80,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(dashboardFile.toString()),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -98,6 +101,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -119,6 +123,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 prometheusFile.toString(),
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -139,6 +144,7 @@ class TestResultPackagerTest {
                 result,
                 filesWithNull,
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -156,6 +162,7 @@ class TestResultPackagerTest {
                 result,
                 List.of("/nonexistent/file.png"),
                 "/nonexistent/prometheus.json",
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -174,6 +181,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 null, // No test ID
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -202,6 +210,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -225,6 +234,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(dashboardFile.toString()),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -246,6 +256,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 prometheusFile.toString(),
+                List.of(),
                 "test",
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -263,6 +274,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 "my-test-id",
                 System.currentTimeMillis() - 10000,
                 System.currentTimeMillis()
@@ -285,6 +297,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(file1.toString(), file2.toString()),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()
@@ -308,6 +321,7 @@ class TestResultPackagerTest {
                 result,
                 List.of(),
                 null,
+                List.of(),
                 "test",
                 System.currentTimeMillis(),
                 System.currentTimeMillis()

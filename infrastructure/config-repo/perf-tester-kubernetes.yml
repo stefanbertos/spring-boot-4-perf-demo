@@ -1,9 +1,10 @@
 # perf-tester Kubernetes profile configuration
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://perf-postgres:5432/perfdb}
-    username: ${SPRING_DATASOURCE_USERNAME:perfuser}
-    password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
+    url: jdbc:h2:file:/data/h2/perfdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:perf-redis}
@@ -31,9 +32,6 @@ app:
     mq:
       host: perf-ibm-mq
       port: 1414
-    postgres:
-      host: perf-postgres
-      port: 5432
     redis:
       host: perf-redis
       port: 6379

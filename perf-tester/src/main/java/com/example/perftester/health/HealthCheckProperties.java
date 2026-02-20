@@ -7,7 +7,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record HealthCheckProperties(
         @DefaultValue ServiceEndpoint kafka,
         @DefaultValue ServiceEndpoint mq,
-        @DefaultValue ServiceEndpoint postgres,
         @DefaultValue ServiceEndpoint redis,
         @DefaultValue("5000") int connectionTimeoutMs,
         @DefaultValue("60000") int intervalMs

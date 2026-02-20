@@ -40,9 +40,6 @@ app:
     mq:
       host: localhost
       port: 1414
-    postgres:
-      host: localhost
-      port: 5432
     redis:
       host: localhost
       port: 6379

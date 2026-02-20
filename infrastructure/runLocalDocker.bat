@@ -32,7 +32,7 @@ echo  Ingress URLs
 echo ============================================
 echo.
 echo Access the services:
-echo   - Perf UI:         http://localhost:5173
+echo   - Perf UI:         http://localhost:8090
 echo   - Grafana:         http://localhost:3000 (admin/admin)
 echo   - Prometheus:      http://localhost:9090
 echo   - Kafdrop:         http://localhost:9000/kafdrop

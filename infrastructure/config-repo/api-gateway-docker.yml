@@ -27,6 +27,7 @@ spring:
                 - Path=/prometheus,/prometheus/**
               filters:
                 - StripPrefix=0
+                - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
             - id: loki-root
               uri: http://grafana:3000
@@ -48,6 +49,8 @@ spring:
                 - Path=/ibmmq,/ibmmq/**
               filters:
                 - StripPrefix=0
+                - RemoveResponseHeader=Content-Security-Policy
+                - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
             - id: kafdrop
               uri: http://kafdrop:9000
@@ -55,6 +58,7 @@ spring:
                 - Path=/kafdrop,/kafdrop/**
               filters:
                 - StripPrefix=0
+                - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
             - id: redis-commander
               uri: http://redis-commander:8081

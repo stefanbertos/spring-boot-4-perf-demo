@@ -46,12 +46,20 @@ const tabs: TabItem[] = [
       />
     ),
   },
+  {
+    label: 'SonarQube',
+    content: <IframePanel src="/sonar" title="SonarQube" />,
+  },
+  {
+    label: 'IBM MQ',
+    content: <IframePanel src="/ibmmq/console" title="IBM MQ Console" />,
+  },
 ];
 
 export default function DashboardsPage() {
   return (
     <Box>
-      <PageHeader title="Dashboards" subtitle="Grafana, Prometheus, Kafdrop, Redis Commander, and Loki" />
+      <PageHeader title="Dashboards" subtitle="Grafana, Prometheus, Kafdrop, Redis Commander, Loki, SonarQube, and IBM MQ" />
       <Tabs tabs={tabs} />
     </Box>
   );

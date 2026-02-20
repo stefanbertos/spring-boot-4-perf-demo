@@ -65,8 +65,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'io.fabric8:kubernetes-client:7.2.0'
     implementation 'org.apache.kafka:kafka-clients'
-    runtimeOnly 'org.postgresql:postgresql'
-    implementation 'org.liquibase:liquibase-core'
+    runtimeOnly 'com.h2database:h2'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
 }
 
 dependencyManagement {

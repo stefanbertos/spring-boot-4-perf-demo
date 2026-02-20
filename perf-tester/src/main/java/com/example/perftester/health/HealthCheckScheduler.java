@@ -30,7 +30,6 @@ public class HealthCheckScheduler {
         var serviceConfigs = Map.of(
                 "kafka", properties.kafka(),
                 "ibm-mq", properties.mq(),
-                "postgres", properties.postgres(),
                 "redis", properties.redis()
         );
 
@@ -38,10 +37,9 @@ public class HealthCheckScheduler {
                 .map(entry -> registerServiceMetrics(entry.getKey(), entry.getValue(), meterRegistry))
                 .toList();
 
-        log.info("Health check scheduler initialized - Kafka: {}:{}, MQ: {}:{}, Postgres: {}:{}, Redis: {}:{}",
+        log.info("Health check scheduler initialized - Kafka: {}:{}, MQ: {}:{}, Redis: {}:{}",
                 properties.kafka().host(), properties.kafka().port(),
                 properties.mq().host(), properties.mq().port(),
-                properties.postgres().host(), properties.postgres().port(),
                 properties.redis().host(), properties.redis().port());
     }
 

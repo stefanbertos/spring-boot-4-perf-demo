@@ -79,12 +79,13 @@ export interface QueueInfo {
 }
 
 export interface TestStartResponse {
+  id: number;
   testRunId: string;
 }
 
 export interface TestProgressEvent {
   testRunId: string;
-  status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'TIMEOUT' | 'FAILED';
+  status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'TIMEOUT' | 'FAILED' | 'EXPORTING';
   sentCount: number;
   completedCount: number;
   totalCount: number;

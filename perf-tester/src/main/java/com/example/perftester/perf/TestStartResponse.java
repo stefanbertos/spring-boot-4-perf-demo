@@ -1,4 +1,4 @@
 package com.example.perftester.perf;
 
-public record TestStartResponse(String testRunId) {
+public record TestStartResponse(Long id, String testRunId) {
 }

@@ -20,7 +20,10 @@ export function sendTest(params: {
   timeoutSeconds?: number;
   delayMs?: number;
   testId?: string;
-  exportStatistics?: boolean;
+  exportGrafana?: boolean;
+  exportPrometheus?: boolean;
+  exportKubernetes?: boolean;
+  exportLogs?: boolean;
   debug?: boolean;
 }): Promise<TestStartResponse> {
   const query = new URLSearchParams();
@@ -28,7 +31,10 @@ export function sendTest(params: {
   if (params.timeoutSeconds != null) query.set('timeoutSeconds', String(params.timeoutSeconds));
   if (params.delayMs != null) query.set('delayMs', String(params.delayMs));
   if (params.testId) query.set('testId', params.testId);
-  if (params.exportStatistics) query.set('exportStatistics', 'true');
+  if (params.exportGrafana) query.set('exportGrafana', 'true');
+  if (params.exportPrometheus) query.set('exportPrometheus', 'true');
+  if (params.exportKubernetes) query.set('exportKubernetes', 'true');
+  if (params.exportLogs) query.set('exportLogs', 'true');
   if (params.debug) query.set('debug', 'true');
 
   const qs = query.toString();

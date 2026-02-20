@@ -10,17 +10,14 @@ class HealthCheckPropertiesTest {
     void shouldCreatePropertiesWithAllValues() {
         var kafka = new HealthCheckProperties.ServiceEndpoint("kafka-host", 9092);
         var mq = new HealthCheckProperties.ServiceEndpoint("mq-host", 1414);
-        var postgres = new HealthCheckProperties.ServiceEndpoint("postgres-host", 5432);
         var redis = new HealthCheckProperties.ServiceEndpoint("redis-host", 6379);
 
-        var properties = new HealthCheckProperties(kafka, mq, postgres, redis, 3000, 30000);
+        var properties = new HealthCheckProperties(kafka, mq, redis, 3000, 30000);
 
         assertThat(properties.kafka().host()).isEqualTo("kafka-host");
         assertThat(properties.kafka().port()).isEqualTo(9092);
         assertThat(properties.mq().host()).isEqualTo("mq-host");
         assertThat(properties.mq().port()).isEqualTo(1414);
-        assertThat(properties.postgres().host()).isEqualTo("postgres-host");
-        assertThat(properties.postgres().port()).isEqualTo(5432);
         assertThat(properties.redis().host()).isEqualTo("redis-host");
         assertThat(properties.redis().port()).isEqualTo(6379);
         assertThat(properties.connectionTimeoutMs()).isEqualTo(3000);

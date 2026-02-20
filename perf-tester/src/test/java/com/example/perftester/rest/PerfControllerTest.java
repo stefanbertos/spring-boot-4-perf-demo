@@ -7,6 +7,8 @@ import com.example.perftester.export.TestResultPackager.PackageResult;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.grafana.GrafanaExportService.DashboardExportResult;
 import com.example.perftester.kubernetes.KubernetesService;
+import com.example.perftester.loki.LogEntry;
+import com.example.perftester.loki.LokiService;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
@@ -73,6 +75,9 @@ class PerfControllerTest {
     private KubernetesService kubernetesService;
 
     @Mock
+    private LokiService lokiService;
+
+    @Mock
     private LoggingAdminService loggingAdminService;
 
     @Mock
@@ -90,7 +95,7 @@ class PerfControllerTest {
     void setUp() throws Exception {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
-                kubernetesService, loggingAdminService, perfProperties, testRunService);
+                kubernetesService, lokiService, loggingAdminService, perfProperties, testRunService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
@@ -107,7 +112,7 @@ class PerfControllerTest {
     @Test
     void sendMessagesShouldReturnAcceptedWithTestRunId() {
         ResponseEntity<TestStartResponse> response = controller.sendMessages(
-                "test message", 10, 1, 0, null, false, false);
+                "test message", 10, 1, 0, null, new PerfController.ExportOptions(), false);
 
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -116,7 +121,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldStartTestAsynchronously() {
-        controller.sendMessages("test message", 10, 1, 0, null, false, false);
+        controller.sendMessages("test message", 10, 1, 0, null, new PerfController.ExportOptions(), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -126,7 +131,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldCallStartTestWithGeneratedRunId() {
-        controller.sendMessages("test message", 5, 1, 0, null, false, false);
+        controller.sendMessages("test message", 5, 1, 0, null, new PerfController.ExportOptions(), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -136,7 +141,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldSetStatusCompletedOnSuccess() {
-        controller.sendMessages("test message", 3, 1, 0, null, false, false);
+        controller.sendMessages("test message", 3, 1, 0, null, new PerfController.ExportOptions(), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -148,7 +153,7 @@ class PerfControllerTest {
     void sendMessagesShouldSetStatusTimeoutWhenNotAllReceived() throws Exception {
         doReturn(false).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
 
-        controller.sendMessages("test message", 3, 1, 0, null, false, false);
+        controller.sendMessages("test message", 3, 1, 0, null, new PerfController.ExportOptions(), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -166,10 +171,11 @@ class PerfControllerTest {
 
         Path tempZip = tempDir.resolve("test.zip");
         Files.write(tempZip, "content".getBytes());
-        when(testResultPackager.packageResults(any(), anyList(), any(), any(), anyLong(), anyLong()))
+        when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 3, 1, 0, "test-id", true, false);
+        controller.sendMessages("test message", 3, 1, 0, "test-id",
+                new PerfController.ExportOptions(true, false, false, false), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -193,10 +199,11 @@ class PerfControllerTest {
 
         Path tempZip = tempDir.resolve("test.zip");
         Files.write(tempZip, "content".getBytes());
-        when(testResultPackager.packageResults(any(), anyList(), anyString(), any(), anyLong(), anyLong()))
+        when(testResultPackager.packageResults(any(), anyList(), anyString(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 1, 1, 0, "test-id", true, false);
+        controller.sendMessages("test message", 1, 1, 0, "test-id",
+                new PerfController.ExportOptions(true, true, false, false), false);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -211,7 +218,7 @@ class PerfControllerTest {
     void sendMessagesShouldEnableDebugLoggingWhenDebugIsTrue() {
         when(loggingAdminService.getLoggerConfiguration("com.example")).thenReturn(null);
 
-        controller.sendMessages("test message", 1, 1, 0, null, false, true);
+        controller.sendMessages("test message", 1, 1, 0, null, new PerfController.ExportOptions(), true);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -224,5 +231,46 @@ class PerfControllerTest {
         var emitter = controller.streamProgress("some-test-run-id");
 
         assertNotNull(emitter);
+    }
+
+    @Test
+    void sendMessagesShouldExportPrometheusWhenPrometheusExportEnabled() throws IOException {
+        var promFile = tempDir.resolve("prometheus.json");
+        Files.writeString(promFile, "{}");
+        var prometheusExport = new PrometheusExportResult(
+                promFile.toString(), "http://prometheus/query", null);
+        when(prometheusExportService.exportMetrics(anyLong(), anyLong(), any())).thenReturn(prometheusExport);
+
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+        when(testResultPackager.packageResults(any(), anyList(), anyString(), anyList(), any(), anyLong(), anyLong()))
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
+
+        controller.sendMessages("test message", 1, 1, 0, "test-id",
+                new PerfController.ExportOptions(false, true, false, false), false);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(prometheusExportService).exportMetrics(anyLong(), anyLong(), any()));
+    }
+
+    @Test
+    void sendMessagesShouldExportLogsWhenLogsExportEnabled() throws IOException {
+        var logEntries = List.of(new LogEntry("2024-01-01T00:00:00Z", "INFO", "test log message"));
+        when(lokiService.queryLogs(any(), any())).thenReturn(logEntries);
+
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+        when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
+
+        controller.sendMessages("test message", 1, 1, 0, "test-id",
+                new PerfController.ExportOptions(false, false, false, true), false);
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(lokiService).queryLogs(any(), any()));
     }
 }

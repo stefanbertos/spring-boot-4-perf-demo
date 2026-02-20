@@ -1,4 +1,5 @@
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -30,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createTestCase,
   deleteTestCase,
+  downloadTestRunUrl,
   getTestCase,
   listTestCases,
   sendTest,
@@ -97,6 +99,7 @@ interface ProgressPanelProps {
 
 function ProgressPanel({ progress }: ProgressPanelProps) {
   const isActive = progress.status === 'RUNNING' || progress.status === 'IDLE';
+  const isExporting = progress.status === 'EXPORTING';
   const statusColor =
     progress.status === 'COMPLETED'
       ? 'success'
@@ -110,7 +113,9 @@ function ProgressPanel({ progress }: ProgressPanelProps) {
       ? 'Starting...'
       : progress.status === 'RUNNING'
         ? 'Running...'
-        : progress.status;
+        : progress.status === 'EXPORTING'
+          ? 'Exporting...'
+          : progress.status;
 
   return (
     <Card sx={{ mt: 3 }}>
@@ -133,7 +138,7 @@ function ProgressPanel({ progress }: ProgressPanelProps) {
             </Typography>
           </Stack>
           <LinearProgress
-            variant={isActive && progress.progressPercent === 0 ? 'indeterminate' : 'determinate'}
+            variant={isExporting || (isActive && progress.progressPercent === 0) ? 'indeterminate' : 'determinate'}
             value={Math.min(progress.progressPercent, 100)}
             color={statusColor}
             sx={{ height: 8, borderRadius: 4 }}
@@ -186,11 +191,16 @@ export default function SendTestPage() {
   const [timeout, setTimeout] = useState('30');
   const [delay, setDelay] = useState('0');
   const [testId, setTestId] = useState('');
-  const [exportStatistics, setExportStatistics] = useState(false);
+  const [exportGrafana, setExportGrafana] = useState(false);
+  const [exportPrometheus, setExportPrometheus] = useState(false);
+  const [exportKubernetes, setExportKubernetes] = useState(false);
+  const [exportLogs, setExportLogs] = useState(false);
   const [debug, setDebug] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [progress, setProgress] = useState<TestProgressEvent | null>(null);
+  const [currentTestRunDbId, setCurrentTestRunDbId] = useState<number | null>(null);
+  const [exportWasRequested, setExportWasRequested] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Test case manager state
@@ -217,17 +227,24 @@ export default function SendTestPage() {
     setSubmitting(true);
     setResult(null);
     setProgress(null);
+    setCurrentTestRunDbId(null);
+    const anyExport = exportGrafana || exportPrometheus || exportKubernetes || exportLogs;
+    setExportWasRequested(anyExport);
 
     try {
-      const { testRunId } = await sendTest({
+      const { id, testRunId } = await sendTest({
         message,
         count: Number(count),
         timeoutSeconds: Number(timeout),
         delayMs: Number(delay),
         testId: testId || undefined,
-        exportStatistics,
+        exportGrafana,
+        exportPrometheus,
+        exportKubernetes,
+        exportLogs,
         debug,
       });
+      setCurrentTestRunDbId(id);
 
       const unsub = subscribeTestProgress(
         testRunId,
@@ -483,28 +500,68 @@ export default function SendTestPage() {
                 fullWidth
               />
             </Stack>
-            <Stack direction="row" spacing={2}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={exportStatistics}
-                    onChange={(e) => setExportStatistics(e.target.checked)}
-                  />
-                }
-                label="Export Statistics"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={debug} onChange={(e) => setDebug(e.target.checked)} />}
-                label="Debug Mode"
-              />
-            </Stack>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Export
+              </Typography>
+              <Stack direction="row" flexWrap="wrap">
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportGrafana}
+                      onChange={(e) => setExportGrafana(e.target.checked)}
+                    />
+                  }
+                  label="Grafana"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportPrometheus}
+                      onChange={(e) => setExportPrometheus(e.target.checked)}
+                    />
+                  }
+                  label="Prometheus"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportKubernetes}
+                      onChange={(e) => setExportKubernetes(e.target.checked)}
+                    />
+                  }
+                  label="Kubernetes"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportLogs}
+                      onChange={(e) => setExportLogs(e.target.checked)}
+                    />
+                  }
+                  label="Logs"
+                />
+              </Stack>
+            </Box>
+            <FormControlLabel
+              control={<Checkbox checked={debug} onChange={(e) => setDebug(e.target.checked)} />}
+              label="Debug Mode"
+            />
             {result && (
               <Alert severity={result.type} onClose={() => setResult(null)}>
                 {result.text}
               </Alert>
             )}
             <Button type="submit" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
-              {submitting ? 'Running...' : 'Send Test'}
+              {submitting
+                ? progress?.status === 'EXPORTING'
+                  ? 'Exporting...'
+                  : 'Running...'
+                : 'Send Test'}
             </Button>
           </Stack>
         </Box>
@@ -512,6 +569,28 @@ export default function SendTestPage() {
 
       {/* Progress Panel */}
       {progress && <ProgressPanel progress={progress} />}
+
+      {/* Download Button — shown after test completes when exports were requested */}
+      {progress &&
+        (progress.status === 'COMPLETED' || progress.status === 'TIMEOUT') &&
+        exportWasRequested &&
+        currentTestRunDbId !== null && (
+          <Card sx={{ mt: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                Export package ready
+              </Typography>
+              <Button
+                component="a"
+                href={downloadTestRunUrl(currentTestRunDbId)}
+                startIcon={<DownloadIcon />}
+                size="small"
+              >
+                Download Results ZIP
+              </Button>
+            </Stack>
+          </Card>
+        )}
 
       {/* Create/Edit/Upload Dialog */}
       <Dialog

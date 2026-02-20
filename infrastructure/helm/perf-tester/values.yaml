@@ -24,6 +24,10 @@ persistence:
   size: 5Gi
   storageClass: ""
 
+h2Persistence:
+  size: 10Gi
+  storageClass: ""
+
 grafana:
   url: http://perf-grafana:3000/grafana
   exportPath: /data/exports/grafana-exports

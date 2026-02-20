@@ -65,17 +65,14 @@ data:
 
     spring:
       datasource:
-        url: jdbc:postgresql://localhost:5432/perfdb
-        username: perfuser
-        password: perfpass
-        driver-class-name: org.postgresql.Driver
+        url: jdbc:h2:file:./data/perfdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+        driver-class-name: org.h2.Driver
+        username: sa
+        password:
       jpa:
         hibernate:
-          ddl-auto: validate
+          ddl-auto: none
         open-in-view: false
-      liquibase:
-        change-log: classpath:db/changelog/db.changelog-master.xml
-        fail-on-error: true
       data:
         redis:
           host: perf-redis
@@ -134,9 +131,6 @@ data:
         mq:
           host: perf-ibm-mq
           port: 1414
-        postgres:
-          host: perf-postgres
-          port: 5432
         redis:
           host: perf-redis
           port: 6379
@@ -155,8 +149,7 @@ data:
 
     logging:
       level:
-        liquibase: INFO
-        org.springframework.boot.autoconfigure.liquibase: INFO
+        org.flywaydb: INFO
         org.springframework.jms: INFO
         com.ibm.mq: INFO
         com.ibm.msg: INFO
@@ -307,6 +300,7 @@ data:
                     - Path=/prometheus,/prometheus/**
                   filters:
                     - StripPrefix=0
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: loki-root
                   uri: http://perf-grafana:3000
@@ -328,6 +322,8 @@ data:
                     - Path=/ibmmq,/ibmmq/**
                   filters:
                     - StripPrefix=0
+                    - RemoveResponseHeader=Content-Security-Policy
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: kafdrop
                   uri: http://perf-kafdrop:9000
@@ -335,6 +331,7 @@ data:
                     - Path=/kafdrop,/kafdrop/**
                   filters:
                     - StripPrefix=0
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: redis-commander
                   uri: http://perf-redis-commander:8081
@@ -412,9 +409,10 @@ data:
     # perf-tester Kubernetes profile configuration
     spring:
       datasource:
-        url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://perf-postgres:5432/perfdb}
-        username: ${SPRING_DATASOURCE_USERNAME:perfuser}
-        password: ${SPRING_DATASOURCE_PASSWORD:perfpass}
+        url: jdbc:h2:file:/data/h2/perfdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+        driver-class-name: org.h2.Driver
+        username: sa
+        password:
       data:
         redis:
           host: ${SPRING_DATA_REDIS_HOST:perf-redis}
@@ -442,9 +440,6 @@ data:
         mq:
           host: perf-ibm-mq
           port: 1414
-        postgres:
-          host: perf-postgres
-          port: 5432
         redis:
           host: perf-redis
           port: 6379
@@ -479,6 +474,7 @@ data:
                     - Path=/prometheus,/prometheus/**
                   filters:
                     - StripPrefix=0
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: loki-root
                   uri: http://perf-grafana:3000
@@ -500,6 +496,8 @@ data:
                     - Path=/ibmmq,/ibmmq/**
                   filters:
                     - StripPrefix=0
+                    - RemoveResponseHeader=Content-Security-Policy
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: kafdrop
                   uri: http://perf-kafdrop:9000
@@ -507,6 +505,7 @@ data:
                     - Path=/kafdrop,/kafdrop/**
                   filters:
                     - StripPrefix=0
+                    - RewriteLocationResponseHeader=AS_IN_REQUEST, Location, ,
 
                 - id: redis-commander
                   uri: http://perf-redis-commander:8081

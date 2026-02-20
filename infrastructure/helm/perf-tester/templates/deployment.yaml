@@ -92,10 +92,6 @@ spec:
               value: perf-ibm-mq
             - name: APP_HEALTHCHECK_MQ_PORT
               value: "1414"
-            - name: APP_HEALTHCHECK_POSTGRES_HOST
-              value: perf-postgres
-            - name: APP_HEALTHCHECK_POSTGRES_PORT
-              value: "5432"
             - name: APP_HEALTHCHECK_REDIS_HOST
               value: {{ .Values.redis.host }}
             - name: APP_HEALTHCHECK_REDIS_PORT
@@ -106,11 +102,13 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-          {{- if .Values.persistence.enabled }}
           volumeMounts:
+            {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /data/exports
-          {{- end }}
+            {{- end }}
+            - name: h2-data
+              mountPath: /data/h2
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
@@ -133,9 +131,12 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 10
-      {{- if .Values.persistence.enabled }}
       volumes:
+        {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "perf-tester.fullname" . }}-pvc
-      {{- end }}
+        {{- end }}
+        - name: h2-data
+          persistentVolumeClaim:
+            claimName: {{ include "perf-tester.fullname" . }}-h2-pvc
