@@ -164,6 +164,10 @@ export interface HeaderFieldDto {
   name: string;
   size: number;
   value: string;
+  type: string | null;
+  paddingChar: string | null;
+  uuidPrefix: string | null;
+  uuidSeparator: string | null;
 }
 
 export interface ScenarioEntryDto {
@@ -192,6 +196,10 @@ export interface HeaderTemplateField {
   name: string;
   size: number;
   value: string;
+  type: string | null;
+  paddingChar: string | null;
+  uuidPrefix: string | null;
+  uuidSeparator: string | null;
 }
 
 export interface HeaderTemplateSummary {

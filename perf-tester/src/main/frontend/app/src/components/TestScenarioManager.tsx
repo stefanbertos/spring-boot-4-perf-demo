@@ -47,10 +47,48 @@ import InfraProfileManager from './InfraProfileManager';
 
 // ── Shared Types ───────────────────────────────────────────────────
 
+type FieldType = 'STRING' | 'NUMBER' | 'UUID';
+
 interface HeaderFieldForm {
   name: string;
   size: number;
   value: string;
+  type: FieldType;
+  paddingChar: string;
+  uuidPrefix: string;
+  uuidSeparator: string;
+}
+
+const DEFAULT_HEADER_FIELD: HeaderFieldForm = {
+  name: '', size: 10, value: '', type: 'STRING', paddingChar: ' ', uuidPrefix: '', uuidSeparator: '-',
+};
+
+interface FieldValidation {
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+function getFieldValidation(field: HeaderFieldForm): FieldValidation | null {
+  if (field.type === 'UUID') {
+    const total = field.uuidPrefix.length + field.uuidSeparator.length + 36;
+    if (total > field.size) {
+      return { severity: 'warning', message: `UUID is ${total} chars — will be truncated to ${field.size}.` };
+    }
+    if (total < field.size) {
+      return { severity: 'warning', message: `UUID is ${total} chars, will be padded to ${field.size} with '${field.paddingChar || ' '}'.` };
+    }
+    return null;
+  }
+  if (field.value.length > field.size) {
+    return { severity: 'error', message: `Value (${field.value.length} chars) exceeds size (${field.size}) and will be truncated.` };
+  }
+  if (field.value.length > 0 && field.value.length < field.size) {
+    return {
+      severity: 'warning',
+      message: `Value is ${field.value.length} of ${field.size} chars. Will be padded with '${field.paddingChar || ' '}'. Enter ${field.size} chars or accept padding.`,
+    };
+  }
+  return null;
 }
 
 interface EntryForm {
@@ -362,13 +400,21 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
     setForm({
       id: detail.id,
       name: detail.name,
-      fields: detail.fields.map((f) => ({ name: f.name, size: f.size, value: f.value })),
+      fields: detail.fields.map((f) => ({
+        name: f.name,
+        size: f.size,
+        value: f.value,
+        type: (f.type ?? 'STRING') as FieldType,
+        paddingChar: f.paddingChar ?? ' ',
+        uuidPrefix: f.uuidPrefix ?? '',
+        uuidSeparator: f.uuidSeparator ?? '-',
+      })),
     });
     setDialogOpen(true);
   };
 
   const addField = () => {
-    setForm((f) => ({ ...f, fields: [...f.fields, { name: '', size: 10, value: '' }] }));
+    setForm((f) => ({ ...f, fields: [...f.fields, { ...DEFAULT_HEADER_FIELD }] }));
   };
 
   const removeField = (i: number) => {
@@ -378,7 +424,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
   const updateField = (i: number, field: keyof HeaderFieldForm, value: string | number) => {
     setForm((f) => ({
       ...f,
-      fields: f.fields.map((fld, idx) => (idx === i ? { ...fld, [field]: value } : fld)),
+      fields: f.fields.map((fld, idx) => (idx === i ? { ...fld, [field]: value } as HeaderFieldForm : fld)),
     }));
   };
 
@@ -387,7 +433,15 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
     try {
       const request = {
         name: form.name,
-        fields: form.fields.map((f) => ({ name: f.name, size: f.size, value: f.value })),
+        fields: form.fields.map((f) => ({
+          name: f.name,
+          size: f.size,
+          value: f.value,
+          type: f.type,
+          paddingChar: f.paddingChar,
+          uuidPrefix: f.uuidPrefix,
+          uuidSeparator: f.uuidSeparator,
+        })),
       };
       if (form.id != null) {
         await updateHeaderTemplate(form.id, request);
@@ -496,39 +550,114 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
             {form.fields.length === 0 ? (
               <Typography variant="caption" color="text.disabled">No fields yet</Typography>
             ) : (
-              <Stack spacing={1}>
-                {form.fields.map((field, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="center">
-                    <MuiTextField
-                      size="small"
-                      label="Name"
-                      value={field.name}
-                      onChange={(e) => updateField(i, 'name', e.target.value)}
-                      sx={{ flex: 2 }}
-                    />
-                    <MuiTextField
-                      size="small"
-                      label="Size"
-                      type="number"
-                      value={field.size}
-                      onChange={(e) => updateField(i, 'size', Number(e.target.value))}
-                      sx={{ width: 80 }}
-                      slotProps={{ htmlInput: { min: 1 } }}
-                    />
-                    <MuiTextField
-                      size="small"
-                      label="Value"
-                      value={field.value}
-                      onChange={(e) => updateField(i, 'value', e.target.value)}
-                      sx={{ flex: 2 }}
-                    />
-                    <Tooltip title="Remove field">
-                      <IconButton size="small" onClick={() => removeField(i)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                ))}
+              <Stack spacing={1.5}>
+                {form.fields.map((field, i) => {
+                  const validation = getFieldValidation(field);
+                  const isUuid = field.type === 'UUID';
+                  const uuidTotal = field.uuidPrefix.length + field.uuidSeparator.length + 36;
+                  return (
+                    <Box key={i} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                      <Stack spacing={1}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <MuiTextField
+                            size="small"
+                            label="Name"
+                            value={field.name}
+                            onChange={(e) => updateField(i, 'name', e.target.value)}
+                            sx={{ flex: 2 }}
+                          />
+                          <MuiTextField
+                            select
+                            size="small"
+                            label="Type"
+                            value={field.type}
+                            onChange={(e) => updateField(i, 'type', e.target.value)}
+                            sx={{ width: 110 }}
+                          >
+                            <MenuItem value="STRING">String</MenuItem>
+                            <MenuItem value="NUMBER">Number</MenuItem>
+                            <MenuItem value="UUID">UUID</MenuItem>
+                          </MuiTextField>
+                          <MuiTextField
+                            size="small"
+                            label="Size"
+                            type="number"
+                            value={field.size}
+                            onChange={(e) => updateField(i, 'size', Number(e.target.value))}
+                            sx={{ width: 75 }}
+                            slotProps={{ htmlInput: { min: 1 } }}
+                          />
+                          <Tooltip title="Remove field">
+                            <IconButton size="small" onClick={() => removeField(i)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                        {isUuid ? (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <MuiTextField
+                              size="small"
+                              label="Prefix"
+                              value={field.uuidPrefix}
+                              onChange={(e) => updateField(i, 'uuidPrefix', e.target.value)}
+                              sx={{ flex: 1 }}
+                            />
+                            <MuiTextField
+                              size="small"
+                              label="Separator"
+                              value={field.uuidSeparator}
+                              onChange={(e) => updateField(i, 'uuidSeparator', e.target.value)}
+                              sx={{ width: 90 }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color={validation?.severity === 'error' ? 'error.main' : validation?.severity === 'warning' ? 'warning.main' : 'success.main'}
+                              sx={{ whiteSpace: 'nowrap' }}
+                            >
+                              {`${field.uuidPrefix.length}+${field.uuidSeparator.length}+36=${uuidTotal}/${field.size}`}
+                              {!validation ? ' ✓' : ''}
+                            </Typography>
+                            {validation && (
+                              <Typography variant="caption" color={validation.severity === 'error' ? 'error.main' : 'warning.main'}>
+                                {validation.message}
+                              </Typography>
+                            )}
+                          </Stack>
+                        ) : (
+                          <Stack direction="row" spacing={1} alignItems="flex-start">
+                            <MuiTextField
+                              size="small"
+                              label="Default Value"
+                              value={field.value}
+                              onChange={(e) => updateField(i, 'value', e.target.value)}
+                              error={validation?.severity === 'error'}
+                              sx={{ flex: 1 }}
+                            />
+                            <MuiTextField
+                              size="small"
+                              label="Pad char"
+                              value={field.paddingChar}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                updateField(i, 'paddingChar', v.length > 0 ? v[v.length - 1] : ' ');
+                              }}
+                              sx={{ width: 80 }}
+                              slotProps={{ htmlInput: { maxLength: 1 } }}
+                            />
+                          </Stack>
+                        )}
+                        {!isUuid && validation && (
+                          <Typography
+                            variant="caption"
+                            color={validation.severity === 'error' ? 'error.main' : 'warning.main'}
+                          >
+                            {validation.message}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Box>
+                  );
+                })}
               </Stack>
             )}
           </Stack>
@@ -664,7 +793,13 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           testCaseName: tc?.name ?? '',
           content: e.content,
           percentage: e.percentage,
-          headerFields: e.headerFields.map((h) => ({ name: h.name, size: h.size, value: h.value })),
+          headerFields: e.headerFields.map((h) => ({
+            name: h.name, size: h.size, value: h.value,
+            type: (h.type ?? 'STRING') as FieldType,
+            paddingChar: h.paddingChar ?? ' ',
+            uuidPrefix: h.uuidPrefix ?? '',
+            uuidSeparator: h.uuidSeparator ?? '-',
+          })),
         };
       }),
     });
@@ -714,7 +849,11 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           testCaseId: e.testCaseId,
           content: e.content,
           percentage: e.percentage,
-          headerFields: e.headerFields.map((h) => ({ name: h.name, size: h.size, value: h.value })),
+          headerFields: e.headerFields.map((h) => ({
+            name: h.name, size: h.size, value: h.value,
+            type: h.type, paddingChar: h.paddingChar,
+            uuidPrefix: h.uuidPrefix, uuidSeparator: h.uuidSeparator,
+          })),
         })),
       };
       if (form.id != null) {
