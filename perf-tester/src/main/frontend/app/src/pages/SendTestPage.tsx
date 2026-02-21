@@ -140,8 +140,6 @@ function ProgressPanel({ progress }: ProgressPanelProps) {
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function SendTestPage() {
-  const [timeout] = useState('0');
-  const [delay] = useState('0');
   const [testId, setTestId] = useState('');
   const [exportGrafana, setExportGrafana] = useState(false);
   const [exportPrometheus, setExportPrometheus] = useState(false);
@@ -163,7 +161,7 @@ export default function SendTestPage() {
     try {
       setTestScenarios(await listTestScenarios());
     } catch {
-      // silently ignore — user can still open manager to see error
+      // silently ignore
     }
   }, []);
 
@@ -193,8 +191,8 @@ export default function SendTestPage() {
 
     try {
       const { id, testRunId } = await sendTest({
-        timeoutSeconds: Number(timeout),
-        delayMs: Number(delay),
+        timeoutSeconds: 0,
+        delayMs: 0,
         testId: testId || undefined,
         scenarioId: selectedScenarioId ?? undefined,
         exportGrafana,
@@ -246,12 +244,14 @@ export default function SendTestPage() {
                 Manage
               </Button>
             </Stack>
+
             <TextField
               label="Test ID (optional)"
               value={testId}
               onChange={(e) => setTestId(e.target.value)}
               fullWidth
             />
+
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 Export
@@ -301,6 +301,7 @@ export default function SendTestPage() {
                 />
               </Stack>
             </Box>
+
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 Debug
@@ -316,16 +317,19 @@ export default function SendTestPage() {
                 label="Enable debug logging"
               />
             </Box>
+
             {result && (
               <Alert severity={result.type} onClose={() => setResult(null)}>
                 {result.text}
               </Alert>
             )}
+
             {!selectedScenarioId && (
               <Typography variant="caption" color="text.secondary">
                 Select a scenario to run
               </Typography>
             )}
+
             <Button
               type="submit"
               disabled={submitting || !selectedScenarioId}
