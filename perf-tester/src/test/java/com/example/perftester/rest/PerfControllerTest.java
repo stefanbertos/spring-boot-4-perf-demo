@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -230,6 +231,30 @@ class PerfControllerTest {
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> verify(loggingAdminService).setLogLevel("com.example", LogLevel.DEBUG));
+    }
+
+    @Test
+    void exportOptionsSettersCoverSpringMvcBinding() {
+        var opts = new PerfController.ExportOptions();
+        opts.setExportGrafana(true);
+        opts.setExportPrometheus(true);
+        opts.setExportKubernetes(true);
+        opts.setExportLogs(true);
+        assertTrue(opts.exportGrafana());
+        assertTrue(opts.exportPrometheus());
+        assertTrue(opts.exportKubernetes());
+        assertTrue(opts.exportLogs());
+    }
+
+    @Test
+    void runOptionsSettersCoverSpringMvcBinding() {
+        var opts = new PerfController.RunOptions();
+        opts.setTestId("tid");
+        opts.setDebug(true);
+        opts.setScenarioId(5L);
+        assertEquals("tid", opts.testId());
+        assertTrue(opts.debug());
+        assertEquals(5L, opts.scenarioId());
     }
 
     @Test

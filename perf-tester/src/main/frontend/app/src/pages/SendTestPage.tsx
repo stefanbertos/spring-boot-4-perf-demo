@@ -191,7 +191,6 @@ export default function SendTestPage() {
 
     try {
       const { id, testRunId } = await sendTest({
-        timeoutSeconds: 0,
         delayMs: 0,
         testId: testId || undefined,
         scenarioId: selectedScenarioId ?? undefined,

@@ -38,6 +38,7 @@ import {
   updateTestScenario,
 } from '@/api';
 import type {
+  HeaderTemplateField,
   HeaderTemplateSummary,
   TestCaseSummary,
   TestScenarioSummary,
@@ -53,6 +54,8 @@ interface HeaderFieldForm {
 }
 
 interface EntryForm {
+  testCaseId: number | null;
+  testCaseName: string;
   content: string;
   percentage: number;
   headerFields: HeaderFieldForm[];
@@ -95,6 +98,9 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
   const [form, setForm] = useState<TestCaseFormState>(EMPTY_TC);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [templates, setTemplates] = useState<HeaderTemplateSummary[]>([]);
+  const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
+  const [expandedFields, setExpandedFields] = useState<HeaderTemplateField[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -109,12 +115,33 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
     void refresh();
   }, [refresh]);
 
+  const loadTemplates = () => {
+    listHeaderTemplates().then(setTemplates).catch(() => {});
+  };
+
+  const toggleTemplate = async (id: number) => {
+    if (expandedTemplateId === id) {
+      setExpandedTemplateId(null);
+      setExpandedFields([]);
+    } else {
+      const detail = await getHeaderTemplate(id);
+      setExpandedTemplateId(id);
+      setExpandedFields(detail.fields);
+    }
+  };
+
   const openCreate = () => {
     setForm({ ...EMPTY_TC, mode: 'create' });
+    setExpandedTemplateId(null);
+    setExpandedFields([]);
+    loadTemplates();
     setDialogOpen(true);
   };
 
   const openEdit = async (tc: TestCaseSummary) => {
+    setExpandedTemplateId(null);
+    setExpandedFields([]);
+    loadTemplates();
     const detail = await getTestCase(tc.id);
     setForm({ mode: 'edit', id: detail.id, name: detail.name, message: detail.message });
     setDialogOpen(true);
@@ -205,6 +232,66 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
             fullWidth
             required
           />
+          {templates.length > 0 && (
+            <Box>
+              <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 1 }}>
+                Header Templates
+              </Typography>
+              <Stack spacing={0.5}>
+                {templates.map((t) => (
+                  <Box key={t.id}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        px: 1.5,
+                        py: 0.75,
+                        border: '1px solid',
+                        borderColor: expandedTemplateId === t.id ? 'primary.main' : 'divider',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': { borderColor: 'primary.main' },
+                      }}
+                      onClick={() => void toggleTemplate(t.id)}
+                    >
+                      <Typography variant="body2">{t.name}</Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="caption" color="text.secondary">
+                          {t.fieldCount} {t.fieldCount === 1 ? 'field' : 'fields'}
+                        </Typography>
+                        <Typography variant="caption" color="primary">
+                          {expandedTemplateId === t.id ? 'hide' : 'show'}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                    {expandedTemplateId === t.id && expandedFields.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 0.5,
+                          px: 1.5,
+                          py: 1,
+                          borderLeft: '2px solid',
+                          borderColor: 'primary.main',
+                          bgcolor: 'action.hover',
+                          borderRadius: '0 4px 4px 0',
+                        }}
+                      >
+                        <Stack spacing={0.25}>
+                          {expandedFields.map((f, fi) => (
+                            <Typography key={fi} variant="caption" color="text.secondary">
+                              <strong>{f.name}</strong> — size: {f.size}
+                              {f.value ? `, default: "${f.value}"` : ''}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          )}
           <TextField
             label="Message"
             value={form.message}
@@ -466,164 +553,54 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
   );
 }
 
-// ── Entry Editor ───────────────────────────────────────────────────
+// ── Entry Row ──────────────────────────────────────────────────────
 
-interface EntryEditorProps {
+interface EntryRowProps {
   entry: EntryForm;
-  index: number;
   testCases: TestCaseSummary[];
-  templates: HeaderTemplateSummary[];
   onChange: (entry: EntryForm) => void;
   onRemove: () => void;
 }
 
-function EntryEditor({ entry, index, testCases, templates, onChange, onRemove }: EntryEditorProps) {
-  const handleLoadTestCase = async (id: number) => {
+function EntryRow({ entry, testCases, onChange, onRemove }: EntryRowProps) {
+  const handleTestCaseChange = async (id: number) => {
+    const tc = testCases.find((t) => t.id === id);
     const detail = await getTestCase(id);
-    onChange({ ...entry, content: detail.message });
+    onChange({ ...entry, testCaseId: id, testCaseName: tc?.name ?? '', content: detail.message });
   };
-
-  const handleLoadTemplate = async (id: number) => {
-    const detail = await getHeaderTemplate(id);
-    onChange({
-      ...entry,
-      headerFields: detail.fields.map((f) => ({ name: f.name, size: f.size, value: f.value })),
-    });
-  };
-
-  const addField = () =>
-    onChange({ ...entry, headerFields: [...entry.headerFields, { name: '', size: 10, value: '' }] });
-
-  const removeField = (i: number) =>
-    onChange({ ...entry, headerFields: entry.headerFields.filter((_, idx) => idx !== i) });
-
-  const updateField = (i: number, field: keyof HeaderFieldForm, value: string | number) =>
-    onChange({
-      ...entry,
-      headerFields: entry.headerFields.map((f, idx) => (idx === i ? { ...f, [field]: value } : f)),
-    });
 
   return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
-      <Stack spacing={2}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="caption" color="text.secondary" fontWeight={500}>
-            Entry {index + 1}
-          </Typography>
-          <Tooltip title="Remove entry">
-            <IconButton size="small" onClick={onRemove}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-
-        {testCases.length > 0 && (
-          <MuiTextField
-            select
-            size="small"
-            label="Load from test case"
-            value=""
-            onChange={(e) => {
-              if (e.target.value) void handleLoadTestCase(Number(e.target.value));
-            }}
-            fullWidth
-          >
-            {testCases.map((tc) => (
-              <MenuItem key={tc.id} value={tc.id}>{tc.name}</MenuItem>
-            ))}
-          </MuiTextField>
-        )}
-
-        <Stack direction="row" spacing={2} alignItems="flex-start">
-          <MuiTextField
-            label="Content"
-            value={entry.content}
-            onChange={(e) => onChange({ ...entry, content: e.target.value })}
-            multiline
-            rows={3}
-            fullWidth
-            size="small"
-          />
-          <MuiTextField
-            label="%"
-            type="number"
-            value={entry.percentage}
-            onChange={(e) => onChange({ ...entry, percentage: Number(e.target.value) })}
-            size="small"
-            sx={{ width: 80 }}
-            slotProps={{ htmlInput: { min: 1, max: 100 } }}
-          />
-        </Stack>
-
-        <Box>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Header Fields (fixed-width columns, prepended as first line)
-            </Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
-              {templates.length > 0 && (
-                <MuiTextField
-                  select
-                  size="small"
-                  label="From template"
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) void handleLoadTemplate(Number(e.target.value));
-                  }}
-                  sx={{ width: 160 }}
-                >
-                  {templates.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
-                  ))}
-                </MuiTextField>
-              )}
-              <Button size="small" onClick={addField}>
-                <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Add Field
-              </Button>
-            </Stack>
-          </Stack>
-          {entry.headerFields.length === 0 ? (
-            <Typography variant="caption" color="text.disabled">No header fields</Typography>
-          ) : (
-            <Stack spacing={1}>
-              {entry.headerFields.map((field, fi) => (
-                <Stack key={fi} direction="row" spacing={1} alignItems="center">
-                  <MuiTextField
-                    size="small"
-                    label="Name"
-                    value={field.name}
-                    onChange={(e) => updateField(fi, 'name', e.target.value)}
-                    sx={{ flex: 2 }}
-                  />
-                  <MuiTextField
-                    size="small"
-                    label="Size"
-                    type="number"
-                    value={field.size}
-                    onChange={(e) => updateField(fi, 'size', Number(e.target.value))}
-                    sx={{ width: 100 }}
-                    slotProps={{ htmlInput: { min: 1 } }}
-                  />
-                  <MuiTextField
-                    size="small"
-                    label="Value"
-                    value={field.value}
-                    onChange={(e) => updateField(fi, 'value', e.target.value)}
-                    sx={{ flex: 2 }}
-                  />
-                  <Tooltip title="Remove field">
-                    <IconButton size="small" onClick={() => removeField(fi)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              ))}
-            </Stack>
-          )}
-        </Box>
-      </Stack>
-    </Box>
+    <Stack direction="row" spacing={1} alignItems="center">
+      <MuiTextField
+        select
+        size="small"
+        label="Test Case"
+        value={entry.testCaseId ?? ''}
+        onChange={(e) => {
+          if (e.target.value) void handleTestCaseChange(Number(e.target.value));
+        }}
+        sx={{ flex: 1 }}
+        required
+      >
+        {testCases.map((tc) => (
+          <MenuItem key={tc.id} value={tc.id}>{tc.name}</MenuItem>
+        ))}
+      </MuiTextField>
+      <MuiTextField
+        label="%"
+        type="number"
+        value={entry.percentage}
+        onChange={(e) => onChange({ ...entry, percentage: Number(e.target.value) })}
+        size="small"
+        sx={{ width: 80 }}
+        slotProps={{ htmlInput: { min: 1, max: 100 } }}
+      />
+      <Tooltip title="Remove">
+        <IconButton size="small" onClick={onRemove}>
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
   );
 }
 
@@ -637,7 +614,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   const [scenarios, setScenarios] = useState<TestScenarioSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<HeaderTemplateSummary[]>([]);
   const [testCases, setTestCases] = useState<TestCaseSummary[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -662,7 +638,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   const refreshSupportingData = () => {
     listTestCases().then(setTestCases).catch(() => {});
-    listHeaderTemplates().then(setTemplates).catch(() => {});
   };
 
   const openCreate = () => {
@@ -672,25 +647,52 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   };
 
   const openEdit = async (scenario: TestScenarioSummary) => {
-    refreshSupportingData();
     setDialogOpen(true);
-    const detail = await getTestScenario(scenario.id);
+    const [detail, tcs] = await Promise.all([
+      getTestScenario(scenario.id),
+      listTestCases().catch(() => [] as TestCaseSummary[]),
+    ]);
+    setTestCases(tcs);
     setForm({
       id: detail.id,
       name: detail.name,
       count: detail.count,
-      entries: detail.entries.map((e) => ({
-        content: e.content,
-        percentage: e.percentage,
-        headerFields: e.headerFields.map((h) => ({ name: h.name, size: h.size, value: h.value })),
-      })),
+      entries: detail.entries.map((e) => {
+        const tc = tcs.find((t) => t.id === e.testCaseId);
+        return {
+          testCaseId: e.testCaseId ?? null,
+          testCaseName: tc?.name ?? '',
+          content: e.content,
+          percentage: e.percentage,
+          headerFields: e.headerFields.map((h) => ({ name: h.name, size: h.size, value: h.value })),
+        };
+      }),
     });
   };
 
-  const addEntry = () => {
+  const addEntry = async () => {
+    const firstTc = testCases[0];
+    let content = '';
+    if (firstTc) {
+      try {
+        const detail = await getTestCase(firstTc.id);
+        content = detail.message;
+      } catch {
+        // ignore
+      }
+    }
     setForm((f) => ({
       ...f,
-      entries: [...f.entries, { content: '', percentage: 100, headerFields: [] }],
+      entries: [
+        ...f.entries,
+        {
+          testCaseId: firstTc?.id ?? null,
+          testCaseName: firstTc?.name ?? '',
+          content,
+          percentage: 100,
+          headerFields: [],
+        },
+      ],
     }));
   };
 
@@ -709,6 +711,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
         name: form.name,
         count: form.count,
         entries: form.entries.map((e) => ({
+          testCaseId: e.testCaseId,
           content: e.content,
           percentage: e.percentage,
           headerFields: e.headerFields.map((h) => ({ name: h.name, size: h.size, value: h.value })),
@@ -823,30 +826,47 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           <Stack spacing={1}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Message Variants
+                Test Cases
               </Typography>
-              <Button size="small" onClick={addEntry}>
+              <Button size="small" onClick={() => void addEntry()} disabled={testCases.length === 0}>
                 <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Add Variant
+                Add Test Case
               </Button>
             </Stack>
-            {form.entries.length === 0 ? (
-              <Typography variant="caption" color="text.disabled">No variants yet</Typography>
+            {testCases.length === 0 && (
+              <Typography variant="caption" color="text.secondary">
+                No test cases available — create some in the Test Cases tab first.
+              </Typography>
+            )}
+            {form.entries.length === 0 && testCases.length > 0 ? (
+              <Typography variant="caption" color="text.disabled">No test cases added yet</Typography>
             ) : (
-              <Stack spacing={2}>
+              <Stack spacing={1}>
                 {form.entries.map((entry, i) => (
-                  <EntryEditor
+                  <EntryRow
                     key={i}
                     entry={entry}
-                    index={i}
                     testCases={testCases}
-                    templates={templates}
                     onChange={(updated) => updateEntry(i, updated)}
                     onRemove={() => removeEntry(i)}
                   />
                 ))}
               </Stack>
             )}
+            {form.entries.length > 0 && (() => {
+              const total = form.entries.reduce((sum, e) => sum + e.percentage, 0);
+              return (
+                <Stack direction="row" justifyContent="flex-end">
+                  <Typography
+                    variant="caption"
+                    color={total === 100 ? 'success.main' : 'warning.main'}
+                    fontWeight={500}
+                  >
+                    Total: {total}%{total !== 100 ? ' (should be 100%)' : ''}
+                  </Typography>
+                </Stack>
+              );
+            })()}
           </Stack>
         </Stack>
       </Dialog>

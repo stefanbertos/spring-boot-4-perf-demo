@@ -273,21 +273,103 @@ public class PerfController {
     /**
      * Holds the individual export flags submitted with a test run request.
      * Spring MVC binds these from query parameters via @ModelAttribute.
+     * Using a mutable class (not a record) so Spring can create via no-arg constructor
+     * and only set fields present in the request, leaving absent params as false.
      */
-    public record ExportOptions(boolean exportGrafana, boolean exportPrometheus,
-                                boolean exportKubernetes, boolean exportLogs) {
+    public static class ExportOptions {
+        private boolean exportGrafana;
+        private boolean exportPrometheus;
+        private boolean exportKubernetes;
+        private boolean exportLogs;
+
         public ExportOptions() {
-            this(false, false, false, false);
+            // Used by Spring MVC @ModelAttribute binding.
+        }
+
+        public ExportOptions(boolean exportGrafana, boolean exportPrometheus,
+                             boolean exportKubernetes, boolean exportLogs) {
+            this.exportGrafana = exportGrafana;
+            this.exportPrometheus = exportPrometheus;
+            this.exportKubernetes = exportKubernetes;
+            this.exportLogs = exportLogs;
+        }
+
+        public boolean exportGrafana() {
+            return exportGrafana;
+        }
+
+        public void setExportGrafana(boolean exportGrafana) {
+            this.exportGrafana = exportGrafana;
+        }
+
+        public boolean exportPrometheus() {
+            return exportPrometheus;
+        }
+
+        public void setExportPrometheus(boolean exportPrometheus) {
+            this.exportPrometheus = exportPrometheus;
+        }
+
+        public boolean exportKubernetes() {
+            return exportKubernetes;
+        }
+
+        public void setExportKubernetes(boolean exportKubernetes) {
+            this.exportKubernetes = exportKubernetes;
+        }
+
+        public boolean exportLogs() {
+            return exportLogs;
+        }
+
+        public void setExportLogs(boolean exportLogs) {
+            this.exportLogs = exportLogs;
         }
     }
 
     /**
      * Holds run-specific options (testId, debug flag, scenarioId).
      * Spring MVC binds these from query parameters via @ModelAttribute.
+     * Using a mutable class (not a record) so Spring can create via no-arg constructor
+     * and only set fields present in the request, leaving absent params as defaults.
      */
-    public record RunOptions(String testId, boolean debug, Long scenarioId) {
+    public static class RunOptions {
+        private String testId;
+        private boolean debug;
+        private Long scenarioId;
+
         public RunOptions() {
-            this(null, false, null);
+            // Used by Spring MVC @ModelAttribute binding.
+        }
+
+        public RunOptions(String testId, boolean debug, Long scenarioId) {
+            this.testId = testId;
+            this.debug = debug;
+            this.scenarioId = scenarioId;
+        }
+
+        public String testId() {
+            return testId;
+        }
+
+        public void setTestId(String testId) {
+            this.testId = testId;
+        }
+
+        public boolean debug() {
+            return debug;
+        }
+
+        public void setDebug(boolean debug) {
+            this.debug = debug;
+        }
+
+        public Long scenarioId() {
+            return scenarioId;
+        }
+
+        public void setScenarioId(Long scenarioId) {
+            this.scenarioId = scenarioId;
         }
     }
 

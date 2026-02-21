@@ -167,6 +167,7 @@ export interface HeaderFieldDto {
 }
 
 export interface ScenarioEntryDto {
+  testCaseId: number | null;
   content: string;
   percentage: number;
   headerFields: HeaderFieldDto[];
