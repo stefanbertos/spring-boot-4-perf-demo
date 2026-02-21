@@ -1,5 +1,6 @@
 // Theme
-export { theme, ThemeProvider, CssBaseline } from './theme';
+export type { AppTheme } from './theme';
+export { themeDefault, themeBlue, themeRed, ThemeProvider, CssBaseline } from './theme';
 
 // Components
 export { Alert } from './components/Alert';

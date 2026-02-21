@@ -1,15 +1,9 @@
-import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
-import EditIcon from '@mui/icons-material/Edit';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
-import Collapse from '@mui/material/Collapse';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import {
@@ -17,63 +11,22 @@ import {
   Button,
   Card,
   Chip,
-  DataTable,
-  Dialog,
-  IconButton,
   PageHeader,
   Select,
   TextField,
-  Tooltip,
 } from 'perf-ui-components';
-import type { DataTableColumn } from 'perf-ui-components';
+import type { SelectChangeEvent } from 'perf-ui-components';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  createTestCase,
-  deleteTestCase,
   downloadTestRunUrl,
-  getTestCase,
-  listTestCases,
+  listNamespaces,
   listTestScenarios,
   sendTest,
   subscribeTestProgress,
-  updateTestCase,
-  uploadTestCase,
 } from '@/api';
-import { InfraProfileManager, TestScenarioManager } from '@/components';
-import type { TestCaseSummary, TestProgressEvent, TestScenarioSummary } from '@/types/api';
-
-// ── Test Case Manager ─────────────────────────────────────────────
-
-function useTestCases() {
-  const [testCases, setTestCases] = useState<TestCaseSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      setTestCases(await listTestCases());
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { testCases, loading, refresh };
-}
-
-interface TestCaseFormState {
-  mode: 'create' | 'edit' | 'upload';
-  id?: number;
-  name: string;
-  message: string;
-  file: File | null;
-}
-
-const INITIAL_FORM: TestCaseFormState = { mode: 'create', name: '', message: '', file: null };
+import { TestScenarioManager } from '@/components';
+import type { TestProgressEvent, TestScenarioSummary } from '@/types/api';
 
 // ── Progress Panel ─────────────────────────────────────────────────
 
@@ -187,11 +140,8 @@ function ProgressPanel({ progress }: ProgressPanelProps) {
 // ── Main Page ─────────────────────────────────────────────────────
 
 export default function SendTestPage() {
-  // Send test form state
-  const [message, setMessage] = useState('Hello, performance test!');
-  const [count, setCount] = useState('10');
-  const [timeout, setTimeout] = useState('30');
-  const [delay, setDelay] = useState('0');
+  const [timeout] = useState('0');
+  const [delay] = useState('0');
   const [testId, setTestId] = useState('');
   const [exportGrafana, setExportGrafana] = useState(false);
   const [exportPrometheus, setExportPrometheus] = useState(false);
@@ -206,29 +156,30 @@ export default function SendTestPage() {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
   const [testScenarios, setTestScenarios] = useState<TestScenarioSummary[]>([]);
+  const [scenarioManagerOpen, setScenarioManagerOpen] = useState(false);
+  const [kubernetesAvailable, setKubernetesAvailable] = useState(false);
 
-  // Test case manager state
-  const { testCases, loading: testCasesLoading, refresh } = useTestCases();
-  const [managerOpen, setManagerOpen] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<TestCaseFormState>(INITIAL_FORM);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [selectedTestCaseId, setSelectedTestCaseId] = useState('');
+  const refreshScenarios = useCallback(async () => {
+    try {
+      setTestScenarios(await listTestScenarios());
+    } catch {
+      // silently ignore — user can still open manager to see error
+    }
+  }, []);
 
-  // Cleanup SSE on unmount
   useEffect(() => {
+    void refreshScenarios();
+    listNamespaces().then((ns) => setKubernetesAvailable(ns.length > 0)).catch(() => {});
     return () => {
       unsubscribeRef.current?.();
     };
-  }, []);
+  }, [refreshScenarios]);
 
-  // Load scenarios for the run form selector
-  useEffect(() => {
-    listTestScenarios().then(setTestScenarios).catch(() => {});
-  }, []);
+  const scenarioOptions = testScenarios.map((s) => ({ value: String(s.id), label: s.name }));
 
-  // ── Send test handler ────────────────────────────────────────────
+  const handleScenarioChange = (e: SelectChangeEvent) => {
+    setSelectedScenarioId(e.target.value ? Number(e.target.value) : null);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -242,8 +193,6 @@ export default function SendTestPage() {
 
     try {
       const { id, testRunId } = await sendTest({
-        message: selectedScenarioId != null ? 'scenario' : message,
-        count: Number(count),
         timeoutSeconds: Number(timeout),
         delayMs: Number(delay),
         testId: testId || undefined,
@@ -275,262 +224,34 @@ export default function SendTestPage() {
     }
   };
 
-  // ── Test case CRUD handlers ──────────────────────────────────────
-
-  const openCreateDialog = () => {
-    setForm({ ...INITIAL_FORM, mode: 'create' });
-    setDialogOpen(true);
-  };
-
-  const openUploadDialog = () => {
-    setForm({ ...INITIAL_FORM, mode: 'upload' });
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = async (tc: TestCaseSummary) => {
-    const detail = await getTestCase(tc.id);
-    setForm({
-      mode: 'edit',
-      id: detail.id,
-      name: detail.name,
-      message: detail.message,
-      file: null,
-    });
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (form.mode === 'upload' && form.file) {
-        await uploadTestCase(form.name, form.file);
-      } else if (form.mode === 'edit' && form.id != null) {
-        await updateTestCase(form.id, form.name, form.message);
-      } else {
-        await createTestCase(form.name, form.message);
-      }
-      setDialogOpen(false);
-      await refresh();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (confirmDeleteId == null) return;
-    await deleteTestCase(confirmDeleteId);
-    setConfirmDeleteId(null);
-    if (selectedTestCaseId === String(confirmDeleteId)) {
-      setSelectedTestCaseId('');
-    }
-    await refresh();
-  };
-
-  const handleLoadTestCase = async (tc: TestCaseSummary) => {
-    const detail = await getTestCase(tc.id);
-    setMessage(detail.message);
-    setSelectedTestCaseId(String(tc.id));
-  };
-
-  const handleSelectChange = async (event: SelectChangeEvent) => {
-    const value = event.target.value;
-    setSelectedTestCaseId(value);
-    if (value === '' || value === '__freetext__') {
-      return;
-    }
-    const detail = await getTestCase(Number(value));
-    setMessage(detail.message);
-  };
-
-  const handleSaveAsTestCase = () => {
-    setForm({ mode: 'create', name: '', message, file: null });
-    setDialogOpen(true);
-  };
-
-  // ── Table columns ────────────────────────────────────────────────
-
-  const columns: DataTableColumn<TestCaseSummary>[] = [
-    { id: 'name', label: 'Name', render: (row) => row.name },
-    {
-      id: 'updatedAt',
-      label: 'Updated',
-      render: (row) => new Date(row.updatedAt).toLocaleString(),
-    },
-    {
-      id: 'actions',
-      label: 'Actions',
-      align: 'right',
-      render: (row) => (
-        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <Tooltip title="Load">
-            <IconButton size="small" onClick={() => handleLoadTestCase(row)}>
-              <PlayArrowIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => openEditDialog(row)}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton size="small" onClick={() => setConfirmDeleteId(row.id)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-    },
-  ];
-
-  // ── Select options ───────────────────────────────────────────────
-
-  const selectOptions = [
-    { value: '__freetext__', label: 'Freetext' },
-    ...testCases.map((tc) => ({ value: String(tc.id), label: tc.name })),
-  ];
-
-  // ── Render ───────────────────────────────────────────────────────
-
-  const dialogTitle =
-    form.mode === 'upload'
-      ? 'Upload Test Case'
-      : form.mode === 'edit'
-        ? 'Edit Test Case'
-        : 'New Test Case';
-
-  const canSave =
-    form.mode === 'upload'
-      ? form.name.trim() !== '' && form.file != null
-      : form.name.trim() !== '' && form.message.trim() !== '';
-
   return (
     <Box>
       <PageHeader title="Run Test" subtitle="Configure and run a performance test" />
 
-      {/* Infra Profiles */}
-      <InfraProfileManager />
-
-      {/* Test Scenarios */}
-      <TestScenarioManager />
-
-      {/* Test Case Manager */}
-      <Card sx={{ mb: 3 }}>
-        <Stack spacing={2}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 'bold', cursor: 'pointer' }}
-              onClick={() => setManagerOpen(!managerOpen)}
-            >
-              Test Cases {managerOpen ? '(collapse)' : '(expand)'}
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button size="small" onClick={openCreateDialog}>
-                New
-              </Button>
-              <Button size="small" onClick={openUploadDialog}>
-                <UploadFileIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Upload
-              </Button>
-            </Stack>
-          </Stack>
-          <Collapse in={managerOpen}>
-            {testCasesLoading ? (
-              <Typography variant="body2" color="text.secondary">
-                Loading test cases...
-              </Typography>
-            ) : testCases.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No test cases yet. Create one or upload a file.
-              </Typography>
-            ) : (
-              <DataTable columns={columns} rows={testCases} keyExtractor={(row) => row.id} />
-            )}
-          </Collapse>
-        </Stack>
-      </Card>
-
-      {/* Send Test Form */}
-      <Card sx={{ maxWidth: 600 }}>
+      <Card sx={{ maxWidth: 640 }}>
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2.5}>
-            <Select
-              label="Load Test Case"
-              value={selectedTestCaseId || '__freetext__'}
-              options={selectOptions}
-              onChange={handleSelectChange}
-              fullWidth
-              size="small"
-            />
-            <Select
-              label="Test Scenario (optional)"
-              value={selectedScenarioId != null ? String(selectedScenarioId) : ''}
-              options={[
-                { value: '', label: 'None — use message below' },
-                ...testScenarios.map((s) => ({ value: String(s.id), label: s.name })),
-              ]}
-              onChange={(e: SelectChangeEvent) => {
-                const val = e.target.value;
-                setSelectedScenarioId(val ? Number(val) : null);
-              }}
-              fullWidth
-              size="small"
-            />
-            <Stack direction="row" spacing={1} alignItems="flex-start">
-              <TextField
-                label="Message Content"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                fullWidth
-                required
-                multiline
-                rows={3}
-                disabled={selectedScenarioId != null}
-              />
-              <Button
-                size="small"
-                onClick={handleSaveAsTestCase}
-                sx={{ whiteSpace: 'nowrap', mt: 1 }}
-              >
-                Save As...
+            <Stack direction="row" spacing={2} alignItems="flex-end">
+              <Box sx={{ flex: 1 }}>
+                <Select
+                  label="Test Scenario"
+                  value={selectedScenarioId != null ? String(selectedScenarioId) : ''}
+                  options={scenarioOptions}
+                  onChange={handleScenarioChange}
+                  fullWidth
+                  disabled={testScenarios.length === 0}
+                />
+              </Box>
+              <Button onClick={() => setScenarioManagerOpen(true)} sx={{ flexShrink: 0 }}>
+                Manage
               </Button>
             </Stack>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Message Count"
-                type="number"
-                value={count}
-                onChange={(e) => setCount(e.target.value)}
-                fullWidth
-                required
-                slotProps={{ htmlInput: { min: 1 } }}
-              />
-              <TextField
-                label="Timeout (seconds)"
-                type="number"
-                value={timeout}
-                onChange={(e) => setTimeout(e.target.value)}
-                fullWidth
-                required
-                slotProps={{ htmlInput: { min: 1 } }}
-              />
-            </Stack>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Delay (ms)"
-                type="number"
-                value={delay}
-                onChange={(e) => setDelay(e.target.value)}
-                fullWidth
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-              <TextField
-                label="Test ID (optional)"
-                value={testId}
-                onChange={(e) => setTestId(e.target.value)}
-                fullWidth
-              />
-            </Stack>
+            <TextField
+              label="Test ID (optional)"
+              value={testId}
+              onChange={(e) => setTestId(e.target.value)}
+              fullWidth
+            />
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 Export
@@ -556,16 +277,18 @@ export default function SendTestPage() {
                   }
                   label="Prometheus"
                 />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={exportKubernetes}
-                      onChange={(e) => setExportKubernetes(e.target.checked)}
-                    />
-                  }
-                  label="Kubernetes"
-                />
+                {kubernetesAvailable && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={exportKubernetes}
+                        onChange={(e) => setExportKubernetes(e.target.checked)}
+                      />
+                    }
+                    label="Kubernetes"
+                  />
+                )}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -598,7 +321,16 @@ export default function SendTestPage() {
                 {result.text}
               </Alert>
             )}
-            <Button type="submit" disabled={submitting} sx={{ alignSelf: 'flex-start' }}>
+            {!selectedScenarioId && (
+              <Typography variant="caption" color="text.secondary">
+                Select a scenario to run
+              </Typography>
+            )}
+            <Button
+              type="submit"
+              disabled={submitting || !selectedScenarioId}
+              sx={{ alignSelf: 'flex-start' }}
+            >
               {submitting
                 ? progress?.status === 'EXPORTING'
                   ? 'Exporting...'
@@ -609,10 +341,14 @@ export default function SendTestPage() {
         </Box>
       </Card>
 
-      {/* Progress Panel */}
+      <TestScenarioManager
+        open={scenarioManagerOpen}
+        onClose={() => setScenarioManagerOpen(false)}
+        onChanged={() => void refreshScenarios()}
+      />
+
       {progress && <ProgressPanel progress={progress} />}
 
-      {/* Download Button — shown after test completes when exports were requested */}
       {progress &&
         (progress.status === 'COMPLETED' || progress.status === 'TIMEOUT') &&
         exportWasRequested &&
@@ -633,71 +369,6 @@ export default function SendTestPage() {
             </Stack>
           </Card>
         )}
-
-      {/* Create/Edit/Upload Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        title={dialogTitle}
-        maxWidth="md"
-        actions={
-          <>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !canSave}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </>
-        }
-      >
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            fullWidth
-            required
-          />
-          {form.mode === 'upload' ? (
-            <Button component="label">
-              {form.file ? form.file.name : 'Choose File'}
-              <input
-                type="file"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  setForm({ ...form, file });
-                }}
-              />
-            </Button>
-          ) : (
-            <TextField
-              label="Message"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              fullWidth
-              required
-              multiline
-              rows={8}
-            />
-          )}
-        </Stack>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={confirmDeleteId != null}
-        onClose={() => setConfirmDeleteId(null)}
-        title="Delete Test Case"
-        maxWidth="xs"
-        actions={
-          <>
-            <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
-            <Button onClick={handleDelete}>Delete</Button>
-          </>
-        }
-      >
-        <Typography>Are you sure you want to delete this test case?</Typography>
-      </Dialog>
     </Box>
   );
 }

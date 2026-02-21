@@ -6,9 +6,9 @@ import { Alert, Button, Card, DataTable, Loading, PageHeader, Select, Tabs, Text
 import type { DataTableColumn, SelectChangeEvent, TabItem } from 'perf-ui-components';
 import type { SelectOption } from 'perf-ui-components';
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
-import { changeQueueMaxDepth, listDeployments, listQueues, listTopics, resizeTopic, scaleDeployment, setLogLevel } from '@/api';
-import type { DeploymentInfo } from '@/types/api';
+import { useEffect, useMemo, useState } from 'react';
+import { changeQueueMaxDepth, listDeployments, listNamespaces, listQueues, listTopics, resizeTopic, scaleDeployment, setLogLevel } from '@/api';
+import type { DeploymentInfo, NamespaceInfo, TopicInfo } from '@/types/api';
 
 const logLevels = [
   { value: 'TRACE', label: 'TRACE' },
@@ -81,23 +81,20 @@ function LoggingTab() {
 }
 
 function KafkaTab() {
-  const [topicOptions, setTopicOptions] = useState<SelectOption[]>([]);
+  const [topics, setTopics] = useState<TopicInfo[]>([]);
   const [topicName, setTopicName] = useState('');
-  const [partitions, setPartitions] = useState('3');
+  const [partitions, setPartitions] = useState('1');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     listTopics()
-      .then((topics) => {
-        const options = topics.map((t) => ({
-          value: t.topicName,
-          label: `${t.topicName} (${t.partitions} partitions)`,
-        }));
-        setTopicOptions(options);
-        if (options.length > 0) {
-          setTopicName(options[0].value);
+      .then((data) => {
+        setTopics(data);
+        if (data.length > 0) {
+          setTopicName(data[0].topicName);
+          setPartitions(String(data[0].partitions));
         }
       })
       .catch((err) => {
@@ -109,6 +106,18 @@ function KafkaTab() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleTopicChange = (e: SelectChangeEvent) => {
+    const name = e.target.value;
+    setTopicName(name);
+    const topic = topics.find((t) => t.topicName === name);
+    if (topic) setPartitions(String(topic.partitions));
+  };
+
+  const topicOptions = topics.map((t) => ({
+    value: t.topicName,
+    label: `${t.topicName} (${t.partitions} partitions)`,
+  }));
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -119,6 +128,8 @@ function KafkaTab() {
         type: 'success',
         text: `Topic "${res.topicName}" resized to ${res.partitions} partitions`,
       });
+      setTopics((prev) => prev.map((t) => (t.topicName === res.topicName ? res : t)));
+      setPartitions(String(res.partitions));
     } catch (err) {
       setResult({
         type: 'error',
@@ -140,7 +151,7 @@ function KafkaTab() {
             label="Topic Name"
             value={topicName}
             options={topicOptions}
-            onChange={(e: SelectChangeEvent) => setTopicName(e.target.value)}
+            onChange={handleTopicChange}
             fullWidth
             disabled={loading}
           />
@@ -262,7 +273,7 @@ function IbmMqTab() {
   );
 }
 
-function DeploymentScaleAction({ name }: { name: string }) {
+function DeploymentScaleAction({ name, namespace }: { name: string; namespace: string }) {
   const [replicas, setReplicas] = useState('4');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -271,7 +282,7 @@ function DeploymentScaleAction({ name }: { name: string }) {
     setSubmitting(true);
     setResult(null);
     try {
-      await scaleDeployment(name, Number(replicas));
+      await scaleDeployment(name, namespace, Number(replicas));
       setResult({ type: 'success', text: `Scaled to ${replicas}` });
     } catch (err) {
       setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to scale' });
@@ -303,41 +314,101 @@ function DeploymentScaleAction({ name }: { name: string }) {
 }
 
 function KubernetesTab() {
+  const [namespaces, setNamespaces] = useState<NamespaceInfo[]>([]);
+  const [selectedNamespace, setSelectedNamespace] = useState('');
+  const [namespacesLoading, setNamespacesLoading] = useState(true);
   const [deployments, setDeployments] = useState<DeploymentInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deploymentsLoading, setDeploymentsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listDeployments()
-      .then(setDeployments)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load deployments'))
-      .finally(() => setLoading(false));
+    listNamespaces()
+      .then((ns) => {
+        setNamespaces(ns);
+        if (ns.length > 0) {
+          setSelectedNamespace(ns[0].name);
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load namespaces'))
+      .finally(() => setNamespacesLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!selectedNamespace) return;
+    setDeploymentsLoading(true);
+    setDeployments([]);
+    listDeployments(selectedNamespace)
+      .then(setDeployments)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load deployments'))
+      .finally(() => setDeploymentsLoading(false));
+  }, [selectedNamespace]);
+
+  const namespaceOptions = namespaces.map((ns) => ({ value: ns.name, label: ns.name }));
 
   const columns: DataTableColumn<DeploymentInfo>[] = [
     { id: 'name', label: 'Deployment', minWidth: 150, render: (row) => row.name },
-    { id: 'namespace', label: 'Namespace', render: (row) => row.namespace },
     { id: 'desired', label: 'Desired', render: (row) => String(row.desiredReplicas) },
     { id: 'ready', label: 'Ready', render: (row) => String(row.readyReplicas) },
-    { id: 'scale', label: 'Scale To', minWidth: 240, render: (row) => <DeploymentScaleAction name={row.name} /> },
+    {
+      id: 'scale',
+      label: 'Scale To',
+      minWidth: 240,
+      render: (row) => <DeploymentScaleAction name={row.name} namespace={row.namespace} />,
+    },
   ];
 
-  if (loading) return <Loading message="Loading deployments..." />;
-  if (loadError) return <Alert severity="error">{loadError}</Alert>;
-  if (deployments.length === 0) {
-    return <Alert severity="info">No deployments found. Kubernetes may not be available in this environment.</Alert>;
+  if (namespacesLoading) return <Loading message="Loading namespaces..." />;
+
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  if (namespaces.length === 0) {
+    return (
+      <Alert severity="info">
+        Kubernetes is not available in this environment. Start the app inside a cluster to manage deployments.
+      </Alert>
+    );
   }
 
-  return <DataTable columns={columns} rows={deployments} keyExtractor={(row) => row.name} />;
+  return (
+    <Stack spacing={3}>
+      <Box sx={{ maxWidth: 400 }}>
+        <Select
+          label="Namespace"
+          value={selectedNamespace}
+          options={namespaceOptions}
+          onChange={(e: SelectChangeEvent) => setSelectedNamespace(e.target.value)}
+          fullWidth
+        />
+      </Box>
+      {deploymentsLoading && <Loading message="Loading deployments..." />}
+      {!deploymentsLoading && deployments.length === 0 && (
+        <Alert severity="info">No deployments found in namespace &quot;{selectedNamespace}&quot;.</Alert>
+      )}
+      {!deploymentsLoading && deployments.length > 0 && (
+        <DataTable columns={columns} rows={deployments} keyExtractor={(row) => row.name} />
+      )}
+    </Stack>
+  );
 }
 
 export default function AdminPage() {
-  const tabs: TabItem[] = [
-    { label: 'Logging', content: <LoggingTab /> },
-    { label: 'Kafka', content: <KafkaTab /> },
-    { label: 'IBM MQ', content: <IbmMqTab /> },
-    { label: 'Kubernetes', content: <KubernetesTab /> },
-  ];
+  const [kubernetesAvailable, setKubernetesAvailable] = useState(false);
+
+  useEffect(() => {
+    listNamespaces().then((ns) => setKubernetesAvailable(ns.length > 0)).catch(() => {});
+  }, []);
+
+  const tabs: TabItem[] = useMemo(() => {
+    const items: TabItem[] = [
+      { label: 'Logging', content: <LoggingTab /> },
+      { label: 'Kafka', content: <KafkaTab /> },
+      { label: 'IBM MQ', content: <IbmMqTab /> },
+    ];
+    if (kubernetesAvailable) {
+      items.push({ label: 'Kubernetes', content: <KubernetesTab /> });
+    }
+    return items;
+  }, [kubernetesAvailable]);
 
   return (
     <Box>

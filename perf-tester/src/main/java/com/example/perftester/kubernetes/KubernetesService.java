@@ -112,22 +112,46 @@ public class KubernetesService {
         }
     }
 
-    public List<DeploymentInfo> listDeployments() {
-        var items = client.apps().deployments().inNamespace(namespace).list().getItems();
-        return items.stream()
-                .map(d -> {
-                    var spec = d.getSpec();
-                    var status = d.getStatus();
-                    var desired = spec != null && spec.getReplicas() != null ? spec.getReplicas() : 0;
-                    var ready = status != null && status.getReadyReplicas() != null ? status.getReadyReplicas() : 0;
-                    return new DeploymentInfo(d.getMetadata().getName(), namespace, desired, ready);
-                })
-                .toList();
+    public List<NamespaceInfo> listNamespaces() {
+        try {
+            return client.namespaces().list().getItems().stream()
+                    .map(n -> new NamespaceInfo(n.getMetadata().getName(),
+                            n.getStatus() != null ? n.getStatus().getPhase() : "Unknown"))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Could not list Kubernetes namespaces: {}. Not running in a cluster?", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public List<DeploymentInfo> listDeployments(String ns) {
+        try {
+            var items = client.apps().deployments().inNamespace(ns).list().getItems();
+            return items.stream()
+                    .map(d -> {
+                        var spec = d.getSpec();
+                        var status = d.getStatus();
+                        var desired = spec != null && spec.getReplicas() != null ? spec.getReplicas() : 0;
+                        var ready = status != null && status.getReadyReplicas() != null ? status.getReadyReplicas() : 0;
+                        return new DeploymentInfo(d.getMetadata().getName(), ns, desired, ready);
+                    })
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Could not list deployments in namespace {}: {}. Not running in a cluster?", ns, e.getMessage());
+            return List.of();
+        }
     }
 
     public void scaleDeployment(String name, int replicas) {
-        client.apps().deployments().inNamespace(namespace).withName(name).scale(replicas);
-        log.info("Scaled deployment {} in namespace {} to {} replicas", name, namespace, replicas);
+        scaleDeployment(name, namespace, replicas);
+    }
+
+    public void scaleDeployment(String name, String ns, int replicas) {
+        client.apps().deployments().inNamespace(ns).withName(name).scale(replicas);
+        log.info("Scaled deployment {} in namespace {} to {} replicas", name, ns, replicas);
+    }
+
+    public record NamespaceInfo(String name, String phase) {
     }
 
     public record DeploymentInfo(String name, String namespace, int desiredReplicas, int readyReplicas) {

@@ -16,9 +16,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let body: unknown;
     try {
-      body = await response.json();
+      const text = await response.text();
+      body = text ? (JSON.parse(text) as unknown) : text;
     } catch {
-      body = await response.text();
+      body = undefined;
     }
     throw new ApiError(response.status, response.statusText, body);
   }

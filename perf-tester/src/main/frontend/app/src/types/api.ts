@@ -111,6 +111,11 @@ export interface TestCaseDetail {
   updatedAt: string;
 }
 
+export interface NamespaceInfo {
+  name: string;
+  phase: string;
+}
+
 export interface DeploymentInfo {
   name: string;
   namespace: string;
@@ -130,6 +135,7 @@ export interface InfraProfileDetail {
   logLevels: Record<string, string>;
   kafkaTopics: Record<string, number>;
   kubernetesReplicas: Record<string, number>;
+  ibmMqQueues: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,6 +145,7 @@ export interface InfraProfileRequest {
   logLevels: Record<string, string>;
   kafkaTopics: Record<string, number>;
   kubernetesReplicas: Record<string, number>;
+  ibmMqQueues: Record<string, number>;
 }
 
 export interface ApplyResult {
@@ -149,20 +156,26 @@ export interface ApplyResult {
 export interface TestScenarioSummary {
   id: number;
   name: string;
+  count: number;
   updatedAt: string;
 }
 
+export interface HeaderFieldDto {
+  name: string;
+  size: number;
+  value: string;
+}
+
 export interface ScenarioEntryDto {
-  testCaseId: number;
-  testCaseName: string;
+  content: string;
   percentage: number;
-  headerName: string;
-  headerValue: string;
+  headerFields: HeaderFieldDto[];
 }
 
 export interface TestScenarioDetail {
   id: number;
   name: string;
+  count: number;
   entries: ScenarioEntryDto[];
   createdAt: string;
   updatedAt: string;
@@ -170,5 +183,32 @@ export interface TestScenarioDetail {
 
 export interface TestScenarioRequest {
   name: string;
+  count: number;
   entries: ScenarioEntryDto[];
+}
+
+export interface HeaderTemplateField {
+  name: string;
+  size: number;
+  value: string;
+}
+
+export interface HeaderTemplateSummary {
+  id: number;
+  name: string;
+  fieldCount: number;
+  updatedAt: string;
+}
+
+export interface HeaderTemplateDetail {
+  id: number;
+  name: string;
+  fields: HeaderTemplateField[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HeaderTemplateRequest {
+  name: string;
+  fields: HeaderTemplateField[];
 }

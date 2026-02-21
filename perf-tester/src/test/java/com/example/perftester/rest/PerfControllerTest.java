@@ -241,17 +241,18 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldUseScenarioPoolWhenScenarioIdProvided() {
-        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload", "X-Type", "PERF");
-        when(testScenarioService.buildMessagePool(1L, 3)).thenReturn(List.of(scenarioMsg, scenarioMsg, scenarioMsg));
-        when(messageSender.sendMessage(anyString(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload");
+        when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(
+                List.of(scenarioMsg, scenarioMsg, scenarioMsg));
 
-        controller.sendMessages("ignored", 3, 1, 0,
+        controller.sendMessages(null, 1000, 1, 0,
                 new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString(), any()));
+                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString()));
     }
 
     @Test

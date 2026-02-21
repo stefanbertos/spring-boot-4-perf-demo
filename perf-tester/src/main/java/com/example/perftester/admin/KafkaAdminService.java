@@ -6,6 +6,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.kafka.common.errors.InvalidPartitionsException;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -31,10 +33,17 @@ public class KafkaAdminService implements AutoCloseable {
 
     public void resizeTopic(String topicName, int partitions)
             throws ExecutionException, InterruptedException, TimeoutException {
-        var newPartitions = Map.of(topicName, NewPartitions.increaseTo(partitions));
-        adminClient.createPartitions(newPartitions).all()
-                .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        log.info("Resized topic '{}' to {} partitions", topicName, partitions);
+        try {
+            var newPartitions = Map.of(topicName, NewPartitions.increaseTo(partitions));
+            adminClient.createPartitions(newPartitions).all()
+                    .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            log.info("Resized topic '{}' to {} partitions", topicName, partitions);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof InvalidPartitionsException cause) {
+                throw new IllegalArgumentException(cause.getMessage(), e);
+            }
+            throw e;
+        }
     }
 
     public List<TopicInfo> listTopics()

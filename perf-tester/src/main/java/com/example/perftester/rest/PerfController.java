@@ -16,7 +16,6 @@ import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -76,7 +75,7 @@ public class PerfController {
      */
     @PostMapping("/send")
     public ResponseEntity<TestStartResponse> sendMessages(
-            @RequestBody @NotBlank String message,
+            @RequestBody(required = false) String message,
             @RequestParam(defaultValue = "1000") @Min(1) @Max(100000) int count,
             @RequestParam(defaultValue = "60") @Min(1) @Max(3600) int timeoutSeconds,
             @RequestParam(defaultValue = "0") @Min(0) @Max(60000) int delayMs,
@@ -84,9 +83,12 @@ public class PerfController {
             @ModelAttribute RunOptions runOptions) {
 
         var testRunId = UUID.randomUUID().toString();
-        var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), count);
+        int effectiveCount = runOptions.scenarioId() != null
+                ? testScenarioService.getScenarioCount(runOptions.scenarioId()) : count;
+        var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), effectiveCount);
+        var effectiveMessage = message != null ? message : "";
         var request = new TestRunRequest(
-                testRunEntity.getId(), testRunId, message, count, timeoutSeconds, delayMs,
+                testRunEntity.getId(), testRunId, effectiveMessage, effectiveCount, timeoutSeconds, delayMs,
                 runOptions.testId(), exportOptions.exportGrafana(), exportOptions.exportPrometheus(),
                 exportOptions.exportKubernetes(), exportOptions.exportLogs(),
                 runOptions.debug(), runOptions.scenarioId());
@@ -201,12 +203,11 @@ public class PerfController {
     private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs,
                                        Long scenarioId) throws InterruptedException {
         List<TestScenarioService.ScenarioMessage> pool = scenarioId != null
-                ? testScenarioService.buildMessagePool(scenarioId, count) : List.of();
+                ? testScenarioService.buildMessagePool(scenarioId) : List.of();
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             if (!pool.isEmpty()) {
-                var msg = pool.get(i);
-                futures[i] = messageSender.sendMessage(msg.content() + "-" + i, msg.headers());
+                futures[i] = messageSender.sendMessage(pool.get(i).content() + "-" + i);
             } else {
                 futures[i] = messageSender.sendMessage(message + "-" + i);
             }

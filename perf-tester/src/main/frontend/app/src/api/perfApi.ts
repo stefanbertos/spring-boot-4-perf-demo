@@ -2,6 +2,10 @@ import { del, get, post, postFormData, put } from './client';
 import type {
   ApplyResult,
   DeploymentInfo,
+  HeaderTemplateDetail,
+  HeaderTemplateRequest,
+  HeaderTemplateSummary,
+  NamespaceInfo,
   InfraProfileDetail,
   InfraProfileRequest,
   InfraProfileSummary,
@@ -23,7 +27,7 @@ import type {
 // ── Performance Tests ──────────────────────────────────────────────
 
 export function sendTest(params: {
-  message: string;
+  message?: string;
   count?: number;
   timeoutSeconds?: number;
   delayMs?: number;
@@ -153,12 +157,16 @@ export function changeQueueMaxDepth(queueName: string, maxDepth: number): Promis
 
 // ── Kubernetes Admin ────────────────────────────────────────────────
 
-export function listDeployments(): Promise<DeploymentInfo[]> {
-  return get('/api/admin/kubernetes/deployments/list');
+export function listNamespaces(): Promise<NamespaceInfo[]> {
+  return get('/api/admin/kubernetes/namespaces/list');
 }
 
-export function scaleDeployment(name: string, replicas: number): Promise<void> {
-  const params = new URLSearchParams({ name, replicas: String(replicas) });
+export function listDeployments(namespace: string): Promise<DeploymentInfo[]> {
+  return get(`/api/admin/kubernetes/deployments/list?namespace=${encodeURIComponent(namespace)}`);
+}
+
+export function scaleDeployment(name: string, namespace: string, replicas: number): Promise<void> {
+  const params = new URLSearchParams({ name, namespace, replicas: String(replicas) });
   return post(`/api/admin/kubernetes/deployments/scale?${params}`);
 }
 
@@ -215,6 +223,28 @@ export function uploadTestCase(name: string, file: File): Promise<TestCaseDetail
   formData.append('name', name);
   formData.append('file', file);
   return postFormData('/api/test-cases/upload', formData);
+}
+
+// ── Header Templates ────────────────────────────────────────────────
+
+export function listHeaderTemplates(): Promise<HeaderTemplateSummary[]> {
+  return get('/api/header-templates');
+}
+
+export function getHeaderTemplate(id: number): Promise<HeaderTemplateDetail> {
+  return get(`/api/header-templates/${id}`);
+}
+
+export function createHeaderTemplate(data: HeaderTemplateRequest): Promise<HeaderTemplateDetail> {
+  return post('/api/header-templates', data);
+}
+
+export function updateHeaderTemplate(id: number, data: HeaderTemplateRequest): Promise<HeaderTemplateDetail> {
+  return put(`/api/header-templates/${id}`, data);
+}
+
+export function deleteHeaderTemplate(id: number): Promise<void> {
+  return del(`/api/header-templates/${id}`);
 }
 
 // ── Test Scenarios ─────────────────────────────────────────────────

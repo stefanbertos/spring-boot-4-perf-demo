@@ -87,6 +87,82 @@ To tear down everything:
 infrastructure\cleanupKubernetes.bat
 ```
 
+## UI Themes
+
+The React UI ships with **three built-in colour themes**.
+
+| Theme | Import name | Primary | Sidebar |
+|-------|-------------|---------|---------|
+| **Default** — indigo/navy + dark-grey sidebar | `themeDefault` | `#1e40af` | `#111827` |
+| **Blue** — sky-blue + dark-blue sidebar | `themeBlue` | `#0369a1` | `#0c4a6e` |
+| **Red** — crimson + dark-red sidebar | `themeRed` | `#b91c1c` | `#450a0a` |
+
+### Switching themes at runtime
+
+A **theme toggle** (three coloured dots) is fixed in the **top-right corner** of the UI.
+Click any dot to switch themes instantly — the selection is saved in `localStorage` and
+persists across page reloads.
+
+### How to change the default theme (compile-time)
+
+Open **`perf-tester/src/main/frontend/app/src/contexts/ThemeContext.tsx`** and change
+the fallback in the `useState` initialiser:
+
+```typescript
+// Default fallback when localStorage has no saved preference
+const initial: ThemeName = saved && saved in THEMES ? saved : 'default'; // ← change 'default'
+```
+
+Or open **`perf-tester/src/main/frontend/app/src/App.tsx`** — no change needed there
+since theme state is managed by the `ThemeContextProvider`.
+
+### Legacy: change the theme via a single import
+
+Before the runtime switcher was added, the theme was hardcoded in `App.tsx`:
+
+```typescript
+const activeTheme: AppTheme = themeDefault;
+```
+
+To change the one line that sets `activeTheme`:
+
+```typescript
+// Default (indigo + dark-grey sidebar) — active by default
+const activeTheme: AppTheme = themeDefault;
+
+// Switch to Blue (sky-blue + dark-blue sidebar)
+const activeTheme: AppTheme = themeBlue;
+
+// Switch to Red (crimson + dark-red sidebar)
+const activeTheme: AppTheme = themeRed;
+```
+
+Make sure the chosen theme is also listed in the import at the top of the file:
+
+```typescript
+import { CssBaseline, themeDefault, themeBlue, themeRed, ThemeProvider } from 'perf-ui-components';
+import type { AppTheme } from 'perf-ui-components';
+```
+
+Then rebuild the frontend (or let the dev server hot-reload) — the entire UI (buttons,
+inputs, links, chips, and the navigation sidebar) switches to the chosen palette.
+
+### Where themes are defined
+
+All three themes live in a single file:
+
+```
+perf-tester/src/main/frontend/components/src/theme/theme.ts
+```
+
+Each `AppTheme` object contains:
+- **`muiTheme`** — the Material-UI palette (primary/secondary colours, typography, shape, component defaults)
+- **`navColors`** — `{ bg, active, hover }` hex values applied to the navigation sidebar via CSS custom properties (`--nav-bg`, `--nav-active`, `--nav-hover`)
+
+To create your own theme, add a new export to that file following the same pattern, then import it in `App.tsx`.
+
+---
+
 ## Service URLs
 
 ### Via API Gateway (Kubernetes with Ingress)

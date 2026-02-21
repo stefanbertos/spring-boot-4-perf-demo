@@ -1,7 +1,10 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.HeaderTemplateNotFoundException;
+import com.example.perftester.persistence.InfraProfileNotFoundException;
 import com.example.perftester.persistence.TestCaseNameConflictException;
 import com.example.perftester.persistence.TestCaseNotFoundException;
+import com.example.perftester.persistence.TestScenarioNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,27 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(HeaderTemplateNotFoundException.class)
+    public ProblemDetail handleHeaderTemplateNotFound(HeaderTemplateNotFoundException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Header Template Not Found");
+        return problem;
+    }
+
+    @ExceptionHandler(InfraProfileNotFoundException.class)
+    public ProblemDetail handleInfraProfileNotFound(InfraProfileNotFoundException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Infra Profile Not Found");
+        return problem;
+    }
+
+    @ExceptionHandler(TestScenarioNotFoundException.class)
+    public ProblemDetail handleTestScenarioNotFound(TestScenarioNotFoundException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Test Scenario Not Found");
+        return problem;
+    }
 
     @ExceptionHandler(TestCaseNotFoundException.class)
     public ProblemDetail handleTestCaseNotFound(TestCaseNotFoundException ex) {
