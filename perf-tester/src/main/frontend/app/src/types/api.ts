@@ -175,6 +175,7 @@ export interface ScenarioEntryDto {
   content: string;
   percentage: number;
   headerFields: HeaderFieldDto[];
+  responseTemplateId: number | null;
 }
 
 export interface TestScenarioDetail {
@@ -220,4 +221,32 @@ export interface HeaderTemplateDetail {
 export interface HeaderTemplateRequest {
   name: string;
   fields: HeaderTemplateField[];
+}
+
+export interface ResponseTemplateField {
+  name: string;
+  size: number;
+  value: string | null;
+  type: string | null;
+  paddingChar: string | null;
+}
+
+export interface ResponseTemplateSummary {
+  id: number;
+  name: string;
+  fieldCount: number;
+  updatedAt: string;
+}
+
+export interface ResponseTemplateDetail {
+  id: number;
+  name: string;
+  fields: ResponseTemplateField[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResponseTemplateRequest {
+  name: string;
+  fields: ResponseTemplateField[];
 }

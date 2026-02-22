@@ -22,24 +22,30 @@ import type { DataTableColumn } from 'perf-ui-components';
 import { useCallback, useEffect, useState } from 'react';
 import {
   createHeaderTemplate,
+  createResponseTemplate,
   createTestCase,
   createTestScenario,
   deleteHeaderTemplate,
+  deleteResponseTemplate,
   deleteTestCase,
   deleteTestScenario,
   getHeaderTemplate,
+  getResponseTemplate,
   getTestCase,
   getTestScenario,
   listHeaderTemplates,
+  listResponseTemplates,
   listTestCases,
   listTestScenarios,
   updateHeaderTemplate,
+  updateResponseTemplate,
   updateTestCase,
   updateTestScenario,
 } from '@/api';
 import type {
   HeaderTemplateField,
   HeaderTemplateSummary,
+  ResponseTemplateSummary,
   TestCaseSummary,
   TestScenarioSummary,
 } from '@/types/api';
@@ -97,6 +103,7 @@ interface EntryForm {
   content: string;
   percentage: number;
   headerFields: HeaderFieldForm[];
+  responseTemplateId: number | null;
 }
 
 interface ScenarioForm {
@@ -682,16 +689,315 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
   );
 }
 
+// ── Response Templates Tab ─────────────────────────────────────────
+
+type ResponseFieldType = 'STATIC' | 'IGNORE' | 'REGEX';
+
+interface ResponseFieldForm {
+  name: string;
+  size: number;
+  value: string;
+  type: ResponseFieldType;
+  paddingChar: string;
+}
+
+const DEFAULT_RESPONSE_FIELD: ResponseFieldForm = {
+  name: '', size: 10, value: '', type: 'STATIC', paddingChar: ' ',
+};
+
+interface ResponseTemplateForm {
+  id?: number;
+  name: string;
+  fields: ResponseFieldForm[];
+}
+
+const EMPTY_RESPONSE_TEMPLATE: ResponseTemplateForm = { name: '', fields: [] };
+
+interface ResponseTemplatesTabProps {
+  onChanged: () => void;
+}
+
+function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
+  const [templates, setTemplates] = useState<ResponseTemplateSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<ResponseTemplateForm>(EMPTY_RESPONSE_TEMPLATE);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      setTemplates(await listResponseTemplates());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load response templates');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const openCreate = () => {
+    setForm(EMPTY_RESPONSE_TEMPLATE);
+    setDialogOpen(true);
+  };
+
+  const openEdit = async (t: ResponseTemplateSummary) => {
+    const detail = await getResponseTemplate(t.id);
+    setForm({
+      id: detail.id,
+      name: detail.name,
+      fields: detail.fields.map((f) => ({
+        name: f.name,
+        size: f.size,
+        value: f.value ?? '',
+        type: (f.type ?? 'STATIC') as ResponseFieldType,
+        paddingChar: f.paddingChar ?? ' ',
+      })),
+    });
+    setDialogOpen(true);
+  };
+
+  const addField = () => {
+    setForm((f) => ({ ...f, fields: [...f.fields, { ...DEFAULT_RESPONSE_FIELD }] }));
+  };
+
+  const removeField = (i: number) => {
+    setForm((f) => ({ ...f, fields: f.fields.filter((_, idx) => idx !== i) }));
+  };
+
+  const updateField = (i: number, field: keyof ResponseFieldForm, value: string | number) => {
+    setForm((f) => ({
+      ...f,
+      fields: f.fields.map((fld, idx) => (idx === i ? { ...fld, [field]: value } as ResponseFieldForm : fld)),
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const request = {
+        name: form.name,
+        fields: form.fields.map((f) => ({
+          name: f.name,
+          size: f.size,
+          value: f.value,
+          type: f.type,
+          paddingChar: f.paddingChar,
+        })),
+      };
+      if (form.id != null) {
+        await updateResponseTemplate(form.id, request);
+      } else {
+        await createResponseTemplate(request);
+      }
+      setDialogOpen(false);
+      await refresh();
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save response template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (confirmDeleteId == null) return;
+    await deleteResponseTemplate(confirmDeleteId);
+    setConfirmDeleteId(null);
+    await refresh();
+    onChanged();
+  };
+
+  const columns: DataTableColumn<ResponseTemplateSummary>[] = [
+    { id: 'name', label: 'Name', minWidth: 160, render: (row) => row.name },
+    { id: 'fieldCount', label: 'Fields', render: (row) => String(row.fieldCount) },
+    { id: 'updated', label: 'Updated', render: (row) => new Date(row.updatedAt).toLocaleString() },
+    {
+      id: 'actions',
+      label: 'Actions',
+      align: 'right',
+      render: (row) => (
+        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+          <Tooltip title="Edit">
+            <IconButton size="small" onClick={() => void openEdit(row)}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton size="small" onClick={() => setConfirmDeleteId(row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+        <Button size="small" onClick={openCreate}>New</Button>
+      </Stack>
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Typography variant="body2" color="text.secondary">Loading response templates...</Typography>
+      ) : templates.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No response templates yet. Create one to define expected response field structure.
+        </Typography>
+      ) : (
+        <DataTable columns={columns} rows={templates} keyExtractor={(row) => row.id} />
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={form.id != null ? 'Edit Response Template' : 'New Response Template'}
+        maxWidth="md"
+        actions={
+          <>
+            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </>
+        }
+      >
+        <Stack spacing={3} sx={{ mt: 1 }}>
+          <MuiTextField
+            label="Template Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            fullWidth
+            required
+            size="small"
+          />
+          <Divider />
+          <Stack spacing={1}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Fields
+              </Typography>
+              <Button size="small" onClick={addField}>
+                <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
+                Add Field
+              </Button>
+            </Stack>
+            {form.fields.length === 0 ? (
+              <Typography variant="caption" color="text.disabled">No fields yet</Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {form.fields.map((field, i) => (
+                  <Box key={i} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                    <Stack spacing={1}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <MuiTextField
+                          size="small"
+                          label="Name"
+                          value={field.name}
+                          onChange={(e) => updateField(i, 'name', e.target.value)}
+                          sx={{ flex: 2 }}
+                        />
+                        <MuiTextField
+                          select
+                          size="small"
+                          label="Type"
+                          value={field.type}
+                          onChange={(e) => updateField(i, 'type', e.target.value)}
+                          sx={{ width: 110 }}
+                        >
+                          <MenuItem value="STATIC">Static</MenuItem>
+                          <MenuItem value="IGNORE">Ignore</MenuItem>
+                          <MenuItem value="REGEX">Regex</MenuItem>
+                        </MuiTextField>
+                        <MuiTextField
+                          size="small"
+                          label="Size"
+                          type="number"
+                          value={field.size}
+                          onChange={(e) => updateField(i, 'size', Number(e.target.value))}
+                          sx={{ width: 75 }}
+                          slotProps={{ htmlInput: { min: 1 } }}
+                        />
+                        <Tooltip title="Remove field">
+                          <IconButton size="small" onClick={() => removeField(i)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                      {field.type !== 'IGNORE' && (
+                        <Stack direction="row" spacing={1}>
+                          <MuiTextField
+                            size="small"
+                            label={field.type === 'REGEX' ? 'Pattern' : 'Expected Value'}
+                            value={field.value}
+                            onChange={(e) => updateField(i, 'value', e.target.value)}
+                            sx={{ flex: 1 }}
+                          />
+                          {field.type === 'STATIC' && (
+                            <MuiTextField
+                              size="small"
+                              label="Pad char"
+                              value={field.paddingChar}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                updateField(i, 'paddingChar', v.length > 0 ? v[v.length - 1] : ' ');
+                              }}
+                              sx={{ width: 80 }}
+                              slotProps={{ htmlInput: { maxLength: 1 } }}
+                            />
+                          )}
+                        </Stack>
+                      )}
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        </Stack>
+      </Dialog>
+
+      <Dialog
+        open={confirmDeleteId != null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Delete Response Template"
+        maxWidth="xs"
+        actions={
+          <>
+            <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+            <Button onClick={handleDelete}>Delete</Button>
+          </>
+        }
+      >
+        <Typography>Are you sure you want to delete this response template?</Typography>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Entry Row ──────────────────────────────────────────────────────
 
 interface EntryRowProps {
   entry: EntryForm;
   testCases: TestCaseSummary[];
+  responseTemplates: ResponseTemplateSummary[];
   onChange: (entry: EntryForm) => void;
   onRemove: () => void;
 }
 
-function EntryRow({ entry, testCases, onChange, onRemove }: EntryRowProps) {
+function EntryRow({ entry, testCases, responseTemplates, onChange, onRemove }: EntryRowProps) {
   const handleTestCaseChange = async (id: number) => {
     const tc = testCases.find((t) => t.id === id);
     const detail = await getTestCase(id);
@@ -713,6 +1019,19 @@ function EntryRow({ entry, testCases, onChange, onRemove }: EntryRowProps) {
       >
         {testCases.map((tc) => (
           <MenuItem key={tc.id} value={tc.id}>{tc.name}</MenuItem>
+        ))}
+      </MuiTextField>
+      <MuiTextField
+        select
+        size="small"
+        label="Expected Response"
+        value={entry.responseTemplateId ?? ''}
+        onChange={(e) => onChange({ ...entry, responseTemplateId: e.target.value ? Number(e.target.value) : null })}
+        sx={{ flex: 1 }}
+      >
+        <MenuItem value=""><em>None</em></MenuItem>
+        {responseTemplates.map((rt) => (
+          <MenuItem key={rt.id} value={rt.id}>{rt.name}</MenuItem>
         ))}
       </MuiTextField>
       <MuiTextField
@@ -744,6 +1063,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [testCases, setTestCases] = useState<TestCaseSummary[]>([]);
+  const [responseTemplates, setResponseTemplates] = useState<ResponseTemplateSummary[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ScenarioForm>(EMPTY_SCENARIO);
@@ -767,6 +1087,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   const refreshSupportingData = () => {
     listTestCases().then(setTestCases).catch(() => {});
+    listResponseTemplates().then(setResponseTemplates).catch(() => {});
   };
 
   const openCreate = () => {
@@ -777,11 +1098,13 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   const openEdit = async (scenario: TestScenarioSummary) => {
     setDialogOpen(true);
-    const [detail, tcs] = await Promise.all([
+    const [detail, tcs, rts] = await Promise.all([
       getTestScenario(scenario.id),
       listTestCases().catch(() => [] as TestCaseSummary[]),
+      listResponseTemplates().catch(() => [] as ResponseTemplateSummary[]),
     ]);
     setTestCases(tcs);
+    setResponseTemplates(rts);
     setForm({
       id: detail.id,
       name: detail.name,
@@ -800,6 +1123,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             uuidPrefix: h.uuidPrefix ?? '',
             uuidSeparator: h.uuidSeparator ?? '-',
           })),
+          responseTemplateId: e.responseTemplateId ?? null,
         };
       }),
     });
@@ -826,6 +1150,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           content,
           percentage: 100,
           headerFields: [],
+          responseTemplateId: null,
         },
       ],
     }));
@@ -854,6 +1179,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             type: h.type, paddingChar: h.paddingChar,
             uuidPrefix: h.uuidPrefix, uuidSeparator: h.uuidSeparator,
           })),
+          responseTemplateId: e.responseTemplateId ?? null,
         })),
       };
       if (form.id != null) {
@@ -986,6 +1312,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
                     key={i}
                     entry={entry}
                     testCases={testCases}
+                    responseTemplates={responseTemplates}
                     onChange={(updated) => updateEntry(i, updated)}
                     onRemove={() => removeEntry(i)}
                   />
@@ -1061,13 +1388,15 @@ export default function TestScenarioManager({ open, onClose, onChanged }: Props)
         <MuiTab label="Scenarios" />
         <MuiTab label="Test Cases" />
         <MuiTab label="Header Templates" />
+        <MuiTab label="Response Templates" />
         <MuiTab label="Infra Profiles" />
       </MuiTabs>
 
       {activeTab === 0 && <ScenariosTab onChanged={handleChanged} />}
       {activeTab === 1 && <TestCasesTab onChanged={handleChanged} />}
       {activeTab === 2 && <HeadersTab onChanged={handleChanged} />}
-      {activeTab === 3 && <InfraProfileManager />}
+      {activeTab === 3 && <ResponseTemplatesTab onChanged={handleChanged} />}
+      {activeTab === 4 && <InfraProfileManager />}
     </Dialog>
   );
 }

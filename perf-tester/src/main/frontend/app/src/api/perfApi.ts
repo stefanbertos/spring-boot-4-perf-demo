@@ -12,6 +12,9 @@ import type {
   LogEntry,
   LogLevelResponse,
   QueueInfo,
+  ResponseTemplateDetail,
+  ResponseTemplateRequest,
+  ResponseTemplateSummary,
   TestCaseDetail,
   TestCaseSummary,
   TestProgressEvent,
@@ -245,6 +248,28 @@ export function updateHeaderTemplate(id: number, data: HeaderTemplateRequest): P
 
 export function deleteHeaderTemplate(id: number): Promise<void> {
   return del(`/api/header-templates/${id}`);
+}
+
+// ── Response Templates ──────────────────────────────────────────────
+
+export function listResponseTemplates(): Promise<ResponseTemplateSummary[]> {
+  return get('/api/response-templates');
+}
+
+export function getResponseTemplate(id: number): Promise<ResponseTemplateDetail> {
+  return get(`/api/response-templates/${id}`);
+}
+
+export function createResponseTemplate(data: ResponseTemplateRequest): Promise<ResponseTemplateDetail> {
+  return post('/api/response-templates', data);
+}
+
+export function updateResponseTemplate(id: number, data: ResponseTemplateRequest): Promise<ResponseTemplateDetail> {
+  return put(`/api/response-templates/${id}`, data);
+}
+
+export function deleteResponseTemplate(id: number): Promise<void> {
+  return del(`/api/response-templates/${id}`);
 }
 
 // ── Test Scenarios ─────────────────────────────────────────────────
