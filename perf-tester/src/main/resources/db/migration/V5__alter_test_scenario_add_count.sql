@@ -1,0 +1,1 @@
+ALTER TABLE test_scenario ADD COLUMN count INT NOT NULL DEFAULT 100;
