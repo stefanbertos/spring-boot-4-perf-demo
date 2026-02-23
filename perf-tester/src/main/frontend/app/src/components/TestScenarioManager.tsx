@@ -2,7 +2,9 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
 import MuiTab from '@mui/material/Tab';
 import MuiTabs from '@mui/material/Tabs';
@@ -54,7 +56,7 @@ import InfraProfileManager from './InfraProfileManager';
 
 // ── Shared Types ───────────────────────────────────────────────────
 
-type FieldType = 'STRING' | 'NUMBER' | 'UUID';
+type FieldType = 'STRING' | 'NUMBER' | 'UUID' | 'MESSAGE_LENGTH';
 
 interface HeaderFieldForm {
   name: string;
@@ -64,10 +66,12 @@ interface HeaderFieldForm {
   paddingChar: string;
   uuidPrefix: string;
   uuidSeparator: string;
+  correlationKey: boolean;
 }
 
 const DEFAULT_HEADER_FIELD: HeaderFieldForm = {
   name: '', size: 10, value: '', type: 'STRING', paddingChar: ' ', uuidPrefix: '', uuidSeparator: '-',
+  correlationKey: false,
 };
 
 interface FieldValidation {
@@ -112,6 +116,8 @@ interface ScenarioForm {
   name: string;
   count: number;
   entries: EntryForm[];
+  scheduledEnabled: boolean;
+  scheduledTime: string;
 }
 
 interface TemplateForm {
@@ -127,7 +133,7 @@ interface TestCaseFormState {
   message: string;
 }
 
-const EMPTY_SCENARIO: ScenarioForm = { name: '', count: 100, entries: [] };
+const EMPTY_SCENARIO: ScenarioForm = { name: '', count: 100, entries: [], scheduledEnabled: false, scheduledTime: '' };
 const EMPTY_TEMPLATE: TemplateForm = { name: '', fields: [] };
 const EMPTY_TC: TestCaseFormState = { mode: 'create', name: '', message: '' };
 
@@ -495,6 +501,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
         paddingChar: f.paddingChar ?? ' ',
         uuidPrefix: f.uuidPrefix ?? '',
         uuidSeparator: f.uuidSeparator ?? '-',
+        correlationKey: f.correlationKey ?? false,
       })),
     });
     setDialogOpen(true);
@@ -508,7 +515,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
     setForm((f) => ({ ...f, fields: f.fields.filter((_, idx) => idx !== i) }));
   };
 
-  const updateField = (i: number, field: keyof HeaderFieldForm, value: string | number) => {
+  const updateField = (i: number, field: keyof HeaderFieldForm, value: string | number | boolean) => {
     setForm((f) => ({
       ...f,
       fields: f.fields.map((fld, idx) => (idx === i ? { ...fld, [field]: value } as HeaderFieldForm : fld)),
@@ -528,6 +535,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
           paddingChar: f.paddingChar,
           uuidPrefix: f.uuidPrefix,
           uuidSeparator: f.uuidSeparator,
+          correlationKey: f.correlationKey,
         })),
       };
       if (form.id != null) {
@@ -641,9 +649,10 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                 {form.fields.map((field, i) => {
                   const validation = getFieldValidation(field);
                   const isUuid = field.type === 'UUID';
+                  const isMessageLength = field.type === 'MESSAGE_LENGTH';
                   const uuidTotal = field.uuidPrefix.length + field.uuidSeparator.length + 36;
                   return (
-                    <Box key={i} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                    <Box key={i} sx={{ border: '1px solid', borderColor: field.correlationKey ? 'primary.main' : 'divider', borderRadius: 1, p: 1.5 }}>
                       <Stack spacing={1}>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <MuiTextField
@@ -659,11 +668,12 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                             label="Type"
                             value={field.type}
                             onChange={(e) => updateField(i, 'type', e.target.value)}
-                            sx={{ width: 110 }}
+                            sx={{ width: 148 }}
                           >
                             <MenuItem value="STRING">String</MenuItem>
                             <MenuItem value="NUMBER">Number</MenuItem>
                             <MenuItem value="UUID">UUID</MenuItem>
+                            <MenuItem value="MESSAGE_LENGTH">Msg Length</MenuItem>
                           </MuiTextField>
                           <MuiTextField
                             size="small"
@@ -710,6 +720,10 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                               </Typography>
                             )}
                           </Stack>
+                        ) : isMessageLength ? (
+                          <Typography variant="caption" color="text.secondary">
+                            Auto-populated with the byte length of the message body, padded to {field.size} chars.
+                          </Typography>
                         ) : (
                           <Stack direction="row" spacing={1} alignItems="flex-start">
                             <MuiTextField
@@ -733,7 +747,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                             />
                           </Stack>
                         )}
-                        {!isUuid && validation && (
+                        {!isUuid && !isMessageLength && validation && (
                           <Typography
                             variant="caption"
                             color={validation.severity === 'error' ? 'error.main' : 'warning.main'}
@@ -741,6 +755,20 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                             {validation.message}
                           </Typography>
                         )}
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={field.correlationKey}
+                              onChange={(e) => updateField(i, 'correlationKey', e.target.checked)}
+                            />
+                          }
+                          label={
+                            <Typography variant="caption">
+                              Correlation key — echo expected in matching response field
+                            </Typography>
+                          }
+                        />
                       </Stack>
                     </Box>
                   );
@@ -771,7 +799,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
 
 // ── Response Templates Tab ─────────────────────────────────────────
 
-type ResponseFieldType = 'STATIC' | 'IGNORE' | 'REGEX';
+type ResponseFieldType = 'STATIC' | 'IGNORE' | 'REGEX' | 'ECHO';
 
 interface ResponseFieldForm {
   name: string;
@@ -1000,6 +1028,7 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
                           <MenuItem value="STATIC">Static</MenuItem>
                           <MenuItem value="IGNORE">Ignore</MenuItem>
                           <MenuItem value="REGEX">Regex</MenuItem>
+                          <MenuItem value="ECHO">Echo</MenuItem>
                         </MuiTextField>
                         <MuiTextField
                           size="small"
@@ -1016,7 +1045,18 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
                           </IconButton>
                         </Tooltip>
                       </Stack>
-                      {field.type !== 'IGNORE' && (
+                      {field.type === 'ECHO' ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <MuiTextField
+                            size="small"
+                            label="Request field name"
+                            value={field.value}
+                            onChange={(e) => updateField(i, 'value', e.target.value)}
+                            sx={{ flex: 1 }}
+                            helperText="Name of the request header field marked as correlation key"
+                          />
+                        </Stack>
+                      ) : field.type !== 'IGNORE' && (
                         <Stack direction="row" spacing={1}>
                           <MuiTextField
                             size="small"
@@ -1189,6 +1229,8 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
       id: detail.id,
       name: detail.name,
       count: detail.count,
+      scheduledEnabled: detail.scheduledEnabled ?? false,
+      scheduledTime: detail.scheduledTime ?? '',
       entries: detail.entries.map((e) => {
         const tc = tcs.find((t) => t.id === e.testCaseId);
         return {
@@ -1202,6 +1244,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             paddingChar: h.paddingChar ?? ' ',
             uuidPrefix: h.uuidPrefix ?? '',
             uuidSeparator: h.uuidSeparator ?? '-',
+            correlationKey: h.correlationKey ?? false,
           })),
           responseTemplateId: e.responseTemplateId ?? null,
         };
@@ -1250,6 +1293,8 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
       const request = {
         name: form.name,
         count: form.count,
+        scheduledEnabled: form.scheduledEnabled,
+        scheduledTime: form.scheduledEnabled && form.scheduledTime ? form.scheduledTime : null,
         entries: form.entries.map((e) => ({
           testCaseId: e.testCaseId,
           content: e.content,
@@ -1258,6 +1303,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             name: h.name, size: h.size, value: h.value,
             type: h.type, paddingChar: h.paddingChar,
             uuidPrefix: h.uuidPrefix, uuidSeparator: h.uuidSeparator,
+            correlationKey: h.correlationKey,
           })),
           responseTemplateId: e.responseTemplateId ?? null,
         })),
@@ -1366,6 +1412,29 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
               sx={{ width: 160 }}
               slotProps={{ htmlInput: { min: 1 } }}
             />
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={form.scheduledEnabled}
+                  onChange={(e) => setForm({ ...form, scheduledEnabled: e.target.checked })}
+                />
+              }
+              label={<Typography variant="body2">Run at specific time daily</Typography>}
+            />
+            {form.scheduledEnabled && (
+              <MuiTextField
+                size="small"
+                label="Time (HH:mm)"
+                type="time"
+                value={form.scheduledTime}
+                onChange={(e) => setForm({ ...form, scheduledTime: e.target.value })}
+                sx={{ width: 140 }}
+                slotProps={{ htmlInput: { step: 60 } }}
+              />
+            )}
           </Stack>
           <Divider />
           <Stack spacing={1}>

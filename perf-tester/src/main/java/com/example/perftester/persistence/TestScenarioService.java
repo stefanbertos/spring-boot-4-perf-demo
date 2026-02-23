@@ -35,6 +35,8 @@ public class TestScenarioService {
         scenario.setName(request.name());
         scenario.setCount(request.count());
         scenario.setEntries(toEntries(request.entries()));
+        scenario.setScheduledEnabled(request.scheduledEnabled());
+        scenario.setScheduledTime(request.scheduledTime());
         return toDetail(testScenarioRepository.save(scenario));
     }
 
@@ -45,12 +47,21 @@ public class TestScenarioService {
         scenario.setName(request.name());
         scenario.setCount(request.count());
         scenario.setEntries(toEntries(request.entries()));
+        scenario.setScheduledEnabled(request.scheduledEnabled());
+        scenario.setScheduledTime(request.scheduledTime());
         return toDetail(testScenarioRepository.save(scenario));
     }
 
     @Transactional
     public void delete(Long id) {
         testScenarioRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TestScenarioDetail> listScheduledEnabled() {
+        return testScenarioRepository.findByScheduledEnabledTrue().stream()
+                .map(this::toDetail)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -88,12 +99,14 @@ public class TestScenarioService {
 
     private String buildMessage(TestScenario.ScenarioEntry entry) {
         var fields = entry.headerFields();
+        var content = entry.content() != null ? entry.content() : "";
         if (fields == null || fields.isEmpty()) {
-            return entry.content() != null ? entry.content() : "";
+            return content;
         }
         var header = new StringBuilder();
+        int messageLength = content.length();
         for (var field : fields) {
-            var val = resolveFieldValue(field);
+            var val = resolveFieldValue(field, messageLength);
             var padChar = field.paddingChar() != null && !field.paddingChar().isEmpty()
                     ? field.paddingChar().charAt(0) : ' ';
             if (val.length() >= field.size()) {
@@ -103,15 +116,17 @@ public class TestScenarioService {
                 header.append(String.valueOf(padChar).repeat(field.size() - val.length()));
             }
         }
-        var content = entry.content() != null ? entry.content() : "";
         return header + "\n" + content;
     }
 
-    private String resolveFieldValue(TestScenario.HeaderField field) {
+    private String resolveFieldValue(TestScenario.HeaderField field, int messageLength) {
         if ("UUID".equals(field.type())) {
             var prefix = field.uuidPrefix() != null ? field.uuidPrefix() : "";
             var separator = field.uuidSeparator() != null ? field.uuidSeparator() : "-";
             return prefix + separator + UUID.randomUUID();
+        }
+        if ("MESSAGE_LENGTH".equals(field.type())) {
+            return String.valueOf(messageLength);
         }
         return field.value() != null ? field.value() : "";
     }
@@ -123,12 +138,14 @@ public class TestScenarioService {
                                 e.headerFields() == null ? List.of()
                                         : e.headerFields().stream()
                                                 .map(f -> new HeaderFieldDto(f.name(), f.size(), f.value(),
-                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator()))
+                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
+                                f.correlationKey()))
                                                 .toList(),
                                 e.responseTemplateId()))
                         .toList();
         return new TestScenarioDetail(scenario.getId(), scenario.getName(), scenario.getCount(),
-                entryDtos, scenario.getCreatedAt().toString(), scenario.getUpdatedAt().toString());
+                entryDtos, scenario.isScheduledEnabled(), scenario.getScheduledTime(),
+                scenario.getCreatedAt().toString(), scenario.getUpdatedAt().toString());
     }
 
     private List<TestScenario.ScenarioEntry> toEntries(List<ScenarioEntryDto> dtos) {
@@ -140,7 +157,8 @@ public class TestScenarioService {
                         d.headerFields() == null ? List.of()
                                 : d.headerFields().stream()
                                         .map(f -> new TestScenario.HeaderField(f.name(), f.size(), f.value(),
-                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator()))
+                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
+                                f.correlationKey()))
                                         .toList(),
                         d.responseTemplateId()))
                 .toList();
@@ -150,18 +168,21 @@ public class TestScenarioService {
     }
 
     public record TestScenarioDetail(Long id, String name, int count, List<ScenarioEntryDto> entries,
+                                     boolean scheduledEnabled, String scheduledTime,
                                      String createdAt, String updatedAt) {
     }
 
     public record HeaderFieldDto(String name, int size, String value, String type,
-                                 String paddingChar, String uuidPrefix, String uuidSeparator) {
+                                 String paddingChar, String uuidPrefix, String uuidSeparator,
+                                 boolean correlationKey) {
     }
 
     public record ScenarioEntryDto(Long testCaseId, String content, int percentage, List<HeaderFieldDto> headerFields,
                                    Long responseTemplateId) {
     }
 
-    public record TestScenarioRequest(String name, int count, List<ScenarioEntryDto> entries) {
+    public record TestScenarioRequest(String name, int count, List<ScenarioEntryDto> entries,
+                                      boolean scheduledEnabled, String scheduledTime) {
     }
 
     public record ScenarioMessage(String content) {

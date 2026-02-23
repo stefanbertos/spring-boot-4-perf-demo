@@ -43,6 +43,12 @@ public class TestScenario {
     @Convert(converter = EntryListConverter.class)
     private List<ScenarioEntry> entries = new ArrayList<>();
 
+    @Column(name = "scheduled_enabled", nullable = false)
+    private boolean scheduledEnabled;
+
+    @Column(name = "scheduled_time", length = 5)
+    private String scheduledTime;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -62,7 +68,8 @@ public class TestScenario {
     }
 
     public record HeaderField(String name, int size, String value, String type,
-                              String paddingChar, String uuidPrefix, String uuidSeparator) {
+                              String paddingChar, String uuidPrefix, String uuidSeparator,
+                              boolean correlationKey) {
     }
 
     public record ScenarioEntry(Long testCaseId, String content, int percentage, List<HeaderField> headerFields,

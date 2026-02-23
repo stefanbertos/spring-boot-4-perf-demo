@@ -59,7 +59,8 @@ public class HeaderTemplate {
     }
 
     public record TemplateField(String name, int size, String value, String type,
-                                String paddingChar, String uuidPrefix, String uuidSeparator) {
+                                String paddingChar, String uuidPrefix, String uuidSeparator,
+                                boolean correlationKey) {
     }
 
     @Converter

@@ -59,7 +59,8 @@ public class HeaderTemplateService {
         var fieldDtos = t.getFields() == null ? List.<TemplateFieldDto>of()
                 : t.getFields().stream()
                         .map(f -> new TemplateFieldDto(f.name(), f.size(), f.value(),
-                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator()))
+                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
+                                f.correlationKey()))
                         .toList();
         return new HeaderTemplateDetail(t.getId(), t.getName(), fieldDtos,
                 t.getCreatedAt().toString(), t.getUpdatedAt().toString());
@@ -71,12 +72,14 @@ public class HeaderTemplateService {
         }
         return dtos.stream()
                 .map(d -> new HeaderTemplate.TemplateField(d.name(), d.size(), d.value(),
-                        d.type(), d.paddingChar(), d.uuidPrefix(), d.uuidSeparator()))
+                        d.type(), d.paddingChar(), d.uuidPrefix(), d.uuidSeparator(),
+                        d.correlationKey()))
                 .toList();
     }
 
     public record TemplateFieldDto(String name, int size, String value, String type,
-                                   String paddingChar, String uuidPrefix, String uuidSeparator) {
+                                   String paddingChar, String uuidPrefix, String uuidSeparator,
+                                   boolean correlationKey) {
     }
 
     public record HeaderTemplateSummary(Long id, String name, int fieldCount, String updatedAt) {

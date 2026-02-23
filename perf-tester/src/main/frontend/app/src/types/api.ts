@@ -168,6 +168,7 @@ export interface HeaderFieldDto {
   paddingChar: string | null;
   uuidPrefix: string | null;
   uuidSeparator: string | null;
+  correlationKey: boolean;
 }
 
 export interface ScenarioEntryDto {
@@ -183,6 +184,8 @@ export interface TestScenarioDetail {
   name: string;
   count: number;
   entries: ScenarioEntryDto[];
+  scheduledEnabled: boolean;
+  scheduledTime: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -191,6 +194,8 @@ export interface TestScenarioRequest {
   name: string;
   count: number;
   entries: ScenarioEntryDto[];
+  scheduledEnabled: boolean;
+  scheduledTime: string | null;
 }
 
 export interface HeaderTemplateField {
@@ -201,6 +206,7 @@ export interface HeaderTemplateField {
   paddingChar: string | null;
   uuidPrefix: string | null;
   uuidSeparator: string | null;
+  correlationKey: boolean;
 }
 
 export interface HeaderTemplateSummary {
