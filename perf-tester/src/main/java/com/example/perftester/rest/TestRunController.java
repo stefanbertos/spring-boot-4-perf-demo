@@ -44,6 +44,13 @@ public class TestRunController {
             Double avgLatencyMs,
             Double minLatencyMs,
             Double maxLatencyMs,
+            Double p50LatencyMs,
+            Double p90LatencyMs,
+            Double p95LatencyMs,
+            Double p99LatencyMs,
+            Long timeoutCount,
+            String testType,
+            String thresholdStatus,
             Long durationMs,
             Instant startedAt,
             Instant completedAt,
@@ -61,10 +68,28 @@ public class TestRunController {
             Double avgLatencyMs,
             Double minLatencyMs,
             Double maxLatencyMs,
+            Double p50LatencyMs,
+            Double p90LatencyMs,
+            Double p95LatencyMs,
+            Double p99LatencyMs,
+            Long timeoutCount,
+            String testType,
+            String thresholdStatus,
+            String thresholdResults,
             Long durationMs,
             Instant startedAt,
             Instant completedAt,
             String zipFilePath) {
+    }
+
+    public record TestRunSnapshotResponse(
+            Long id,
+            Long testRunId,
+            Instant sampledAt,
+            Integer outboundQueueDepth,
+            Integer inboundQueueDepth,
+            Long kafkaRequestsLag,
+            Long kafkaResponsesLag) {
     }
 
     @GetMapping
@@ -113,11 +138,22 @@ public class TestRunController {
         return lokiService.queryLogs(run.getStartedAt(), end);
     }
 
+    @GetMapping("/{id}/snapshots")
+    public List<TestRunSnapshotResponse> getSnapshots(@PathVariable long id) {
+        return testRunService.findSnapshots(id).stream()
+                .map(s -> new TestRunSnapshotResponse(s.getId(), s.getTestRunId(), s.getSampledAt(),
+                        s.getOutboundQueueDepth(), s.getInboundQueueDepth(),
+                        s.getKafkaRequestsLag(), s.getKafkaResponsesLag()))
+                .toList();
+    }
+
     private TestRunListResponse toListResponse(TestRun run) {
         return new TestRunListResponse(
                 run.getId(), run.getTestRunId(), run.getTestId(), run.getStatus(),
                 run.getMessageCount(), run.getCompletedCount(),
                 run.getTps(), run.getAvgLatencyMs(), run.getMinLatencyMs(), run.getMaxLatencyMs(),
+                run.getP50LatencyMs(), run.getP90LatencyMs(), run.getP95LatencyMs(), run.getP99LatencyMs(),
+                run.getTimeoutCount(), run.getTestType(), run.getThresholdStatus(),
                 run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath());
     }
 
@@ -126,6 +162,9 @@ public class TestRunController {
                 run.getId(), run.getTestRunId(), run.getTestId(), run.getStatus(),
                 run.getMessageCount(), run.getCompletedCount(),
                 run.getTps(), run.getAvgLatencyMs(), run.getMinLatencyMs(), run.getMaxLatencyMs(),
+                run.getP50LatencyMs(), run.getP90LatencyMs(), run.getP95LatencyMs(), run.getP99LatencyMs(),
+                run.getTimeoutCount(), run.getTestType(), run.getThresholdStatus(),
+                run.getThresholdResults(),
                 run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath());
     }
 }

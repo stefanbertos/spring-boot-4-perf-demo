@@ -37,7 +37,7 @@ class TestScenarioControllerTest {
     @Test
     void getByIdShouldReturnScenario() {
         var detail = new TestScenarioService.TestScenarioDetail(
-                1L, "scenario-a", 100, List.of(), false, null, "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+                1L, "scenario-a", 100, List.of(), false, null, 0, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.getById(1L)).thenReturn(detail);
 
         var response = controller.getById(1L);
@@ -48,9 +48,9 @@ class TestScenarioControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null);
+        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, List.of());
         var detail = new TestScenarioService.TestScenarioDetail(
-                1L, "scenario-a", 100, List.of(), false, null, "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+                1L, "scenario-a", 100, List.of(), false, null, 0, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.create(request)).thenReturn(detail);
 
         var response = controller.create(request);
@@ -61,9 +61,9 @@ class TestScenarioControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null);
+        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, List.of());
         var detail = new TestScenarioService.TestScenarioDetail(
-                1L, "scenario-a", 100, List.of(), false, null, "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+                1L, "scenario-a", 100, List.of(), false, null, 0, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.update(1L, request)).thenReturn(detail);
 
         var response = controller.update(1L, request);

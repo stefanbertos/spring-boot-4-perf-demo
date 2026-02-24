@@ -20,6 +20,7 @@ import type {
   TestProgressEvent,
   TestRunDetailResponse,
   TestRunResponse,
+  TestRunSnapshotResponse,
   TestScenarioDetail,
   TestScenarioRequest,
   TestScenarioSummary,
@@ -107,6 +108,10 @@ export function downloadTestRunUrl(id: number): string {
 
 export function getTestRunLogs(id: number): Promise<LogEntry[]> {
   return get(`/api/perf/test-runs/${id}/logs`);
+}
+
+export function getTestRunSnapshots(id: number): Promise<TestRunSnapshotResponse[]> {
+  return get(`/api/perf/test-runs/${id}/snapshots`);
 }
 
 // ── Logging Admin ──────────────────────────────────────────────────

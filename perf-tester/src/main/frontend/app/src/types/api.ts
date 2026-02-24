@@ -9,6 +9,13 @@ export interface TestRunResponse {
   avgLatencyMs: number | null;
   minLatencyMs: number | null;
   maxLatencyMs: number | null;
+  p50LatencyMs: number | null;
+  p90LatencyMs: number | null;
+  p95LatencyMs: number | null;
+  p99LatencyMs: number | null;
+  timeoutCount: number;
+  testType: string | null;
+  thresholdStatus: string | null;
   durationMs: number | null;
   startedAt: string;
   completedAt: string | null;
@@ -26,10 +33,28 @@ export interface TestRunDetailResponse {
   avgLatencyMs: number | null;
   minLatencyMs: number | null;
   maxLatencyMs: number | null;
+  p50LatencyMs: number | null;
+  p90LatencyMs: number | null;
+  p95LatencyMs: number | null;
+  p99LatencyMs: number | null;
+  timeoutCount: number;
+  testType: string | null;
+  thresholdStatus: string | null;
+  thresholdResults: string | null;
   durationMs: number | null;
   startedAt: string;
   completedAt: string | null;
   zipFilePath: string | null;
+}
+
+export interface TestRunSnapshotResponse {
+  id: number;
+  testRunId: number;
+  sampledAt: string;
+  outboundQueueDepth: number | null;
+  inboundQueueDepth: number | null;
+  kafkaRequestsLag: number | null;
+  kafkaResponsesLag: number | null;
 }
 
 export interface LogEntry {
@@ -179,6 +204,28 @@ export interface ScenarioEntryDto {
   responseTemplateId: number | null;
 }
 
+export interface ThresholdDef {
+  metric: string;
+  operator: string;
+  value: number;
+}
+
+export interface ThresholdResult {
+  metric: string;
+  operator: string;
+  threshold: number;
+  actual: number;
+  passed: boolean;
+}
+
+export interface ThinkTimeConfig {
+  distribution: 'CONSTANT' | 'UNIFORM' | 'GAUSSIAN';
+  minMs: number;
+  maxMs: number;
+  meanMs: number;
+  stdDevMs: number;
+}
+
 export interface TestScenarioDetail {
   id: number;
   name: string;
@@ -186,6 +233,10 @@ export interface TestScenarioDetail {
   entries: ScenarioEntryDto[];
   scheduledEnabled: boolean;
   scheduledTime: string | null;
+  warmupCount: number;
+  testType: string | null;
+  thinkTime: ThinkTimeConfig | null;
+  thresholds: ThresholdDef[];
   createdAt: string;
   updatedAt: string;
 }
@@ -196,6 +247,10 @@ export interface TestScenarioRequest {
   entries: ScenarioEntryDto[];
   scheduledEnabled: boolean;
   scheduledTime: string | null;
+  warmupCount: number;
+  testType: string | null;
+  thinkTime: ThinkTimeConfig | null;
+  thresholds: ThresholdDef[];
 }
 
 export interface HeaderTemplateField {

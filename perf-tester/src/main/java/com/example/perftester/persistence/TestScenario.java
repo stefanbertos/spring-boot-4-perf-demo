@@ -49,6 +49,18 @@ public class TestScenario {
     @Column(name = "scheduled_time", length = 5)
     private String scheduledTime;
 
+    @Column(name = "warmup_count", nullable = false)
+    private int warmupCount;
+
+    @Column(name = "test_type", length = 20)
+    private String testType;
+
+    @Column(name = "think_time", columnDefinition = "text")
+    private String thinkTimeJson;
+
+    @Column(name = "thresholds", columnDefinition = "text")
+    private String thresholdsJson;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

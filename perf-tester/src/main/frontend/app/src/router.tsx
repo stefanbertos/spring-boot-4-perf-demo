@@ -5,6 +5,7 @@ import {
   DashboardsPage,
   NotFoundPage,
   SendTestPage,
+  TestRunComparePage,
   TestRunDetailPage,
   TestRunsPage,
 } from '@/pages';
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboards" replace /> },
       { path: 'send', element: <SendTestPage /> },
       { path: 'test-runs', element: <TestRunsPage /> },
+      { path: 'test-runs/compare', element: <TestRunComparePage /> },
       { path: 'test-runs/:id', element: <TestRunDetailPage /> },
       { path: 'dashboards', element: <DashboardsPage /> },
       { path: 'admin', element: <AdminPage /> },

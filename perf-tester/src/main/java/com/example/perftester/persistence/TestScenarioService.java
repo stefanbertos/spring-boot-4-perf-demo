@@ -1,16 +1,28 @@
 package com.example.perftester.persistence;
 
+import com.example.perftester.perf.ThinkTimeConfig;
+import com.example.perftester.perf.ThresholdDef;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TestScenarioService {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final TestScenarioRepository testScenarioRepository;
 
@@ -32,11 +44,7 @@ public class TestScenarioService {
     @Transactional
     public TestScenarioDetail create(TestScenarioRequest request) {
         var scenario = new TestScenario();
-        scenario.setName(request.name());
-        scenario.setCount(request.count());
-        scenario.setEntries(toEntries(request.entries()));
-        scenario.setScheduledEnabled(request.scheduledEnabled());
-        scenario.setScheduledTime(request.scheduledTime());
+        applyRequest(request, scenario);
         return toDetail(testScenarioRepository.save(scenario));
     }
 
@@ -44,11 +52,7 @@ public class TestScenarioService {
     public TestScenarioDetail update(Long id, TestScenarioRequest request) {
         var scenario = testScenarioRepository.findById(id)
                 .orElseThrow(() -> new TestScenarioNotFoundException(id));
-        scenario.setName(request.name());
-        scenario.setCount(request.count());
-        scenario.setEntries(toEntries(request.entries()));
-        scenario.setScheduledEnabled(request.scheduledEnabled());
-        scenario.setScheduledTime(request.scheduledTime());
+        applyRequest(request, scenario);
         return toDetail(testScenarioRepository.save(scenario));
     }
 
@@ -72,6 +76,45 @@ public class TestScenarioService {
     }
 
     @Transactional(readOnly = true)
+    public int getWarmupCount(Long scenarioId) {
+        return testScenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new TestScenarioNotFoundException(scenarioId))
+                .getWarmupCount();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ThinkTimeConfig> getThinkTimeConfig(Long scenarioId) {
+        var json = testScenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new TestScenarioNotFoundException(scenarioId))
+                .getThinkTimeJson();
+        if (json == null || json.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(MAPPER.readValue(json, ThinkTimeConfig.class));
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse think time config for scenario {}: {}", scenarioId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ThresholdDef> getScenarioThresholds(Long scenarioId) {
+        var json = testScenarioRepository.findById(scenarioId)
+                .orElseThrow(() -> new TestScenarioNotFoundException(scenarioId))
+                .getThresholdsJson();
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse thresholds for scenario {}: {}", scenarioId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    @Transactional(readOnly = true)
     public List<ScenarioMessage> buildMessagePool(Long scenarioId) {
         var scenario = testScenarioRepository.findById(scenarioId)
                 .orElseThrow(() -> new TestScenarioNotFoundException(scenarioId));
@@ -85,25 +128,50 @@ public class TestScenarioService {
         int totalAllocated = 0;
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i);
-            var messageContent = buildMessage(entry);
+            var scenarioMessage = buildScenarioMessage(entry);
             int allocated = i == entries.size() - 1
                     ? count - totalAllocated
                     : (int) Math.floor(entry.percentage() / 100.0 * count);
             for (int j = 0; j < allocated; j++) {
-                pool.add(new ScenarioMessage(messageContent));
+                pool.add(scenarioMessage);
             }
             totalAllocated += allocated;
         }
         return pool;
     }
 
-    private String buildMessage(TestScenario.ScenarioEntry entry) {
+    private void applyRequest(TestScenarioRequest request, TestScenario scenario) {
+        scenario.setName(request.name());
+        scenario.setCount(request.count());
+        scenario.setEntries(toEntries(request.entries()));
+        scenario.setScheduledEnabled(request.scheduledEnabled());
+        scenario.setScheduledTime(request.scheduledTime());
+        scenario.setWarmupCount(request.warmupCount());
+        scenario.setTestType(request.testType());
+        scenario.setThinkTimeJson(serializeJson(request.thinkTime()));
+        scenario.setThresholdsJson(serializeJson(request.thresholds()));
+    }
+
+    private String serializeJson(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+        try {
+            return MAPPER.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize object: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private ScenarioMessage buildScenarioMessage(TestScenario.ScenarioEntry entry) {
         var fields = entry.headerFields();
         var content = entry.content() != null ? entry.content() : "";
         if (fields == null || fields.isEmpty()) {
-            return content;
+            return new ScenarioMessage(content, Map.of());
         }
         var header = new StringBuilder();
+        var jmsProperties = new LinkedHashMap<String, String>();
         int messageLength = content.length();
         for (var field : fields) {
             var val = resolveFieldValue(field, messageLength);
@@ -115,11 +183,17 @@ public class TestScenarioService {
                 header.append(val);
                 header.append(String.valueOf(padChar).repeat(field.size() - val.length()));
             }
+            if ("TRANSACTION_ID".equals(field.type()) || field.correlationKey()) {
+                jmsProperties.put(field.name(), val);
+            }
         }
-        return header + "\n" + content;
+        return new ScenarioMessage(header + "\n" + content, Map.copyOf(jmsProperties));
     }
 
     private String resolveFieldValue(TestScenario.HeaderField field, int messageLength) {
+        if ("TRANSACTION_ID".equals(field.type())) {
+            return UUID.randomUUID().toString();
+        }
         if ("UUID".equals(field.type())) {
             var prefix = field.uuidPrefix() != null ? field.uuidPrefix() : "";
             var separator = field.uuidSeparator() != null ? field.uuidSeparator() : "-";
@@ -143,9 +217,34 @@ public class TestScenarioService {
                                                 .toList(),
                                 e.responseTemplateId()))
                         .toList();
+        var thinkTime = parseThinkTime(scenario.getThinkTimeJson());
+        var thresholds = parseThresholds(scenario.getThresholdsJson());
         return new TestScenarioDetail(scenario.getId(), scenario.getName(), scenario.getCount(),
                 entryDtos, scenario.isScheduledEnabled(), scenario.getScheduledTime(),
+                scenario.getWarmupCount(), scenario.getTestType(), thinkTime, thresholds,
                 scenario.getCreatedAt().toString(), scenario.getUpdatedAt().toString());
+    }
+
+    private ThinkTimeConfig parseThinkTime(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, ThinkTimeConfig.class);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    private List<ThresholdDef> parseThresholds(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
     }
 
     private List<TestScenario.ScenarioEntry> toEntries(List<ScenarioEntryDto> dtos) {
@@ -169,6 +268,8 @@ public class TestScenarioService {
 
     public record TestScenarioDetail(Long id, String name, int count, List<ScenarioEntryDto> entries,
                                      boolean scheduledEnabled, String scheduledTime,
+                                     int warmupCount, String testType,
+                                     ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds,
                                      String createdAt, String updatedAt) {
     }
 
@@ -182,9 +283,11 @@ public class TestScenarioService {
     }
 
     public record TestScenarioRequest(String name, int count, List<ScenarioEntryDto> entries,
-                                      boolean scheduledEnabled, String scheduledTime) {
+                                      boolean scheduledEnabled, String scheduledTime,
+                                      int warmupCount, String testType,
+                                      ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds) {
     }
 
-    public record ScenarioMessage(String content) {
+    public record ScenarioMessage(String content, Map<String, String> jmsProperties) {
     }
 }

@@ -5,7 +5,10 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
+import org.apache.kafka.clients.admin.ListOffsetsResult;
+import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.common.errors.InvalidPartitionsException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +76,27 @@ public class KafkaAdminService implements AutoCloseable {
                 .allTopicNames().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         var description = descriptions.get(topicName);
         return new TopicInfo(topicName, description.partitions().size());
+    }
+
+    public long getTotalConsumerGroupLag(String groupId)
+            throws ExecutionException, InterruptedException, TimeoutException {
+        var offsets = adminClient.listConsumerGroupOffsets(groupId)
+                .partitionsToOffsetAndMetadata().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        if (offsets.isEmpty()) {
+            return 0;
+        }
+        var topicPartitions = offsets.keySet().stream()
+                .collect(Collectors.toMap(tp -> tp, tp -> OffsetSpec.latest()));
+        Map<org.apache.kafka.common.TopicPartition, ListOffsetsResult.ListOffsetsResultInfo> endOffsets =
+                adminClient.listOffsets(topicPartitions).all().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        return offsets.keySet().stream()
+                .mapToLong(tp -> {
+                    var end = endOffsets.get(tp);
+                    var current = offsets.get(tp);
+                    return end != null && current != null
+                            ? Math.max(0, end.offset() - current.offset()) : 0;
+                })
+                .sum();
     }
 
     @Override

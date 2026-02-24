@@ -35,6 +35,7 @@ class PerfTestResultTest {
 
         PerfTestResult result = new PerfTestResult(
                 100, 5, 10.5, 9.52, 50.0, 10.0, 200.0,
+                0.0, 0.0, 0.0, 0.0,
                 urls, files, prometheusFile, kubernetesFile
         );
 
@@ -71,6 +72,7 @@ class PerfTestResultTest {
         List<String> files = List.of("/path/to/export.png");
         PerfTestResult original = new PerfTestResult(
                 100, 5, 10.5, 9.52, 50.0, 10.0, 200.0,
+                0.0, 0.0, 0.0, 0.0,
                 urls, files, null, null
         );
 

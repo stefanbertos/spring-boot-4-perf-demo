@@ -8,8 +8,13 @@ import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.loki.LogEntry;
 import com.example.perftester.loki.LokiService;
 import com.example.perftester.messaging.MessageSender;
+import com.example.perftester.monitoring.InfraSnapshotService;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
+import com.example.perftester.perf.ThinkTimeCalculator;
+import com.example.perftester.perf.ThinkTimeConfig;
+import com.example.perftester.perf.ThresholdEvaluator;
+import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.perf.TestStartResponse;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
@@ -68,6 +73,9 @@ public class PerfController {
     private final PerfProperties perfProperties;
     private final TestRunService testRunService;
     private final TestScenarioService testScenarioService;
+    private final ThinkTimeCalculator thinkTimeCalculator;
+    private final ThresholdEvaluator thresholdEvaluator;
+    private final InfraSnapshotService infraSnapshotService;
 
     /**
      * Starts a performance test asynchronously and returns a testRunId immediately.
@@ -85,13 +93,24 @@ public class PerfController {
         var testRunId = UUID.randomUUID().toString();
         int effectiveCount = runOptions.scenarioId() != null
                 ? testScenarioService.getScenarioCount(runOptions.scenarioId()) : count;
-        var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), effectiveCount);
+
+        String testType = null;
+        int warmupCount = 0;
+        ThinkTimeConfig thinkTimeConfig = null;
+        if (runOptions.scenarioId() != null) {
+            var scenario = testScenarioService.getById(runOptions.scenarioId());
+            testType = scenario.testType();
+            warmupCount = scenario.warmupCount();
+            thinkTimeConfig = scenario.thinkTime();
+        }
+
+        var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), effectiveCount, testType);
         var effectiveMessage = message != null ? message : "";
         var request = new TestRunRequest(
                 testRunEntity.getId(), testRunId, effectiveMessage, effectiveCount, timeoutSeconds, delayMs,
                 runOptions.testId(), exportOptions.exportGrafana(), exportOptions.exportPrometheus(),
                 exportOptions.exportKubernetes(), exportOptions.exportLogs(),
-                runOptions.debug(), runOptions.scenarioId());
+                runOptions.debug(), runOptions.scenarioId(), warmupCount, thinkTimeConfig);
 
         Thread.ofVirtual().name("perf-test-" + testRunId).start(() -> runTestInBackground(request));
 
@@ -142,10 +161,21 @@ public class PerfController {
             log.info("Starting async performance test: testRunId={}, count={}, timeout={}s, delay={}ms, testId={}",
                     req.testRunId(), req.count(), req.timeoutSeconds(), req.delayMs(), req.testId());
 
+            if (req.warmupCount() > 0) {
+                performanceTracker.startWarmupPhase(req.warmupCount());
+                for (int i = 0; i < req.warmupCount(); i++) {
+                    messageSender.sendMessage("warmup-" + i);
+                }
+                performanceTracker.awaitWarmupCompletion(60, TimeUnit.SECONDS);
+                log.info("Warmup phase complete: {} messages", req.warmupCount());
+            }
+
             performanceTracker.startTest(req.count(), req.testRunId());
+            infraSnapshotService.startMonitoring(req.entityId());
             long testStartTimeMs = System.currentTimeMillis();
 
-            var completed = runPerformanceTest(req.message(), req.count(), req.timeoutSeconds(), req.delayMs(), req.scenarioId());
+            var completed = runPerformanceTest(req.message(), req.count(),
+                    req.timeoutSeconds(), req.delayMs(), req.scenarioId(), req.thinkTimeConfig());
             long testEndTimeMs = System.currentTimeMillis();
 
             var finalStatus = completed ? "COMPLETED" : "TIMEOUT";
@@ -176,6 +206,16 @@ public class PerfController {
             }
             performanceTracker.setStatus(finalStatus);
             testRunService.completeRun(req.entityId(), finalStatus, result, zipPath);
+
+            if (req.scenarioId() != null) {
+                var thresholds = testScenarioService.getScenarioThresholds(req.scenarioId());
+                if (!thresholds.isEmpty()) {
+                    var thresholdResults = thresholdEvaluator.evaluate(thresholds, result);
+                    var passed = thresholdResults.stream().allMatch(ThresholdResult::passed);
+                    testRunService.updateThresholdResult(req.entityId(),
+                            passed ? "PASSED" : "FAILED", thresholdResults);
+                }
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             performanceTracker.setStatus("FAILED");
@@ -186,6 +226,7 @@ public class PerfController {
             testRunService.completeRun(req.entityId(), "FAILED", performanceTracker.getResult(), null);
             log.error("Performance test failed: testRunId={}", req.testRunId(), e);
         } finally {
+            infraSnapshotService.stopMonitoring();
             if (req.debug() && previousLevel != null) {
                 loggingAdminService.setLogLevel(DEBUG_LOGGER, previousLevel);
             }
@@ -201,18 +242,24 @@ public class PerfController {
     }
 
     private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs,
-                                       Long scenarioId) throws InterruptedException {
+                                       Long scenarioId, ThinkTimeConfig thinkTimeConfig)
+            throws InterruptedException {
         List<TestScenarioService.ScenarioMessage> pool = scenarioId != null
                 ? testScenarioService.buildMessagePool(scenarioId) : List.of();
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             if (!pool.isEmpty()) {
-                futures[i] = messageSender.sendMessage(pool.get(i).content() + "-" + i);
+                var msg = pool.get(i);
+                futures[i] = msg.jmsProperties().isEmpty()
+                        ? messageSender.sendMessage(msg.content() + "-" + i)
+                        : messageSender.sendMessage(msg.content() + "-" + i, msg.jmsProperties());
             } else {
                 futures[i] = messageSender.sendMessage(message + "-" + i);
             }
-            if (delayMs > 0) {
-                Thread.sleep(delayMs);
+            long sleepMs = thinkTimeConfig != null
+                    ? thinkTimeCalculator.nextSleepMs(thinkTimeConfig) : (long) delayMs;
+            if (sleepMs > 0) {
+                Thread.sleep(sleepMs);
             }
         }
         CompletableFuture.allOf(futures).join();
@@ -381,7 +428,8 @@ public class PerfController {
                                   int timeoutSeconds, int delayMs, String testId,
                                   boolean exportGrafana, boolean exportPrometheus,
                                   boolean exportKubernetes, boolean exportLogs,
-                                  boolean debug, Long scenarioId) {
+                                  boolean debug, Long scenarioId,
+                                  int warmupCount, ThinkTimeConfig thinkTimeConfig) {
         boolean anyExport() {
             return exportGrafana || exportPrometheus || exportKubernetes || exportLogs;
         }
@@ -430,7 +478,8 @@ public class PerfController {
             }
         }
 
-        int fileCount = dashboardFiles.size() + (prometheusFile != null ? 1 : 0) + (kubernetesFile != null ? 1 : 0);
+        int fileCount = dashboardFiles.size() + (prometheusFile != null ? 1 : 0)
+                + (kubernetesFile != null ? 1 : 0);
         log.info("Cleaned up {} exported files", fileCount);
     }
 

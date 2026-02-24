@@ -21,6 +21,7 @@ export {
   getResponseTemplate,
   getTestCase,
   getTestRunLogs,
+  getTestRunSnapshots,
   getTestRunSummary,
   getTestRuns,
   getTestScenario,

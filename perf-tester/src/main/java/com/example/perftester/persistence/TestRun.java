@@ -51,6 +51,30 @@ public class TestRun {
     @Column(name = "max_latency_ms")
     private Double maxLatencyMs;
 
+    @Column(name = "p50_latency_ms")
+    private Double p50LatencyMs;
+
+    @Column(name = "p90_latency_ms")
+    private Double p90LatencyMs;
+
+    @Column(name = "p95_latency_ms")
+    private Double p95LatencyMs;
+
+    @Column(name = "p99_latency_ms")
+    private Double p99LatencyMs;
+
+    @Column(name = "timeout_count", nullable = false)
+    private long timeoutCount;
+
+    @Column(name = "test_type", length = 20)
+    private String testType;
+
+    @Column(name = "threshold_status", length = 20)
+    private String thresholdStatus;
+
+    @Column(name = "threshold_results", columnDefinition = "text")
+    private String thresholdResults;
+
     @Column(name = "duration_ms")
     private Long durationMs;
 

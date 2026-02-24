@@ -1,7 +1,9 @@
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InboxIcon from '@mui/icons-material/Inbox';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -9,6 +11,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
 import Snackbar from '@mui/material/Snackbar';
+import Stack from '@mui/material/Stack';
 import { Alert, Chip, DataTable, EmptyState, Loading, PageHeader } from 'perf-ui-components';
 import type { DataTableColumn } from 'perf-ui-components';
 import { useState } from 'react';
@@ -24,11 +27,32 @@ const statusColor: Record<string, 'success' | 'error' | 'warning' | 'info' | 'de
   TIMEOUT: 'warning',
 };
 
+const testTypeColor: Record<string, 'info' | 'primary' | 'warning' | 'default' | 'error'> = {
+  SMOKE: 'info',
+  LOAD: 'primary',
+  STRESS: 'warning',
+  SOAK: 'default',
+  SPIKE: 'error',
+};
+
 export default function TestRunsPage() {
   const { data: runs, loading, error, refetch } = useApi(() => getTestRuns());
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < 2) {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleDeleteConfirm = async () => {
     if (confirmId == null) {
@@ -45,6 +69,19 @@ export default function TestRunsPage() {
   };
 
   const columns: DataTableColumn<TestRunResponse>[] = [
+    {
+      id: 'select',
+      label: '',
+      minWidth: 50,
+      render: (row) => (
+        <Checkbox
+          size="small"
+          checked={selectedIds.has(row.id)}
+          onClick={(e) => { e.stopPropagation(); toggleSelect(row.id); }}
+          disabled={!selectedIds.has(row.id) && selectedIds.size >= 2}
+        />
+      ),
+    },
     { id: 'id', label: 'ID', render: (row) => row.id },
     { id: 'testId', label: 'Test ID', render: (row) => row.testId ?? '-' },
     {
@@ -66,6 +103,24 @@ export default function TestRunsPage() {
       label: 'Avg Latency',
       align: 'right',
       render: (row) => (row.avgLatencyMs != null ? `${row.avgLatencyMs.toFixed(0)} ms` : '-'),
+    },
+    {
+      id: 'p95',
+      label: 'P95',
+      align: 'right',
+      render: (row) => (row.p95LatencyMs != null ? `${row.p95LatencyMs.toFixed(0)} ms` : '-'),
+    },
+    {
+      id: 'testType',
+      label: 'Type',
+      render: (row) =>
+        row.testType ? (
+          <Chip
+            label={row.testType}
+            size="small"
+            color={testTypeColor[row.testType] ?? 'default'}
+          />
+        ) : null,
     },
     {
       id: 'duration',
@@ -102,7 +157,21 @@ export default function TestRunsPage() {
 
   return (
     <Box>
-      <PageHeader title="Test Runs" subtitle="Recent performance test results" />
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: 2 }}>
+        <PageHeader title="Test Runs" subtitle="Recent performance test results" />
+        <MuiButton
+          variant="outlined"
+          disabled={selectedIds.size !== 2}
+          startIcon={<CompareArrowsIcon />}
+          onClick={() => {
+            const [id1, id2] = [...selectedIds];
+            void navigate(`/test-runs/compare?id1=${id1}&id2=${id2}`);
+          }}
+          sx={{ mt: 1 }}
+        >
+          Compare Selected
+        </MuiButton>
+      </Stack>
       {runs && runs.length > 0 ? (
         <DataTable
           columns={columns}

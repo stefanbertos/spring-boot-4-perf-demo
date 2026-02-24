@@ -15,5 +15,13 @@ CREATE TABLE test_run (
     zip_file_path   VARCHAR(1000),
     started_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
     completed_at    TIMESTAMP,
-    created_at      TIMESTAMP       NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
+    p50_latency_ms FLOAT8,
+    p90_latency_ms FLOAT8,
+    p95_latency_ms FLOAT8,
+    p99_latency_ms FLOAT8,
+    timeout_count BIGINT NOT NULL DEFAULT 0,
+    test_type VARCHAR(20),
+    threshold_status VARCHAR(20),
+    threshold_results TEXT
 );

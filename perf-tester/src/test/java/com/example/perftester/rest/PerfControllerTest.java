@@ -10,10 +10,15 @@ import com.example.perftester.kubernetes.KubernetesService;
 import com.example.perftester.loki.LogEntry;
 import com.example.perftester.loki.LokiService;
 import com.example.perftester.messaging.MessageSender;
+import com.example.perftester.monitoring.InfraSnapshotService;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
 import com.example.perftester.perf.TestProgressEvent;
 import com.example.perftester.perf.TestStartResponse;
+import com.example.perftester.perf.ThinkTimeCalculator;
+import com.example.perftester.perf.ThresholdDef;
+import com.example.perftester.perf.ThresholdEvaluator;
+import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
@@ -37,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -88,6 +94,15 @@ class PerfControllerTest {
     @Mock
     private TestScenarioService testScenarioService;
 
+    @Mock
+    private ThinkTimeCalculator thinkTimeCalculator;
+
+    @Mock
+    private ThresholdEvaluator thresholdEvaluator;
+
+    @Mock
+    private InfraSnapshotService infraSnapshotService;
+
     @TempDir
     Path tempDir;
 
@@ -101,7 +116,7 @@ class PerfControllerTest {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
                 kubernetesService, lokiService, loggingAdminService, perfProperties, testRunService,
-                testScenarioService);
+                testScenarioService, thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
@@ -109,7 +124,7 @@ class PerfControllerTest {
         when(performanceTracker.getResult()).thenReturn(perfResult);
         var mockTestRun = new TestRun();
         mockTestRun.setId(1L);
-        when(testRunService.createRun(anyString(), any(), anyInt())).thenReturn(mockTestRun);
+        when(testRunService.createRun(anyString(), any(), anyInt(), any())).thenReturn(mockTestRun);
         when(performanceTracker.getProgressSnapshot()).thenReturn(
                 new TestProgressEvent("run-id", "RUNNING", 5, 3, 10, 30.0, 3.0, 50.0, 10.0, 100.0, 0.5));
         when(kubernetesService.exportClusterInfo()).thenReturn(null);
@@ -266,10 +281,13 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldUseScenarioPoolWhenScenarioIdProvided() {
-        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload");
+        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload", Map.of());
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(
                 List.of(scenarioMsg, scenarioMsg, scenarioMsg));
+        when(testScenarioService.getById(1L)).thenReturn(
+                new TestScenarioService.TestScenarioDetail(1L, "test", 3, List.of(),
+                        false, null, 0, null, null, List.of(), "now", "now"));
 
         controller.sendMessages(null, 1000, 1, 0,
                 new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
@@ -300,6 +318,46 @@ class PerfControllerTest {
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> verify(prometheusExportService).exportMetrics(anyLong(), anyLong(), any()));
+    }
+
+    @Test
+    void sendMessagesShouldExecuteWarmupPhaseWhenWarmupCountIsPositive() throws Exception {
+        var detail = new TestScenarioService.TestScenarioDetail(
+                1L, "test", 3, List.of(), false, null, 5, null, null, List.of(), "now", "now");
+        when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
+        when(testScenarioService.getById(1L)).thenReturn(detail);
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
+        doReturn(true).when(performanceTracker).awaitWarmupCompletion(anyLong(), any(TimeUnit.class));
+
+        controller.sendMessages(null, 3, 60, 0,
+                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).startWarmupPhase(5));
+    }
+
+    @Test
+    void sendMessagesShouldEvaluateThresholdsForScenario() {
+        var thresholds = List.of(new ThresholdDef("TPS", "GTE", 5.0));
+        var thresholdResults = List.of(new ThresholdResult("TPS", "GTE", 5.0, 10.0, true));
+        var detail = new TestScenarioService.TestScenarioDetail(
+                1L, "test", 3, List.of(), false, null, 0, null, null, List.of(), "now", "now");
+        when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
+        when(testScenarioService.getById(1L)).thenReturn(detail);
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
+        when(testScenarioService.getScenarioThresholds(1L)).thenReturn(thresholds);
+        when(thresholdEvaluator.evaluate(thresholds, performanceTracker.getResult()))
+                .thenReturn(thresholdResults);
+
+        controller.sendMessages(null, 3, 60, 0,
+                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(testRunService).updateThresholdResult(anyLong(), any(), any()));
     }
 
     @Test

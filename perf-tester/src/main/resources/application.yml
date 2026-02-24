@@ -26,6 +26,11 @@ app:
     export-enabled: false
   kafka:
     bootstrap-servers: localhost:9092
+  monitoring:
+    outbound-queue: DEV.QUEUE.2
+    inbound-queue: DEV.QUEUE.1
+    kafka-request-consumer-group: ibm-mq-consumer
+    kafka-response-consumer-group: ibm-mq-consumer
   loki:
     url: http://localhost:3100
   perf:

@@ -51,12 +51,14 @@ import type {
   ResponseTemplateSummary,
   TestCaseSummary,
   TestScenarioSummary,
+  ThresholdDef,
+  ThinkTimeConfig,
 } from '@/types/api';
 import InfraProfileManager from './InfraProfileManager';
 
 // ── Shared Types ───────────────────────────────────────────────────
 
-type FieldType = 'STRING' | 'NUMBER' | 'UUID' | 'MESSAGE_LENGTH';
+type FieldType = 'STRING' | 'NUMBER' | 'UUID' | 'MESSAGE_LENGTH' | 'TRANSACTION_ID';
 
 interface HeaderFieldForm {
   name: string;
@@ -111,6 +113,8 @@ interface EntryForm {
   responseTemplateId: number | null;
 }
 
+type TestType = 'SMOKE' | 'LOAD' | 'STRESS' | 'SOAK' | 'SPIKE';
+
 interface ScenarioForm {
   id?: number;
   name: string;
@@ -118,6 +122,15 @@ interface ScenarioForm {
   entries: EntryForm[];
   scheduledEnabled: boolean;
   scheduledTime: string;
+  warmupCount: number;
+  testType: TestType | '';
+  thinkTimeEnabled: boolean;
+  thinkTimeDistribution: 'CONSTANT' | 'UNIFORM' | 'GAUSSIAN';
+  thinkTimeMinMs: number;
+  thinkTimeMaxMs: number;
+  thinkTimeMeanMs: number;
+  thinkTimeStdDevMs: number;
+  thresholds: ThresholdDef[];
 }
 
 interface TemplateForm {
@@ -133,7 +146,12 @@ interface TestCaseFormState {
   message: string;
 }
 
-const EMPTY_SCENARIO: ScenarioForm = { name: '', count: 100, entries: [], scheduledEnabled: false, scheduledTime: '' };
+const EMPTY_SCENARIO: ScenarioForm = {
+  name: '', count: 100, entries: [], scheduledEnabled: false, scheduledTime: '',
+  warmupCount: 0, testType: '', thinkTimeEnabled: false,
+  thinkTimeDistribution: 'CONSTANT', thinkTimeMinMs: 0, thinkTimeMaxMs: 1000,
+  thinkTimeMeanMs: 500, thinkTimeStdDevMs: 100, thresholds: [],
+};
 const EMPTY_TEMPLATE: TemplateForm = { name: '', fields: [] };
 const EMPTY_TC: TestCaseFormState = { mode: 'create', name: '', message: '' };
 
@@ -522,6 +540,20 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
     }));
   };
 
+  const updateFieldType = (i: number, newType: FieldType) => {
+    setForm((f) => ({
+      ...f,
+      fields: f.fields.map((fld, idx) => {
+        if (idx !== i) return fld;
+        const updated = { ...fld, type: newType };
+        if (newType === 'TRANSACTION_ID') {
+          updated.correlationKey = true;
+        }
+        return updated;
+      }),
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -650,6 +682,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                   const validation = getFieldValidation(field);
                   const isUuid = field.type === 'UUID';
                   const isMessageLength = field.type === 'MESSAGE_LENGTH';
+                  const isTransactionId = field.type === 'TRANSACTION_ID';
                   const uuidTotal = field.uuidPrefix.length + field.uuidSeparator.length + 36;
                   return (
                     <Box key={i} sx={{ border: '1px solid', borderColor: field.correlationKey ? 'primary.main' : 'divider', borderRadius: 1, p: 1.5 }}>
@@ -667,13 +700,14 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                             size="small"
                             label="Type"
                             value={field.type}
-                            onChange={(e) => updateField(i, 'type', e.target.value)}
+                            onChange={(e) => updateFieldType(i, e.target.value as FieldType)}
                             sx={{ width: 148 }}
                           >
                             <MenuItem value="STRING">String</MenuItem>
                             <MenuItem value="NUMBER">Number</MenuItem>
                             <MenuItem value="UUID">UUID</MenuItem>
                             <MenuItem value="MESSAGE_LENGTH">Msg Length</MenuItem>
+                            <MenuItem value="TRANSACTION_ID">Transaction ID</MenuItem>
                           </MuiTextField>
                           <MuiTextField
                             size="small"
@@ -720,6 +754,10 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                               </Typography>
                             )}
                           </Stack>
+                        ) : isTransactionId ? (
+                          <Typography variant="caption" color="text.secondary">
+                            Auto-generates a unique UUID per message. Forwarded as a JMS property for downstream correlation.
+                          </Typography>
                         ) : isMessageLength ? (
                           <Typography variant="caption" color="text.secondary">
                             Auto-populated with the byte length of the message body, padded to {field.size} chars.
@@ -747,7 +785,7 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                             />
                           </Stack>
                         )}
-                        {!isUuid && !isMessageLength && validation && (
+                        {!isUuid && !isMessageLength && !isTransactionId && validation && (
                           <Typography
                             variant="caption"
                             color={validation.severity === 'error' ? 'error.main' : 'warning.main'}
@@ -759,7 +797,8 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
                           control={
                             <Checkbox
                               size="small"
-                              checked={field.correlationKey}
+                              checked={field.correlationKey || isTransactionId}
+                              disabled={isTransactionId}
                               onChange={(e) => updateField(i, 'correlationKey', e.target.checked)}
                             />
                           }
@@ -1231,6 +1270,15 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
       count: detail.count,
       scheduledEnabled: detail.scheduledEnabled ?? false,
       scheduledTime: detail.scheduledTime ?? '',
+      warmupCount: detail.warmupCount ?? 0,
+      testType: (detail.testType as TestType | '') ?? '',
+      thinkTimeEnabled: detail.thinkTime != null,
+      thinkTimeDistribution: detail.thinkTime?.distribution ?? 'CONSTANT',
+      thinkTimeMinMs: detail.thinkTime?.minMs ?? 0,
+      thinkTimeMaxMs: detail.thinkTime?.maxMs ?? 1000,
+      thinkTimeMeanMs: detail.thinkTime?.meanMs ?? 500,
+      thinkTimeStdDevMs: detail.thinkTime?.stdDevMs ?? 100,
+      thresholds: detail.thresholds ?? [],
       entries: detail.entries.map((e) => {
         const tc = tcs.find((t) => t.id === e.testCaseId);
         return {
@@ -1290,11 +1338,24 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const thinkTime: ThinkTimeConfig | null = form.thinkTimeEnabled
+        ? {
+            distribution: form.thinkTimeDistribution,
+            minMs: form.thinkTimeMinMs,
+            maxMs: form.thinkTimeMaxMs,
+            meanMs: form.thinkTimeMeanMs,
+            stdDevMs: form.thinkTimeStdDevMs,
+          }
+        : null;
       const request = {
         name: form.name,
         count: form.count,
         scheduledEnabled: form.scheduledEnabled,
         scheduledTime: form.scheduledEnabled && form.scheduledTime ? form.scheduledTime : null,
+        warmupCount: form.warmupCount,
+        testType: form.testType || null,
+        thinkTime,
+        thresholds: form.thresholds,
         entries: form.entries.map((e) => ({
           testCaseId: e.testCaseId,
           content: e.content,
@@ -1436,6 +1497,182 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
               />
             )}
           </Stack>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <MuiTextField
+              select
+              size="small"
+              label="Test Type"
+              value={form.testType}
+              onChange={(e) => setForm({ ...form, testType: e.target.value as TestType | '' })}
+              sx={{ width: 160 }}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              <MenuItem value="SMOKE">Smoke</MenuItem>
+              <MenuItem value="LOAD">Load</MenuItem>
+              <MenuItem value="STRESS">Stress</MenuItem>
+              <MenuItem value="SOAK">Soak</MenuItem>
+              <MenuItem value="SPIKE">Spike</MenuItem>
+            </MuiTextField>
+            <MuiTextField
+              size="small"
+              label="Warmup Messages"
+              type="number"
+              value={form.warmupCount}
+              onChange={(e) => setForm({ ...form, warmupCount: Number(e.target.value) })}
+              sx={{ width: 160 }}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+          </Stack>
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={form.thinkTimeEnabled}
+                    onChange={(e) => setForm({ ...form, thinkTimeEnabled: e.target.checked })}
+                  />
+                }
+                label={<Typography variant="body2">Think time between messages</Typography>}
+              />
+            </Stack>
+            {form.thinkTimeEnabled && (
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <MuiTextField
+                  select
+                  size="small"
+                  label="Distribution"
+                  value={form.thinkTimeDistribution}
+                  onChange={(e) => setForm({ ...form, thinkTimeDistribution: e.target.value as 'CONSTANT' | 'UNIFORM' | 'GAUSSIAN' })}
+                  sx={{ width: 140 }}
+                >
+                  <MenuItem value="CONSTANT">Constant</MenuItem>
+                  <MenuItem value="UNIFORM">Uniform</MenuItem>
+                  <MenuItem value="GAUSSIAN">Gaussian</MenuItem>
+                </MuiTextField>
+                <MuiTextField
+                  size="small"
+                  label="Min ms"
+                  type="number"
+                  value={form.thinkTimeMinMs}
+                  onChange={(e) => setForm({ ...form, thinkTimeMinMs: Number(e.target.value) })}
+                  sx={{ width: 90 }}
+                  slotProps={{ htmlInput: { min: 0 } }}
+                />
+                <MuiTextField
+                  size="small"
+                  label="Max ms"
+                  type="number"
+                  value={form.thinkTimeMaxMs}
+                  onChange={(e) => setForm({ ...form, thinkTimeMaxMs: Number(e.target.value) })}
+                  sx={{ width: 90 }}
+                  slotProps={{ htmlInput: { min: 0 } }}
+                />
+                {form.thinkTimeDistribution === 'GAUSSIAN' && (
+                  <>
+                    <MuiTextField
+                      size="small"
+                      label="Mean ms"
+                      type="number"
+                      value={form.thinkTimeMeanMs}
+                      onChange={(e) => setForm({ ...form, thinkTimeMeanMs: Number(e.target.value) })}
+                      sx={{ width: 90 }}
+                    />
+                    <MuiTextField
+                      size="small"
+                      label="StdDev ms"
+                      type="number"
+                      value={form.thinkTimeStdDevMs}
+                      onChange={(e) => setForm({ ...form, thinkTimeStdDevMs: Number(e.target.value) })}
+                      sx={{ width: 100 }}
+                    />
+                  </>
+                )}
+              </Stack>
+            )}
+          </Box>
+          <Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                SLA Thresholds
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => setForm((f) => ({
+                  ...f,
+                  thresholds: [...f.thresholds, { metric: 'P95', operator: 'LT', value: 1000 }],
+                }))}
+              >
+                <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
+                Add Threshold
+              </Button>
+            </Stack>
+            {form.thresholds.length === 0 ? (
+              <Typography variant="caption" color="text.disabled">No thresholds defined</Typography>
+            ) : (
+              <Stack spacing={1}>
+                {form.thresholds.map((t, i) => (
+                  <Stack key={i} direction="row" spacing={1} alignItems="center">
+                    <MuiTextField
+                      select
+                      size="small"
+                      label="Metric"
+                      value={t.metric}
+                      onChange={(e) => {
+                        const updated = [...form.thresholds];
+                        updated[i] = { ...t, metric: e.target.value };
+                        setForm({ ...form, thresholds: updated });
+                      }}
+                      sx={{ width: 130 }}
+                    >
+                      {['TPS', 'AVG_LATENCY', 'P50', 'P90', 'P95', 'P99'].map((m) => (
+                        <MenuItem key={m} value={m}>{m}</MenuItem>
+                      ))}
+                    </MuiTextField>
+                    <MuiTextField
+                      select
+                      size="small"
+                      label="Op"
+                      value={t.operator}
+                      onChange={(e) => {
+                        const updated = [...form.thresholds];
+                        updated[i] = { ...t, operator: e.target.value };
+                        setForm({ ...form, thresholds: updated });
+                      }}
+                      sx={{ width: 80 }}
+                    >
+                      {['LT', 'LTE', 'GT', 'GTE'].map((op) => (
+                        <MenuItem key={op} value={op}>{op}</MenuItem>
+                      ))}
+                    </MuiTextField>
+                    <MuiTextField
+                      size="small"
+                      label="Value"
+                      type="number"
+                      value={t.value}
+                      onChange={(e) => {
+                        const updated = [...form.thresholds];
+                        updated[i] = { ...t, value: Number(e.target.value) };
+                        setForm({ ...form, thresholds: updated });
+                      }}
+                      sx={{ width: 100 }}
+                    />
+                    <Tooltip title="Remove">
+                      <IconButton
+                        size="small"
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          thresholds: f.thresholds.filter((_, idx) => idx !== i),
+                        }))}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Box>
           <Divider />
           <Stack spacing={1}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">

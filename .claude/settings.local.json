@@ -91,7 +91,9 @@
       "Bash(test:*)",
       "Bash(cd /c/Users/stefa/IdeaProjects/spring-boot-4-perf-demo && git check-ignore -v perf-tester/src/main/java/com/example/perftester/persistence/ResponseTemplate.java perf-tester/src/main/java/com/example/perftester/persistence/HeaderTemplate.java perf-tester/src/main/resources/db/migration/V8__create_response_template.sql 2>&1)",
       "Bash(cd:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(docker rm docker-perf-tester-1 2>&1 && docker volume rm docker_perf-tester-h2 2>&1)",
+      "Bash(docker image:*)"
     ]
   }
 }

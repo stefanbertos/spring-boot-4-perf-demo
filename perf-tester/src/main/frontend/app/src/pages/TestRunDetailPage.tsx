@@ -7,12 +7,12 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
-import { Alert, Card, Chip, Loading, PageHeader, Tabs } from 'perf-ui-components';
-import type { TabItem } from 'perf-ui-components';
+import { Alert, Card, Chip, DataTable, Loading, PageHeader, Tabs } from 'perf-ui-components';
+import type { DataTableColumn, TabItem } from 'perf-ui-components';
 import { Link, useParams } from 'react-router-dom';
-import { downloadTestRunUrl, getTestRunLogs, getTestRunSummary } from '@/api';
+import { downloadTestRunUrl, getTestRunLogs, getTestRunSnapshots, getTestRunSummary } from '@/api';
 import { useApi } from '@/hooks';
-import type { LogEntry } from '@/types/api';
+import type { LogEntry, TestRunSnapshotResponse, ThresholdResult } from '@/types/api';
 
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
@@ -56,6 +56,65 @@ function LogsPanel({ logs, loading }: { logs: LogEntry[] | null; loading: boolea
   );
 }
 
+function MonitoringPanel({
+  snapshots,
+  loading,
+}: {
+  snapshots: TestRunSnapshotResponse[] | null;
+  loading: boolean;
+}) {
+  if (loading) return <Loading message="Loading monitoring data..." />;
+  if (!snapshots || snapshots.length === 0) {
+    return <Typography color="text.secondary">No monitoring snapshots available.</Typography>;
+  }
+  const columns: DataTableColumn<TestRunSnapshotResponse>[] = [
+    {
+      id: 'time',
+      label: 'Time',
+      render: (row) => new Date(row.sampledAt).toLocaleTimeString(),
+    },
+    {
+      id: 'outbound',
+      label: 'Outbound Q',
+      align: 'right',
+      render: (row) => (row.outboundQueueDepth != null ? row.outboundQueueDepth : '-'),
+    },
+    {
+      id: 'inbound',
+      label: 'Inbound Q',
+      align: 'right',
+      render: (row) => (row.inboundQueueDepth != null ? row.inboundQueueDepth : '-'),
+    },
+    {
+      id: 'reqLag',
+      label: 'Requests Lag',
+      align: 'right',
+      render: (row) => (row.kafkaRequestsLag != null ? row.kafkaRequestsLag : '-'),
+    },
+    {
+      id: 'resLag',
+      label: 'Responses Lag',
+      align: 'right',
+      render: (row) => (row.kafkaResponsesLag != null ? row.kafkaResponsesLag : '-'),
+    },
+  ];
+  return (
+    <DataTable
+      columns={columns}
+      rows={snapshots}
+      keyExtractor={(row) => row.id}
+    />
+  );
+}
+
+const testTypeColor: Record<string, 'info' | 'primary' | 'warning' | 'default' | 'error'> = {
+  SMOKE: 'info',
+  LOAD: 'primary',
+  STRESS: 'warning',
+  SOAK: 'default',
+  SPIKE: 'error',
+};
+
 export default function TestRunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const numericId = Number(id);
@@ -67,6 +126,10 @@ export default function TestRunDetailPage() {
   } = useApi(() => getTestRunSummary(numericId), [numericId]);
 
   const { data: logs, loading: loadingLogs } = useApi(() => getTestRunLogs(numericId), [numericId]);
+  const { data: snapshots, loading: loadingSnapshots } = useApi(
+    () => getTestRunSnapshots(numericId),
+    [numericId],
+  );
 
   if (loadingSummary) return <Loading message="Loading test run..." />;
   if (errorSummary) return <Alert severity="error">{errorSummary.message}</Alert>;
@@ -80,6 +143,10 @@ export default function TestRunDetailPage() {
         : summary.status === 'RUNNING'
           ? 'info'
           : ('default' as const);
+
+  const parsedThresholds: ThresholdResult[] = summary.thresholdResults
+    ? (JSON.parse(summary.thresholdResults) as ThresholdResult[])
+    : [];
 
   const tabs: TabItem[] = [
     {
@@ -105,7 +172,31 @@ export default function TestRunDetailPage() {
             <Grid size={{ xs: 6, md: 3 }}>
               <SummaryField
                 label="Avg Latency"
-                value={summary.avgLatencyMs != null ? `${summary.avgLatencyMs.toFixed(0)} ms` : '-'}
+                value={summary.avgLatencyMs != null ? `${summary.avgLatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="P50"
+                value={summary.p50LatencyMs != null ? `${summary.p50LatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="P90"
+                value={summary.p90LatencyMs != null ? `${summary.p90LatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="P95"
+                value={summary.p95LatencyMs != null ? `${summary.p95LatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="P99"
+                value={summary.p99LatencyMs != null ? `${summary.p99LatencyMs.toFixed(1)} ms` : '-'}
               />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
@@ -146,12 +237,33 @@ export default function TestRunDetailPage() {
               </Grid>
             )}
           </Grid>
+          {parsedThresholds.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                SLA Thresholds
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {parsedThresholds.map((t, i) => (
+                  <Chip
+                    key={i}
+                    size="small"
+                    color={t.passed ? 'success' : 'error'}
+                    label={`${t.metric} ${t.operator} ${t.threshold} (actual: ${t.actual.toFixed(1)})`}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
         </Card>
       ),
     },
     {
       label: 'Logs',
       content: <LogsPanel logs={logs} loading={loadingLogs} />,
+    },
+    {
+      label: 'Monitoring',
+      content: <MonitoringPanel snapshots={snapshots} loading={loadingSnapshots} />,
     },
   ];
 
@@ -173,6 +285,22 @@ export default function TestRunDetailPage() {
           subtitle={summary.testId ? `Test ID: ${summary.testId}` : `Run ID: ${summary.testRunId}`}
         />
         <Chip label={summary.status} color={statusColor} sx={{ mt: -1 }} />
+        {summary.testType && (
+          <Chip
+            label={summary.testType}
+            size="small"
+            color={testTypeColor[summary.testType] ?? 'default'}
+            sx={{ mt: -1 }}
+          />
+        )}
+        {summary.thresholdStatus && (
+          <Chip
+            label={summary.thresholdStatus}
+            size="small"
+            color={summary.thresholdStatus === 'PASSED' ? 'success' : 'error'}
+            sx={{ mt: -1 }}
+          />
+        )}
         {summary.zipFilePath && (
           <MuiButton
             component="a"
