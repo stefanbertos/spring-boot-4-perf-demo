@@ -36,7 +36,7 @@ class HeaderTemplateControllerTest {
 
     @Test
     void getByIdShouldReturnDetail() {
-        var field = new HeaderTemplateService.TemplateFieldDto("CorrelationId", 32, "ABC", null, null, null, null);
+        var field = new HeaderTemplateService.TemplateFieldDto("CorrelationId", 32, "ABC", null, null, null, null, false);
         var detail = new HeaderTemplateService.HeaderTemplateDetail(
                 1L, "Correlation", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(headerTemplateService.getById(1L)).thenReturn(detail);
@@ -49,7 +49,7 @@ class HeaderTemplateControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var field = new HeaderTemplateService.TemplateFieldDto("MsgType", 10, "REQUEST", null, null, null, null);
+        var field = new HeaderTemplateService.TemplateFieldDto("MsgType", 10, "REQUEST", null, null, null, null, false);
         var request = new HeaderTemplateService.HeaderTemplateRequest("New Template", List.of(field));
         var detail = new HeaderTemplateService.HeaderTemplateDetail(
                 2L, "New Template", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
@@ -63,7 +63,7 @@ class HeaderTemplateControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var field = new HeaderTemplateService.TemplateFieldDto("System", 8, "PERF", null, null, null, null);
+        var field = new HeaderTemplateService.TemplateFieldDto("System", 8, "PERF", null, null, null, null, false);
         var request = new HeaderTemplateService.HeaderTemplateRequest("Updated Template", List.of(field));
         var detail = new HeaderTemplateService.HeaderTemplateDetail(
                 1L, "Updated Template", List.of(field), "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z");
