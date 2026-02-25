@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:/data/h2/perfdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:perf-redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+ibm:
+  mq:
+    conn-name: ${IBM_MQ_CONNNAME:perf-ibm-mq(1414)}
+
+app:
+  kubernetes:
+    export-enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:perf-kafka:9092}
+  loki:
+    url: ${LOKI_URL:http://perf-loki:3100}
+  grafana:
+    url: ${GRAFANA_URL:http://perf-grafana:3000}
+  prometheus:
+    url: ${PROMETHEUS_URL:http://perf-prometheus:9090}
