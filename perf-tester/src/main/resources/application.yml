@@ -23,10 +23,6 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
-  data:
-    redis:
-      host: localhost
-      port: 6379
   jms:
     pool:
       enabled: true
@@ -47,6 +43,7 @@ ibm:
 
 app:
   kubernetes:
+    namespace: perf-demo
     export-enabled: false
   kafka:
     bootstrap-servers: localhost:9092

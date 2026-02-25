@@ -62,7 +62,7 @@ class ScheduledScenarioServiceTest {
     private TestScenarioService.TestScenarioDetail scenarioAt(String scheduledTime) {
         return new TestScenarioService.TestScenarioDetail(
                 1L, "test-scenario", 2, List.of(), true, scheduledTime,
-                0, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+                0, null, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
     }
 
     private TestRun mockTestRun(Long id) {

@@ -21,6 +21,7 @@ import com.example.perftester.perf.ThresholdDef;
 import com.example.perftester.perf.ThresholdEvaluator;
 import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.persistence.TestRun;
+import com.example.perftester.persistence.InfraProfileService;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
@@ -99,6 +100,9 @@ class PerfControllerTest {
     private TestScenarioService testScenarioService;
 
     @Mock
+    private InfraProfileService infraProfileService;
+
+    @Mock
     private ThinkTimeCalculator thinkTimeCalculator;
 
     @Mock
@@ -120,7 +124,8 @@ class PerfControllerTest {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
                 kubernetesService, lokiService, databaseExportService, loggingAdminService, perfProperties,
-                testRunService, testScenarioService, thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
+                testRunService, testScenarioService, infraProfileService,
+                thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
@@ -259,10 +264,12 @@ class PerfControllerTest {
         opts.setExportPrometheus(true);
         opts.setExportKubernetes(true);
         opts.setExportLogs(true);
+        opts.setExportDatabase(true);
         assertTrue(opts.exportGrafana());
         assertTrue(opts.exportPrometheus());
         assertTrue(opts.exportKubernetes());
         assertTrue(opts.exportLogs());
+        assertTrue(opts.exportDatabase());
     }
 
     @Test
@@ -291,7 +298,7 @@ class PerfControllerTest {
                 List.of(scenarioMsg, scenarioMsg, scenarioMsg));
         when(testScenarioService.getById(1L)).thenReturn(
                 new TestScenarioService.TestScenarioDetail(1L, "test", 3, List.of(),
-                        false, null, 0, null, null, List.of(), "now", "now"));
+                        false, null, 0, null, null, null, List.of(), "now", "now"));
 
         controller.sendMessages(null, 1000, 1, 0,
                 new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
@@ -327,7 +334,7 @@ class PerfControllerTest {
     @Test
     void sendMessagesShouldExecuteWarmupPhaseWhenWarmupCountIsPositive() throws Exception {
         var detail = new TestScenarioService.TestScenarioDetail(
-                1L, "test", 3, List.of(), false, null, 5, null, null, List.of(), "now", "now");
+                1L, "test", 3, List.of(), false, null, 5, null, null, null, List.of(), "now", "now");
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.getById(1L)).thenReturn(detail);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
@@ -347,7 +354,7 @@ class PerfControllerTest {
         var thresholds = List.of(new ThresholdDef("TPS", "GTE", 5.0));
         var thresholdResults = List.of(new ThresholdResult("TPS", "GTE", 5.0, 10.0, true));
         var detail = new TestScenarioService.TestScenarioDetail(
-                1L, "test", 3, List.of(), false, null, 0, null, null, List.of(), "now", "now");
+                1L, "test", 3, List.of(), false, null, 0, null, null, null, List.of(), "now", "now");
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.getById(1L)).thenReturn(detail);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
@@ -381,6 +388,72 @@ class PerfControllerTest {
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> verify(lokiService).queryLogs(any(), any()));
+    }
+
+    @Test
+    void sendMessagesShouldApplyInfraProfileWhenScenarioHasInfraProfileId() {
+        var detail = new TestScenarioService.TestScenarioDetail(
+                1L, "test", 3, List.of(), false, null, 0, null, 42L, null, List.of(), "now", "now");
+        when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
+        when(testScenarioService.getById(1L)).thenReturn(detail);
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
+
+        controller.sendMessages(null, 3, 60, 0,
+                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(infraProfileService).applyProfile(42L));
+    }
+
+    @Test
+    void sendMessagesShouldExportAndCleanupDatabaseFilesWhenExportDatabaseEnabled() throws IOException {
+        var csvFile = tempDir.resolve("query1.csv");
+        Files.writeString(csvFile, "col1,col2");
+        when(databaseExportService.executeExportQueries()).thenReturn(Map.of("query1", csvFile));
+
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+        when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
+
+        var exportOpts = new PerfController.ExportOptions();
+        exportOpts.setExportDatabase(true);
+        controller.sendMessages("test message", 1, 1, 0, exportOpts,
+                new PerfController.RunOptions("test-id", false, null));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> {
+                    verify(databaseExportService).executeExportQueries();
+                    assertFalse(Files.exists(csvFile));
+                });
+    }
+
+    @Test
+    void sendMessagesShouldCleanupKubernetesExportDirectory() throws IOException {
+        Path kubeDir = tempDir.resolve("kubernetes-export");
+        Files.createDirectories(kubeDir);
+        Path kubeFile = kubeDir.resolve("nodes.json");
+        Files.writeString(kubeFile, "{}");
+        when(kubernetesService.exportClusterInfo()).thenReturn(kubeDir.toString());
+
+        Path tempZip = tempDir.resolve("test.zip");
+        Files.write(tempZip, "content".getBytes());
+        when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
+                .thenReturn(new PackageResult("test.zip", tempZip.toString()));
+
+        var exportOpts = new PerfController.ExportOptions();
+        exportOpts.setExportKubernetes(true);
+        controller.sendMessages("test message", 1, 1, 0, exportOpts,
+                new PerfController.RunOptions("test-id", false, null));
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> assertFalse(Files.exists(kubeFile)));
     }
 
     private static PerfController.ExportOptions exportOptions(

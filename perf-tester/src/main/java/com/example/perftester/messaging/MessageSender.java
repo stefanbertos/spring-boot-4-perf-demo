@@ -1,13 +1,12 @@
 package com.example.perftester.messaging;
 
+import com.example.perftester.config.AsyncConfig;
 import com.example.perftester.perf.PerformanceTracker;
 import com.ibm.mq.jakarta.jms.MQQueue;
 
 import jakarta.jms.JMSException;
 import jakarta.jms.Queue;
-import com.example.perftester.config.AsyncConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -26,12 +25,11 @@ public class MessageSender {
     private final PerformanceTracker performanceTracker;
 
     public MessageSender(JmsTemplate jmsTemplate,
-                         @Value("${app.mq.queue.outbound}") String outboundQueue,
-                         @Value("${app.mq.queue.inbound}") String inboundQueue,
+                         MqProperties mqProperties,
                          PerformanceTracker performanceTracker) throws JMSException {
         this.jmsTemplate = jmsTemplate;
-        this.outboundQueue = convertToNonJmsQueueNameFormat(outboundQueue);
-        this.replyToQueue = createQueue(inboundQueue);
+        this.outboundQueue = convertToNonJmsQueueNameFormat(mqProperties.queue().outbound());
+        this.replyToQueue = createQueue(mqProperties.queue().inbound());
         this.performanceTracker = performanceTracker;
     }
 
@@ -51,8 +49,8 @@ public class MessageSender {
             return m;
         });
 
-        log.debug("Sent message [{}] to {} with replyTo {}",
-                messageId, outboundQueue, replyToQueue);
+        log.debug("Sent message [{}] to {} with replyTo {}: {}",
+                message, outboundQueue, replyToQueue, payload);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -71,8 +69,8 @@ public class MessageSender {
             return m;
         });
 
-        log.debug("Sent message [{}] to {} with replyTo {} and {} header(s)",
-                message, outboundQueue, replyToQueue, headers.size());
+        log.debug("Sent message [{}] to {} with replyTo {} and {} header(s): {}",
+                messageId, outboundQueue, replyToQueue, headers.size(), payload);
         return CompletableFuture.completedFuture(null);
     }
 

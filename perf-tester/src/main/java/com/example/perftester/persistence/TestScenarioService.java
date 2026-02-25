@@ -259,8 +259,7 @@ public class TestScenarioService {
                                         .map(f -> new TestScenario.HeaderField(f.name(), f.size(), f.value(),
                                 f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
                                 f.correlationKey()))
-                                        .toList(),
-                        d.responseTemplateId()))
+                                        .toList()))
                 .toList();
     }
 

@@ -1,6 +1,7 @@
 package com.example.perftester.prometheus;
 
 import com.example.perftester.config.PerfProperties;
+import com.example.perftester.prometheus.PrometheusProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -37,8 +38,7 @@ class PrometheusExportServiceTest {
     @BeforeEach
     void setUp() {
         service = new PrometheusExportService(
-                "http://localhost:9090",
-                tempDir.toString(),
+                new PrometheusProperties("http://localhost:9090", tempDir.toString()),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
         // Inject mock RestClient
@@ -306,8 +306,7 @@ class PrometheusExportServiceTest {
 
         // Try to create subdirectory inside a file (should fail)
         PrometheusExportService invalidPathService = new PrometheusExportService(
-                "http://localhost:9090",
-                blockingFile.resolve("subdir").toString(),
+                new PrometheusProperties("http://localhost:9090", blockingFile.resolve("subdir").toString()),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
 
@@ -334,8 +333,7 @@ class PrometheusExportServiceTest {
         Files.createDirectories(blockingDir);  // Make it a directory so file write fails
 
         PrometheusExportService fileWriteFailService = new PrometheusExportService(
-                "http://localhost:9090",
-                readOnlyDir.toString(),
+                new PrometheusProperties("http://localhost:9090", readOnlyDir.toString()),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
         ReflectionTestUtils.setField(fileWriteFailService, "restClient", restClient);

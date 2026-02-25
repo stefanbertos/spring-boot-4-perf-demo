@@ -205,7 +205,6 @@ export interface ScenarioEntryDto {
   content: string;
   percentage: number;
   headerFields: HeaderFieldDto[];
-  responseTemplateId: number | null;
 }
 
 export interface ThresholdDef {
@@ -239,6 +238,7 @@ export interface TestScenarioDetail {
   scheduledTime: string | null;
   warmupCount: number;
   testType: string | null;
+  infraProfileId: number | null;
   thinkTime: ThinkTimeConfig | null;
   thresholds: ThresholdDef[];
   createdAt: string;
@@ -253,6 +253,7 @@ export interface TestScenarioRequest {
   scheduledTime: string | null;
   warmupCount: number;
   testType: string | null;
+  infraProfileId: number | null;
   thinkTime: ThinkTimeConfig | null;
   thresholds: ThresholdDef[];
 }

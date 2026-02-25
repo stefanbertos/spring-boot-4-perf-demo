@@ -11,12 +11,12 @@ import org.apache.kafka.clients.admin.ListOffsetsResult;
 import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.common.errors.InvalidPartitionsException;
 
+import com.example.perftester.config.KafkaAdminProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.ListTopicsOptions;
 import org.apache.kafka.clients.admin.NewPartitions;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,11 +27,10 @@ public class KafkaAdminService implements AutoCloseable {
 
     private final AdminClient adminClient;
 
-    public KafkaAdminService(
-            @Value("${app.kafka.bootstrap-servers:localhost:9092}") String bootstrapServers) {
+    public KafkaAdminService(KafkaAdminProperties kafkaAdminProperties) {
         this.adminClient = AdminClient.create(
-                Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers));
-        log.info("Kafka AdminClient initialized with bootstrap servers: {}", bootstrapServers);
+                Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAdminProperties.bootstrapServers()));
+        log.info("Kafka AdminClient initialized with bootstrap servers: {}", kafkaAdminProperties.bootstrapServers());
     }
 
     public void resizeTopic(String topicName, int partitions)

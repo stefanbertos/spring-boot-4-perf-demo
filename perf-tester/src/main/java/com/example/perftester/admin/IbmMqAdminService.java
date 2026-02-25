@@ -5,13 +5,13 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.example.perftester.config.IbmMqConnectionProperties;
 import com.ibm.mq.MQQueueManager;
 import com.ibm.mq.constants.CMQC;
 import com.ibm.mq.constants.CMQCFC;
 import com.ibm.mq.headers.pcf.PCFMessage;
 import com.ibm.mq.headers.pcf.PCFMessageAgent;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,17 +27,13 @@ public class IbmMqAdminService {
     private final String user;
     private final String password;
 
-    public IbmMqAdminService(
-            @Value("${ibm.mq.queue-manager}") String queueManagerName,
-            @Value("${ibm.mq.channel}") String channel,
-            @Value("${ibm.mq.conn-name}") String connName,
-            @Value("${ibm.mq.user}") String user,
-            @Value("${ibm.mq.password}") String password) {
-        this.queueManagerName = queueManagerName;
-        this.channel = channel;
-        this.user = user;
-        this.password = password;
+    public IbmMqAdminService(IbmMqConnectionProperties mqConnectionProperties) {
+        this.queueManagerName = mqConnectionProperties.queueManager();
+        this.channel = mqConnectionProperties.channel();
+        this.user = mqConnectionProperties.user();
+        this.password = mqConnectionProperties.password();
 
+        var connName = mqConnectionProperties.connName();
         var matcher = CONN_NAME_PATTERN.matcher(connName);
         if (matcher.matches()) {
             this.host = matcher.group(1);

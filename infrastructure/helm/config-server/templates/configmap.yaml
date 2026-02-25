@@ -73,10 +73,6 @@ data:
         hibernate:
           ddl-auto: none
         open-in-view: false
-      data:
-        redis:
-          host: perf-redis
-          port: 6379
       jms:
         pool:
           enabled: true
@@ -413,10 +409,6 @@ data:
         driver-class-name: org.h2.Driver
         username: sa
         password:
-      data:
-        redis:
-          host: ${SPRING_DATA_REDIS_HOST:perf-redis}
-          port: ${SPRING_DATA_REDIS_PORT:6379}
 
     ibm:
       mq:

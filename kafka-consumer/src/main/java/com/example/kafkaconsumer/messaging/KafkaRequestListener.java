@@ -72,6 +72,9 @@ public class KafkaRequestListener {
             if (replyTo != null) {
                 builder.setHeader("mq-reply-to", replyTo);
             }
+            if (correlationId != null) {
+                builder.setHeader("correlationId", correlationId);
+            }
 
             var responseMessage = builder.build();
             kafkaTemplate.send(responseMessage);

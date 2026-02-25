@@ -1,5 +1,6 @@
 package com.example.perftester.messaging;
 
+import com.example.perftester.messaging.MqProperties;
 import com.example.perftester.perf.PerformanceTracker;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
@@ -40,7 +41,8 @@ class MessageSenderTest {
 
     @BeforeEach
     void setUp() throws JMSException {
-        messageSender = new MessageSender(jmsTemplate, "DEV.QUEUE.2", "DEV.QUEUE.1",
+        messageSender = new MessageSender(jmsTemplate,
+                new MqProperties(new MqProperties.QueueProperties("DEV.QUEUE.2", "DEV.QUEUE.1")),
                 performanceTracker);
     }
 

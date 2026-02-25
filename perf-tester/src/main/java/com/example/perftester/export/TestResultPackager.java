@@ -1,9 +1,9 @@
 package com.example.perftester.export;
 
+import com.example.perftester.config.ExportProperties;
 import com.example.perftester.loki.LogEntry;
 import com.example.perftester.perf.PerfTestResult;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedOutputStream;
@@ -23,8 +23,8 @@ public class TestResultPackager {
 
     private final String exportPath;
 
-    public TestResultPackager(@Value("${app.export.path:./test-exports}") String exportPath) {
-        this.exportPath = exportPath;
+    public TestResultPackager(ExportProperties exportProperties) {
+        this.exportPath = exportProperties.path();
     }
 
     /**
@@ -88,11 +88,11 @@ public class TestResultPackager {
                 addTextEntry(zos, "logs/application.log", logContent);
             }
 
-            // Add database export query results as CSV files
+            // Add database export query results as CSV files — stream from temp files to avoid OOM
             if (result.dbQueryResults() != null && !result.dbQueryResults().isEmpty()) {
                 for (var entry : result.dbQueryResults().entrySet()) {
                     var csvFilename = sanitizeFilename(entry.getKey()) + ".csv";
-                    addTextEntry(zos, "db/" + csvFilename, entry.getValue());
+                    addFileEntryStreaming(zos, entry.getValue(), "db/", csvFilename);
                 }
             }
 
@@ -228,8 +228,13 @@ public class TestResultPackager {
     }
 
     private void addFileEntryStreaming(ZipOutputStream zos, Path file, String prefix) throws IOException {
+        addFileEntryStreaming(zos, file, prefix, file.getFileName().toString());
+    }
+
+    private void addFileEntryStreaming(ZipOutputStream zos, Path file, String prefix,
+                                       String entryFilename) throws IOException {
         if (Files.exists(file)) {
-            var entryName = prefix + file.getFileName().toString();
+            var entryName = prefix + entryFilename;
             var entry = new ZipEntry(entryName);
             zos.putNextEntry(entry);
             // Stream file content to avoid loading entire file into memory

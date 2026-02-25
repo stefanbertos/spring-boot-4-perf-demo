@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -30,16 +29,13 @@ public class PrometheusExportService {
     private final long prometheusBufferSeconds;
     private final int prometheusStepSeconds;
 
-    public PrometheusExportService(
-            @Value("${app.prometheus.url:http://localhost:9090}") String prometheusUrl,
-            @Value("${app.prometheus.export-path:./prometheus-exports}") String exportPath,
-            PerfProperties perfProperties) {
+    public PrometheusExportService(PrometheusProperties prometheusProperties, PerfProperties perfProperties) {
         this.restClient = RestClient.builder()
-                .baseUrl(prometheusUrl)
+                .baseUrl(prometheusProperties.url())
                 .build();
         this.objectMapper = new ObjectMapper()
                 .enable(SerializationFeature.INDENT_OUTPUT);
-        this.exportPath = exportPath;
+        this.exportPath = prometheusProperties.exportPath();
         this.prometheusBufferSeconds = perfProperties.prometheusBufferSeconds();
         this.prometheusStepSeconds = perfProperties.prometheusStepSeconds();
     }

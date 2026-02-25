@@ -2,7 +2,6 @@ package com.example.perftester.grafana;
 
 import com.example.perftester.config.PerfProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -31,18 +30,15 @@ public class GrafanaExportService {
     private final String grafanaUrl;
     private final String exportPath;
 
-    public GrafanaExportService(
-            @Value("${app.grafana.url:http://localhost:3000}") String grafanaUrl,
-            @Value("${app.grafana.export-path:./grafana-exports}") String exportPath,
-            @Value("${app.grafana.api-key:}") String apiKey,
-            PerfProperties perfProperties) {
-        this.grafanaUrl = grafanaUrl;
-        this.exportPath = exportPath;
+    public GrafanaExportService(GrafanaProperties grafanaProperties, PerfProperties perfProperties) {
+        this.grafanaUrl = grafanaProperties.url();
+        this.exportPath = grafanaProperties.exportPath();
         this.bufferBeforeMs = perfProperties.grafanaBufferBeforeMs();
         this.bufferAfterMs = perfProperties.grafanaBufferAfterMs();
 
+        var apiKey = grafanaProperties.apiKey();
         var builder = RestClient.builder()
-                .baseUrl(grafanaUrl);
+                .baseUrl(grafanaProperties.url());
 
         if (apiKey != null && !apiKey.isEmpty()) {
             builder.defaultHeader("Authorization", "Bearer " + apiKey);

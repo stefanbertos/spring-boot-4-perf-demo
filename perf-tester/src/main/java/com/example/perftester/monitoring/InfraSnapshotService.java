@@ -7,7 +7,6 @@ import com.example.perftester.persistence.TestRunSnapshot;
 import com.example.perftester.persistence.TestRunSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@EnableConfigurationProperties(MonitoringProperties.class)
 public class InfraSnapshotService {
 
     private static final int POLL_INTERVAL_SECONDS = 10;
@@ -53,10 +51,12 @@ public class InfraSnapshotService {
         var snapshot = new TestRunSnapshot();
         snapshot.setTestRunId(testRunId);
         snapshot.setSampledAt(Instant.now());
+        var captured = 0;
 
         try {
             var info = ibmMqAdminService.getQueueInfo(monitoringProperties.outboundQueue());
             snapshot.setOutboundQueueDepth(info.currentDepth());
+            captured++;
         } catch (Exception e) {
             log.debug("Could not sample outbound queue depth: {}", e.getMessage());
         }
@@ -64,6 +64,7 @@ public class InfraSnapshotService {
         try {
             var info = ibmMqAdminService.getQueueInfo(monitoringProperties.inboundQueue());
             snapshot.setInboundQueueDepth(info.currentDepth());
+            captured++;
         } catch (Exception e) {
             log.debug("Could not sample inbound queue depth: {}", e.getMessage());
         }
@@ -72,6 +73,7 @@ public class InfraSnapshotService {
             var lag = kafkaAdminService.getTotalConsumerGroupLag(
                     monitoringProperties.kafkaRequestConsumerGroup());
             snapshot.setKafkaRequestsLag(lag);
+            captured++;
         } catch (Exception e) {
             log.debug("Could not sample kafka requests lag: {}", e.getMessage());
         }
@@ -80,10 +82,15 @@ public class InfraSnapshotService {
             var lag = kafkaAdminService.getTotalConsumerGroupLag(
                     monitoringProperties.kafkaResponseConsumerGroup());
             snapshot.setKafkaResponsesLag(lag);
+            captured++;
         } catch (Exception e) {
             log.debug("Could not sample kafka responses lag: {}", e.getMessage());
         }
 
-        snapshotRepository.save(snapshot);
+        if (captured > 0) {
+            snapshotRepository.save(snapshot);
+        } else {
+            log.debug("Skipping snapshot — no metrics sampled for test run {}", testRunId);
+        }
     }
 }

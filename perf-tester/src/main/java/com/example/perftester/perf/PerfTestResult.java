@@ -1,5 +1,6 @@
 package com.example.perftester.perf;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public record PerfTestResult(
         List<String> dashboardExportFiles,
         String prometheusExportFile,
         String kubernetesExportFile,
-        Map<String, String> dbQueryResults
+        Map<String, Path> dbQueryResults
 ) {
     public PerfTestResult(long completedMessages, long pendingMessages, double testDurationSeconds,
                           double tps, double avgLatencyMs, double minLatencyMs, double maxLatencyMs) {
@@ -56,7 +57,7 @@ public record PerfTestResult(
                 dashboardUrls, dashboardExportFiles, prometheusExportFile, exportFile, dbQueryResults);
     }
 
-    public PerfTestResult withDbQueryResults(Map<String, String> results) {
+    public PerfTestResult withDbQueryResults(Map<String, Path> results) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
                 p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,

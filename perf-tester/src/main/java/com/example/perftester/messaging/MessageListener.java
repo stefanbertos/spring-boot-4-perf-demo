@@ -26,7 +26,7 @@ public class MessageListener {
         if (messageId != null) {
             performanceTracker.recordReceive(messageId);
             log.debug("Received response message [{}] correlationId=[{}]",
-                    messageId, correlationId);
+                    message, correlationId);
         } else {
             log.warn("Received message without valid ID: {}", message);
         }

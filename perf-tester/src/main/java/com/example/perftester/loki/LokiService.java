@@ -2,24 +2,25 @@ package com.example.perftester.loki;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
-@EnableConfigurationProperties(LokiProperties.class)
 public class LokiService {
 
-    private static final String LOG_LEVEL_LABEL = "level";
     private static final String DEFAULT_LEVEL = "INFO";
-    private static final int DEFAULT_LIMIT = 500;
+    private static final int DEFAULT_LIMIT = 5000;
     private static final String FALLBACK_QUERY = "{job=\"perf-tester\"}";
+    private static final Pattern SPRING_LOG_PATTERN =
+            Pattern.compile("^\\S+\\s+(TRACE|DEBUG|INFO|WARN|ERROR)\\s+");
 
     private final LokiProperties lokiProperties;
     private final LokiServiceLabelRepository labelRepository;
@@ -77,8 +78,6 @@ public class LokiService {
         }
         var entries = new ArrayList<LogEntry>();
         for (var stream : response.data().result()) {
-            var labels = stream.stream() != null ? stream.stream() : Map.<String, String>of();
-            var level = labels.getOrDefault(LOG_LEVEL_LABEL, DEFAULT_LEVEL).toUpperCase();
             if (stream.values() != null) {
                 for (var value : stream.values()) {
                     if (value.size() >= 2) {
@@ -86,12 +85,23 @@ public class LokiService {
                         var line = value.get(1);
                         var tsMillis = Long.parseLong(tsNs) / 1_000_000L;
                         var timestamp = Instant.ofEpochMilli(tsMillis).toString();
-                        entries.add(new LogEntry(timestamp, level, line));
+                        entries.add(new LogEntry(timestamp, extractLevel(line), extractMessage(line)));
                     }
                 }
             }
         }
+        entries.sort(Comparator.comparing(LogEntry::timestamp));
         return entries;
+    }
+
+    private static String extractLevel(String line) {
+        var matcher = SPRING_LOG_PATTERN.matcher(line);
+        return matcher.find() ? matcher.group(1) : DEFAULT_LEVEL;
+    }
+
+    private static String extractMessage(String line) {
+        var matcher = SPRING_LOG_PATTERN.matcher(line);
+        return matcher.find() ? line.substring(matcher.end()) : line;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

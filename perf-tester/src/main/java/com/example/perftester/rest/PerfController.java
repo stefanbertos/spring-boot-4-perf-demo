@@ -17,6 +17,7 @@ import com.example.perftester.perf.ThinkTimeConfig;
 import com.example.perftester.perf.ThresholdEvaluator;
 import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.perf.TestStartResponse;
+import com.example.perftester.persistence.InfraProfileService;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
@@ -24,7 +25,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +42,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,13 +51,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-
 @Slf4j
 @Validated
 @RestController
 @RequestMapping("/api/perf")
 @RequiredArgsConstructor
-@EnableConfigurationProperties(PerfProperties.class)
 public class PerfController {
 
     private static final String DEBUG_LOGGER = "com.example";
@@ -75,6 +74,7 @@ public class PerfController {
     private final PerfProperties perfProperties;
     private final TestRunService testRunService;
     private final TestScenarioService testScenarioService;
+    private final InfraProfileService infraProfileService;
     private final ThinkTimeCalculator thinkTimeCalculator;
     private final ThresholdEvaluator thresholdEvaluator;
     private final InfraSnapshotService infraSnapshotService;
@@ -104,6 +104,9 @@ public class PerfController {
             testType = scenario.testType();
             warmupCount = scenario.warmupCount();
             thinkTimeConfig = scenario.thinkTime();
+            if (scenario.infraProfileId() != null) {
+                infraProfileService.applyProfile(scenario.infraProfileId());
+            }
         }
 
         var testRunEntity = testRunService.createRun(testRunId, runOptions.testId(), effectiveCount, testType);
@@ -209,7 +212,7 @@ public class PerfController {
                 zipPath = packageResult.savedPath();
                 log.info("Test results packaged: {} ({})", packageResult.filename(), zipPath);
                 cleanupExportedFiles(exports.dashboardFiles(), exports.prometheusFile(),
-                        exports.result().kubernetesExportFile());
+                        exports.result().kubernetesExportFile(), exports.result().dbQueryResults());
             }
             performanceTracker.setStatus(finalStatus);
             testRunService.completeRun(req.entityId(), finalStatus, result, zipPath);
@@ -324,12 +327,6 @@ public class PerfController {
         return new ExportContext(enrichedResult, dashboardFiles, prometheusFile, logEntries);
     }
 
-    /**
-     * Holds the individual export flags submitted with a test run request.
-     * Spring MVC binds these from query parameters via @ModelAttribute.
-     * Using a mutable class (not a record) so Spring can create via no-arg constructor
-     * and only set fields present in the request, leaving absent params as false.
-     */
     public static class ExportOptions {
         private boolean exportGrafana;
         private boolean exportPrometheus;
@@ -383,12 +380,6 @@ public class PerfController {
         }
     }
 
-    /**
-     * Holds run-specific options (testId, debug flag, scenarioId).
-     * Spring MVC binds these from query parameters via @ModelAttribute.
-     * Using a mutable class (not a record) so Spring can create via no-arg constructor
-     * and only set fields present in the request, leaving absent params as defaults.
-     */
     public static class RunOptions {
         private String testId;
         private boolean debug;
@@ -445,7 +436,7 @@ public class PerfController {
     }
 
     private void cleanupExportedFiles(List<String> dashboardFiles, String prometheusFile,
-                                      String kubernetesFile) {
+                                      String kubernetesFile, Map<String, Path> dbQueryFiles) {
         for (var file : dashboardFiles) {
             try {
                 Files.deleteIfExists(Path.of(file));
@@ -487,8 +478,19 @@ public class PerfController {
             }
         }
 
+        if (dbQueryFiles != null) {
+            for (var path : dbQueryFiles.values()) {
+                try {
+                    Files.deleteIfExists(path);
+                    log.debug("Deleted DB export temp file: {}", path);
+                } catch (IOException e) {
+                    log.warn("Failed to delete DB export temp file {}: {}", path, e.getMessage());
+                }
+            }
+        }
+
         int fileCount = dashboardFiles.size() + (prometheusFile != null ? 1 : 0)
-                + (kubernetesFile != null ? 1 : 0);
+                + (kubernetesFile != null ? 1 : 0) + (dbQueryFiles != null ? dbQueryFiles.size() : 0);
         log.info("Cleaned up {} exported files", fileCount);
     }
 

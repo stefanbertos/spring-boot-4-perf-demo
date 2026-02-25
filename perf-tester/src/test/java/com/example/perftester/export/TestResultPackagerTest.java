@@ -1,5 +1,6 @@
 package com.example.perftester.export;
 
+import com.example.perftester.config.ExportProperties;
 import com.example.perftester.perf.PerfTestResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class TestResultPackagerTest {
 
     @BeforeEach
     void setUp() {
-        packager = new TestResultPackager(tempDir.toString());
+        packager = new TestResultPackager(new ExportProperties(tempDir.toString()));
     }
 
     @Test
@@ -314,7 +315,7 @@ class TestResultPackagerTest {
         Files.write(blockingFile, "blocking content".getBytes());
 
         // Try to create subdirectory inside a file (should fail)
-        TestResultPackager invalidPathPackager = new TestResultPackager(blockingFile.resolve("subdir").toString());
+        TestResultPackager invalidPathPackager = new TestResultPackager(new ExportProperties(blockingFile.resolve("subdir").toString()));
         PerfTestResult result = new PerfTestResult(100, 0, 10.0, 10.0, 50.0, 10.0, 100.0);
 
         assertThrows(RuntimeException.class, () -> invalidPathPackager.packageResults(

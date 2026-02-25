@@ -36,6 +36,7 @@ import {
   getTestCase,
   getTestScenario,
   listHeaderTemplates,
+  listInfraProfiles,
   listResponseTemplates,
   listTestCases,
   listTestScenarios,
@@ -47,6 +48,7 @@ import {
 import type {
   HeaderTemplateField,
   HeaderTemplateSummary,
+  InfraProfileSummary,
   ResponseTemplateField,
   ResponseTemplateSummary,
   TestCaseSummary,
@@ -110,7 +112,6 @@ interface EntryForm {
   content: string;
   percentage: number;
   headerFields: HeaderFieldForm[];
-  responseTemplateId: number | null;
 }
 
 type TestType = 'SMOKE' | 'LOAD' | 'STRESS' | 'SOAK' | 'SPIKE';
@@ -124,6 +125,7 @@ interface ScenarioForm {
   scheduledTime: string;
   warmupCount: number;
   testType: TestType | '';
+  infraProfileId: number | null;
   thinkTimeEnabled: boolean;
   thinkTimeDistribution: 'CONSTANT' | 'UNIFORM' | 'GAUSSIAN';
   thinkTimeMinMs: number;
@@ -148,7 +150,7 @@ interface TestCaseFormState {
 
 const EMPTY_SCENARIO: ScenarioForm = {
   name: '', count: 100, entries: [], scheduledEnabled: false, scheduledTime: '',
-  warmupCount: 0, testType: '', thinkTimeEnabled: false,
+  warmupCount: 0, testType: '', infraProfileId: null, thinkTimeEnabled: false,
   thinkTimeDistribution: 'CONSTANT', thinkTimeMinMs: 0, thinkTimeMaxMs: 1000,
   thinkTimeMeanMs: 500, thinkTimeStdDevMs: 100, thresholds: [],
 };
@@ -1151,12 +1153,11 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
 interface EntryRowProps {
   entry: EntryForm;
   testCases: TestCaseSummary[];
-  responseTemplates: ResponseTemplateSummary[];
   onChange: (entry: EntryForm) => void;
   onRemove: () => void;
 }
 
-function EntryRow({ entry, testCases, responseTemplates, onChange, onRemove }: EntryRowProps) {
+function EntryRow({ entry, testCases, onChange, onRemove }: EntryRowProps) {
   const handleTestCaseChange = async (id: number) => {
     const tc = testCases.find((t) => t.id === id);
     const detail = await getTestCase(id);
@@ -1178,19 +1179,6 @@ function EntryRow({ entry, testCases, responseTemplates, onChange, onRemove }: E
       >
         {testCases.map((tc) => (
           <MenuItem key={tc.id} value={tc.id}>{tc.name}</MenuItem>
-        ))}
-      </MuiTextField>
-      <MuiTextField
-        select
-        size="small"
-        label="Expected Response"
-        value={entry.responseTemplateId ?? ''}
-        onChange={(e) => onChange({ ...entry, responseTemplateId: e.target.value ? Number(e.target.value) : null })}
-        sx={{ flex: 1 }}
-      >
-        <MenuItem value=""><em>None</em></MenuItem>
-        {responseTemplates.map((rt) => (
-          <MenuItem key={rt.id} value={rt.id}>{rt.name}</MenuItem>
         ))}
       </MuiTextField>
       <MuiTextField
@@ -1222,7 +1210,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [testCases, setTestCases] = useState<TestCaseSummary[]>([]);
-  const [responseTemplates, setResponseTemplates] = useState<ResponseTemplateSummary[]>([]);
+  const [infraProfiles, setInfraProfiles] = useState<InfraProfileSummary[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ScenarioForm>(EMPTY_SCENARIO);
@@ -1246,7 +1234,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   const refreshSupportingData = () => {
     listTestCases().then(setTestCases).catch(() => {});
-    listResponseTemplates().then(setResponseTemplates).catch(() => {});
+    listInfraProfiles().then(setInfraProfiles).catch(() => {});
   };
 
   const openCreate = () => {
@@ -1257,13 +1245,13 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   const openEdit = async (scenario: TestScenarioSummary) => {
     setDialogOpen(true);
-    const [detail, tcs, rts] = await Promise.all([
+    const [detail, tcs, profiles] = await Promise.all([
       getTestScenario(scenario.id),
       listTestCases().catch(() => [] as TestCaseSummary[]),
-      listResponseTemplates().catch(() => [] as ResponseTemplateSummary[]),
+      listInfraProfiles().catch(() => [] as InfraProfileSummary[]),
     ]);
     setTestCases(tcs);
-    setResponseTemplates(rts);
+    setInfraProfiles(profiles);
     setForm({
       id: detail.id,
       name: detail.name,
@@ -1272,6 +1260,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
       scheduledTime: detail.scheduledTime ?? '',
       warmupCount: detail.warmupCount ?? 0,
       testType: (detail.testType as TestType | '') ?? '',
+      infraProfileId: detail.infraProfileId ?? null,
       thinkTimeEnabled: detail.thinkTime != null,
       thinkTimeDistribution: detail.thinkTime?.distribution ?? 'CONSTANT',
       thinkTimeMinMs: detail.thinkTime?.minMs ?? 0,
@@ -1294,7 +1283,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             uuidSeparator: h.uuidSeparator ?? '-',
             correlationKey: h.correlationKey ?? false,
           })),
-          responseTemplateId: e.responseTemplateId ?? null,
         };
       }),
     });
@@ -1321,7 +1309,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           content,
           percentage: 100,
           headerFields: [],
-          responseTemplateId: null,
         },
       ],
     }));
@@ -1354,6 +1341,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
         scheduledTime: form.scheduledEnabled && form.scheduledTime ? form.scheduledTime : null,
         warmupCount: form.warmupCount,
         testType: form.testType || null,
+        infraProfileId: form.infraProfileId,
         thinkTime,
         thresholds: form.thresholds,
         entries: form.entries.map((e) => ({
@@ -1366,7 +1354,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
             uuidPrefix: h.uuidPrefix, uuidSeparator: h.uuidSeparator,
             correlationKey: h.correlationKey,
           })),
-          responseTemplateId: e.responseTemplateId ?? null,
         })),
       };
       if (form.id != null) {
@@ -1522,6 +1509,19 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
               sx={{ width: 160 }}
               slotProps={{ htmlInput: { min: 0 } }}
             />
+            <MuiTextField
+              select
+              size="small"
+              label="Infra Profile"
+              value={form.infraProfileId ?? ''}
+              onChange={(e) => setForm({ ...form, infraProfileId: e.target.value ? Number(e.target.value) : null })}
+              sx={{ width: 200 }}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              {infraProfiles.map((p) => (
+                <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+              ))}
+            </MuiTextField>
           </Stack>
           <Box>
             <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
@@ -1698,7 +1698,6 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
                     key={i}
                     entry={entry}
                     testCases={testCases}
-                    responseTemplates={responseTemplates}
                     onChange={(updated) => updateEntry(i, updated)}
                     onRemove={() => removeEntry(i)}
                   />

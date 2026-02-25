@@ -1,10 +1,10 @@
 package com.example.perftester.kubernetes;
 
+import com.example.perftester.config.ExportProperties;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -24,13 +24,12 @@ public class KubernetesService {
     private final ObjectWriter prettyWriter;
 
     public KubernetesService(KubernetesClient client,
-                             @Value("${app.export.path:./test-exports}") String exportPath,
-                             @Value("${app.kubernetes.namespace:perf-demo}") String namespace,
-                             @Value("${app.kubernetes.export-enabled:false}") boolean enabled) {
+                             ExportProperties exportProperties,
+                             KubernetesProperties kubernetesProperties) {
         this.client = client;
-        this.exportPath = exportPath;
-        this.namespace = namespace;
-        this.enabled = enabled;
+        this.exportPath = exportProperties.path();
+        this.namespace = kubernetesProperties.namespace();
+        this.enabled = kubernetesProperties.exportEnabled();
         this.prettyWriter = Serialization.jsonMapper().writerWithDefaultPrettyPrinter();
     }
 

@@ -9,6 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -61,53 +67,68 @@ public class DatabaseExportService {
         repository.deleteById(id);
     }
 
-    public Map<String, String> executeExportQueries() {
-        var results = new LinkedHashMap<String, String>();
+    public Map<String, Path> executeExportQueries() {
+        var results = new LinkedHashMap<String, Path>();
         var queries = repository.findAllByOrderByDisplayOrderAscNameAsc();
         for (var query : queries) {
             try {
                 results.put(query.getName(), executeQueryAsCsv(query.getSqlQuery()));
             } catch (Exception e) {
                 log.warn("Failed to execute export query '{}': {}", query.getName(), e.getMessage());
-                results.put(query.getName(), "ERROR: " + e.getMessage());
             }
         }
         return results;
     }
 
-    private String executeQueryAsCsv(String sql) {
-        var sb = new StringBuilder();
-        jdbcTemplate.query(sql, (ResultSetExtractor<Void>) rs -> {
-            var meta = rs.getMetaData();
-            var cols = meta.getColumnCount();
-            writeHeader(sb, meta, cols);
-            while (rs.next()) {
-                writeRow(sb, rs, cols);
-            }
-            return null;
-        });
-        return sb.toString();
-    }
-
-    private void writeHeader(StringBuilder sb, ResultSetMetaData meta, int cols) throws SQLException {
-        for (int i = 1; i <= cols; i++) {
-            if (i > 1) {
-                sb.append(',');
-            }
-            sb.append(escapeCsv(meta.getColumnLabel(i)));
+    private Path executeQueryAsCsv(String sql) throws IOException {
+        var tempFile = Files.createTempFile("db-export-", ".csv");
+        try (var writer = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
+            jdbcTemplate.query(
+                    conn -> {
+                        var ps = conn.prepareStatement(sql,
+                                ResultSet.TYPE_FORWARD_ONLY,
+                                ResultSet.CONCUR_READ_ONLY);
+                        ps.setFetchSize(1000);
+                        return ps;
+                    },
+                    (ResultSetExtractor<Void>) rs -> {
+                        try {
+                            var meta = rs.getMetaData();
+                            var cols = meta.getColumnCount();
+                            writeHeader(writer, meta, cols);
+                            while (rs.next()) {
+                                writeRow(writer, rs, cols);
+                            }
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                        return null;
+                    });
         }
-        sb.append('\n');
+        return tempFile;
     }
 
-    private void writeRow(StringBuilder sb, ResultSet rs, int cols) throws SQLException {
+    private void writeHeader(BufferedWriter writer, ResultSetMetaData meta, int cols)
+            throws SQLException, IOException {
         for (int i = 1; i <= cols; i++) {
             if (i > 1) {
-                sb.append(',');
+                writer.write(',');
+            }
+            writer.write(escapeCsv(meta.getColumnLabel(i)));
+        }
+        writer.newLine();
+    }
+
+    private void writeRow(BufferedWriter writer, ResultSet rs, int cols)
+            throws SQLException, IOException {
+        for (int i = 1; i <= cols; i++) {
+            if (i > 1) {
+                writer.write(',');
             }
             var val = rs.getString(i);
-            sb.append(val != null ? escapeCsv(val) : "");
+            writer.write(val != null ? escapeCsv(val) : "");
         }
-        sb.append('\n');
+        writer.newLine();
     }
 
     private String escapeCsv(String value) {

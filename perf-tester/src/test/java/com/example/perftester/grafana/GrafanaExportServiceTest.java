@@ -1,6 +1,7 @@
 package com.example.perftester.grafana;
 
 import com.example.perftester.config.PerfProperties;
+import com.example.perftester.grafana.GrafanaProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -50,9 +51,7 @@ class GrafanaExportServiceTest {
     @BeforeEach
     void setUp() {
         service = new GrafanaExportService(
-                "http://localhost:3000",
-                tempDir.toString(),
-                "test-api-key",
+                new GrafanaProperties("http://localhost:3000", tempDir.toString(), "test-api-key"),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
         // Inject mock RestClient
@@ -141,9 +140,7 @@ class GrafanaExportServiceTest {
     @Test
     void constructorShouldUseBasicAuthWhenNoApiKey() {
         GrafanaExportService serviceWithoutApiKey = new GrafanaExportService(
-                "http://localhost:3000",
-                tempDir.toString(),
-                "",
+                new GrafanaProperties("http://localhost:3000", tempDir.toString(), ""),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
 
@@ -153,9 +150,7 @@ class GrafanaExportServiceTest {
     @Test
     void constructorShouldUseBasicAuthWhenApiKeyIsNull() {
         GrafanaExportService serviceWithNullApiKey = new GrafanaExportService(
-                "http://localhost:3000",
-                tempDir.toString(),
-                null,
+                new GrafanaProperties("http://localhost:3000", tempDir.toString(), null),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
 
@@ -223,9 +218,7 @@ class GrafanaExportServiceTest {
 
         // Try to create subdirectory inside a file (should fail)
         GrafanaExportService invalidPathService = new GrafanaExportService(
-                "http://localhost:3000",
-                blockingFile.resolve("subdir").toString(),
-                "test-api-key",
+                new GrafanaProperties("http://localhost:3000", blockingFile.resolve("subdir").toString(), "test-api-key"),
                 new PerfProperties(16000, 60000, 60000, 30000, 60, 15)
         );
         ReflectionTestUtils.setField(invalidPathService, "restClient", restClient);
