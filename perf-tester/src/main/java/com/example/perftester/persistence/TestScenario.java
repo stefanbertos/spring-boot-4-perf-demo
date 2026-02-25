@@ -61,6 +61,9 @@ public class TestScenario {
     @Column(name = "thresholds", columnDefinition = "text")
     private String thresholdsJson;
 
+    @Column(name = "infra_profile_id")
+    private Long infraProfileId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -84,8 +87,7 @@ public class TestScenario {
                               boolean correlationKey) {
     }
 
-    public record ScenarioEntry(Long testCaseId, String content, int percentage, List<HeaderField> headerFields,
-                                Long responseTemplateId) {
+    public record ScenarioEntry(Long testCaseId, String content, int percentage, List<HeaderField> headerFields) {
     }
 
     @Converter

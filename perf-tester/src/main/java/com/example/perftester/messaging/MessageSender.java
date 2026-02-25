@@ -72,7 +72,7 @@ public class MessageSender {
         });
 
         log.debug("Sent message [{}] to {} with replyTo {} and {} header(s)",
-                messageId, outboundQueue, replyToQueue, headers.size());
+                message, outboundQueue, replyToQueue, headers.size());
         return CompletableFuture.completedFuture(null);
     }
 

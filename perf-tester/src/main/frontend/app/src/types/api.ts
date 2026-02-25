@@ -9,7 +9,9 @@ export interface TestRunResponse {
   avgLatencyMs: number | null;
   minLatencyMs: number | null;
   maxLatencyMs: number | null;
+  p25LatencyMs: number | null;
   p50LatencyMs: number | null;
+  p75LatencyMs: number | null;
   p90LatencyMs: number | null;
   p95LatencyMs: number | null;
   p99LatencyMs: number | null;
@@ -33,7 +35,9 @@ export interface TestRunDetailResponse {
   avgLatencyMs: number | null;
   minLatencyMs: number | null;
   maxLatencyMs: number | null;
+  p25LatencyMs: number | null;
   p50LatencyMs: number | null;
+  p75LatencyMs: number | null;
   p90LatencyMs: number | null;
   p95LatencyMs: number | null;
   p99LatencyMs: number | null;

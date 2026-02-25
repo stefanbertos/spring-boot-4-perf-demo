@@ -8,8 +8,8 @@ import type { DataTableColumn, SelectChangeEvent, TabItem } from 'perf-ui-compon
 import type { SelectOption } from 'perf-ui-components';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { addLokiServiceLabel, changeQueueMaxDepth, createDbExportQuery, deleteDbExportQuery, deleteLokiServiceLabel, listDbExportQueries, listDeployments, listHealthCheckConfigs, listLokiServiceLabels, listNamespaces, listQueues, listTopics, resizeTopic, scaleDeployment, setLogLevel, updateDbExportQuery, updateHealthCheckConfig } from '@/api';
-import type { DbExportQuery, DeploymentInfo, HealthCheckConfig, NamespaceInfo, TopicInfo } from '@/types/api';
+import { changeQueueMaxDepth, listDeployments, listHealthCheckConfigs, listNamespaces, listQueues, listTopics, resizeTopic, scaleDeployment, setLogLevel, updateHealthCheckConfig } from '@/api';
+import type { DeploymentInfo, HealthCheckConfig, NamespaceInfo, TopicInfo } from '@/types/api';
 
 const logLevels = [
   { value: 'TRACE', label: 'TRACE' },
@@ -392,109 +392,6 @@ function KubernetesTab() {
   );
 }
 
-function LokiTab() {
-  const [labels, setLabels] = useState<string[]>([]);
-  const [newName, setNewName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [deletingName, setDeletingName] = useState<string | null>(null);
-  const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  useEffect(() => {
-    listLokiServiceLabels()
-      .then(setLabels)
-      .catch((err) => setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load service labels' }))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleAdd = async (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-    setAdding(true);
-    setResult(null);
-    try {
-      await addLokiServiceLabel(trimmed);
-      setLabels((prev) => [...prev, trimmed].sort());
-      setNewName('');
-      setResult({ type: 'success', text: `Added "${trimmed}"` });
-    } catch (err) {
-      setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to add label' });
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const handleDelete = async (name: string) => {
-    setDeletingName(name);
-    setResult(null);
-    try {
-      await deleteLokiServiceLabel(name);
-      setLabels((prev) => prev.filter((l) => l !== name));
-    } catch (err) {
-      setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete label' });
-    } finally {
-      setDeletingName(null);
-    }
-  };
-
-  if (loading) return <Loading message="Loading Loki service labels..." />;
-
-  return (
-    <Card sx={{ maxWidth: 500 }}>
-      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-        Loki Service Labels
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Log export queries Loki for all listed service names using the <code>job</code> label.
-        Changes apply immediately on the next export.
-      </Typography>
-      <Stack spacing={1} sx={{ mb: 2 }}>
-        {labels.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No service labels configured.
-          </Typography>
-        )}
-        {labels.map((label) => (
-          <Stack key={label} direction="row" alignItems="center" spacing={1}>
-            <Typography variant="body2" sx={{ flex: 1, fontFamily: 'monospace' }}>
-              {label}
-            </Typography>
-            <Button
-              disabled={deletingName === label}
-              onClick={() => handleDelete(label)}
-            >
-              {deletingName === label ? 'Removing...' : 'Remove'}
-            </Button>
-          </Stack>
-        ))}
-      </Stack>
-      <Box component="form" onSubmit={handleAdd}>
-        <Stack direction="row" spacing={1} alignItems="flex-start">
-          <TextField
-            label="Service name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. fluentd"
-            size="small"
-            sx={{ flex: 1 }}
-          />
-          <Button type="submit" disabled={adding || !newName.trim()}>
-            {adding ? 'Adding...' : 'Add'}
-          </Button>
-        </Stack>
-      </Box>
-      {result && (
-        <Box sx={{ mt: 2 }}>
-          <Alert severity={result.type} onClose={() => setResult(null)}>
-            {result.text}
-          </Alert>
-        </Box>
-      )}
-    </Card>
-  );
-}
-
 type PingEdit = {
   host: string;
   port: string;
@@ -670,186 +567,6 @@ function PingTab() {
   );
 }
 
-type DbQueryEdit = {
-  name: string;
-  sqlQuery: string;
-  displayOrder: string;
-};
-
-function DatabaseTab() {
-  const [queries, setQueries] = useState<DbExportQuery[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<number | 'new' | null>(null);
-  const [form, setForm] = useState<DbQueryEdit>({ name: '', sqlQuery: '', displayOrder: '0' });
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  useEffect(() => {
-    listDbExportQueries()
-      .then(setQueries)
-      .catch((err) => setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load queries' }))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const startAdd = () => {
-    setEditingId('new');
-    setForm({ name: '', sqlQuery: '', displayOrder: '0' });
-    setResult(null);
-  };
-
-  const startEdit = (q: DbExportQuery) => {
-    setEditingId(q.id);
-    setForm({ name: q.name, sqlQuery: q.sqlQuery, displayOrder: String(q.displayOrder) });
-    setResult(null);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setResult(null);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setResult(null);
-    try {
-      const data = { name: form.name, sqlQuery: form.sqlQuery, displayOrder: Number(form.displayOrder) };
-      if (editingId === 'new') {
-        const created = await createDbExportQuery(data);
-        setQueries((prev) => [...prev, created].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)));
-        setResult({ type: 'success', text: `Query "${created.name}" created` });
-      } else if (editingId != null) {
-        const updated = await updateDbExportQuery(editingId, data);
-        setQueries((prev) => prev.map((q) => (q.id === updated.id ? updated : q)).sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)));
-        setResult({ type: 'success', text: `Query "${updated.name}" updated` });
-      }
-      setEditingId(null);
-    } catch (err) {
-      setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save query' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: number, name: string) => {
-    setDeletingId(id);
-    setResult(null);
-    try {
-      await deleteDbExportQuery(id);
-      setQueries((prev) => prev.filter((q) => q.id !== id));
-      setResult({ type: 'success', text: `Query "${name}" deleted` });
-      if (editingId === id) setEditingId(null);
-    } catch (err) {
-      setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete query' });
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  if (loading) return <Loading message="Loading database queries..." />;
-
-  return (
-    <Stack spacing={3}>
-      <Typography variant="body2" color="text.secondary">
-        Configure SELECT queries to execute during export. Results are saved as CSV files in the
-        <code> db/</code> folder of the ZIP.
-      </Typography>
-
-      {queries.length === 0 && editingId === null && (
-        <Typography variant="body2" color="text.secondary">
-          No queries configured yet. Click &quot;Add Query&quot; to get started.
-        </Typography>
-      )}
-
-      {queries.map((q) => (
-        <Card key={q.id}>
-          <Stack spacing={1}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" fontWeight="bold">
-                  {q.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  order: {q.displayOrder}
-                </Typography>
-              </Stack>
-              <Stack direction="row" spacing={1}>
-                <Button size="small" disabled={deletingId === q.id} onClick={() => startEdit(q)}>
-                  Edit
-                </Button>
-                <Button size="small" disabled={deletingId === q.id} onClick={() => handleDelete(q.id, q.name)}>
-                  {deletingId === q.id ? 'Deleting...' : 'Delete'}
-                </Button>
-              </Stack>
-            </Stack>
-            <Typography
-              variant="caption"
-              sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'text.secondary' }}
-            >
-              {q.sqlQuery.length > 200 ? q.sqlQuery.slice(0, 200) + '…' : q.sqlQuery}
-            </Typography>
-          </Stack>
-        </Card>
-      ))}
-
-      {editingId !== null && (
-        <Card>
-          <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2 }}>
-            {editingId === 'new' ? 'Add New Query' : 'Edit Query'}
-          </Typography>
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Name"
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                fullWidth
-                required
-              />
-              <MuiTextField
-                label="Display Order"
-                type="number"
-                value={form.displayOrder}
-                onChange={(e) => setForm((p) => ({ ...p, displayOrder: e.target.value }))}
-                sx={{ width: 140 }}
-                size="small"
-              />
-            </Stack>
-            <MuiTextField
-              label="SQL Query (SELECT only)"
-              value={form.sqlQuery}
-              onChange={(e) => setForm((p) => ({ ...p, sqlQuery: e.target.value }))}
-              multiline
-              rows={5}
-              fullWidth
-              required
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontSize: 13 } } }}
-            />
-            <Stack direction="row" spacing={1}>
-              <Button disabled={saving || !form.name.trim() || !form.sqlQuery.trim()} onClick={handleSave}>
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
-              <Button onClick={cancelEdit}>Cancel</Button>
-            </Stack>
-          </Stack>
-        </Card>
-      )}
-
-      {editingId === null && (
-        <Box>
-          <Button onClick={startAdd}>Add Query</Button>
-        </Box>
-      )}
-
-      {result && (
-        <Alert severity={result.type} onClose={() => setResult(null)}>
-          {result.text}
-        </Alert>
-      )}
-    </Stack>
-  );
-}
-
 export default function AdminPage() {
   const [kubernetesAvailable, setKubernetesAvailable] = useState(false);
 
@@ -862,9 +579,7 @@ export default function AdminPage() {
       { label: 'Logging', content: <LoggingTab /> },
       { label: 'Kafka', content: <KafkaTab /> },
       { label: 'IBM MQ', content: <IbmMqTab /> },
-      { label: 'Loki', content: <LokiTab /> },
       { label: 'Ping', content: <PingTab /> },
-      { label: 'Database', content: <DatabaseTab /> },
     ];
     if (kubernetesAvailable) {
       items.push({ label: 'Kubernetes', content: <KubernetesTab /> });
@@ -874,7 +589,7 @@ export default function AdminPage() {
 
   return (
     <Box>
-      <PageHeader title="Admin" subtitle="Logging, Kafka, IBM MQ, Loki, Ping, Database, and Kubernetes administration" />
+      <PageHeader title="Admin" subtitle="Logging, Kafka, IBM MQ, Ping, and Kubernetes administration" />
       <Tabs tabs={tabs} />
     </Box>
   );

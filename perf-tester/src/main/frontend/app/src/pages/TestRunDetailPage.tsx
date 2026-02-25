@@ -177,8 +177,20 @@ export default function TestRunDetailPage() {
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <SummaryField
+                label="P25"
+                value={summary.p25LatencyMs != null ? `${summary.p25LatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
                 label="P50"
                 value={summary.p50LatencyMs != null ? `${summary.p50LatencyMs.toFixed(1)} ms` : '-'}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <SummaryField
+                label="P75"
+                value={summary.p75LatencyMs != null ? `${summary.p75LatencyMs.toFixed(1)} ms` : '-'}
               />
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>

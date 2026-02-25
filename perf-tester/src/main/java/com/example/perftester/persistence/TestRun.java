@@ -51,8 +51,14 @@ public class TestRun {
     @Column(name = "max_latency_ms")
     private Double maxLatencyMs;
 
+    @Column(name = "p25_latency_ms")
+    private Double p25LatencyMs;
+
     @Column(name = "p50_latency_ms")
     private Double p50LatencyMs;
+
+    @Column(name = "p75_latency_ms")
+    private Double p75LatencyMs;
 
     @Column(name = "p90_latency_ms")
     private Double p90LatencyMs;

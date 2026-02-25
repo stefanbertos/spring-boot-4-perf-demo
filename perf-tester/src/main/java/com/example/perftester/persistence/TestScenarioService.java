@@ -148,6 +148,7 @@ public class TestScenarioService {
         scenario.setScheduledTime(request.scheduledTime());
         scenario.setWarmupCount(request.warmupCount());
         scenario.setTestType(request.testType());
+        scenario.setInfraProfileId(request.infraProfileId());
         scenario.setThinkTimeJson(serializeJson(request.thinkTime()));
         scenario.setThresholdsJson(serializeJson(request.thresholds()));
     }
@@ -214,14 +215,14 @@ public class TestScenarioService {
                                                 .map(f -> new HeaderFieldDto(f.name(), f.size(), f.value(),
                                 f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
                                 f.correlationKey()))
-                                                .toList(),
-                                e.responseTemplateId()))
+                                                .toList()))
                         .toList();
         var thinkTime = parseThinkTime(scenario.getThinkTimeJson());
         var thresholds = parseThresholds(scenario.getThresholdsJson());
         return new TestScenarioDetail(scenario.getId(), scenario.getName(), scenario.getCount(),
                 entryDtos, scenario.isScheduledEnabled(), scenario.getScheduledTime(),
-                scenario.getWarmupCount(), scenario.getTestType(), thinkTime, thresholds,
+                scenario.getWarmupCount(), scenario.getTestType(), scenario.getInfraProfileId(),
+                thinkTime, thresholds,
                 scenario.getCreatedAt().toString(), scenario.getUpdatedAt().toString());
     }
 
@@ -268,7 +269,7 @@ public class TestScenarioService {
 
     public record TestScenarioDetail(Long id, String name, int count, List<ScenarioEntryDto> entries,
                                      boolean scheduledEnabled, String scheduledTime,
-                                     int warmupCount, String testType,
+                                     int warmupCount, String testType, Long infraProfileId,
                                      ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds,
                                      String createdAt, String updatedAt) {
     }
@@ -278,13 +279,13 @@ public class TestScenarioService {
                                  boolean correlationKey) {
     }
 
-    public record ScenarioEntryDto(Long testCaseId, String content, int percentage, List<HeaderFieldDto> headerFields,
-                                   Long responseTemplateId) {
+    public record ScenarioEntryDto(Long testCaseId, String content, int percentage,
+                                   List<HeaderFieldDto> headerFields) {
     }
 
     public record TestScenarioRequest(String name, int count, List<ScenarioEntryDto> entries,
                                       boolean scheduledEnabled, String scheduledTime,
-                                      int warmupCount, String testType,
+                                      int warmupCount, String testType, Long infraProfileId,
                                       ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds) {
     }
 

@@ -48,7 +48,9 @@ public class TestRunService {
         run.setAvgLatencyMs(result.avgLatencyMs());
         run.setMinLatencyMs(result.minLatencyMs());
         run.setMaxLatencyMs(result.maxLatencyMs());
+        run.setP25LatencyMs(result.p25LatencyMs());
         run.setP50LatencyMs(result.p50LatencyMs());
+        run.setP75LatencyMs(result.p75LatencyMs());
         run.setP90LatencyMs(result.p90LatencyMs());
         run.setP95LatencyMs(result.p95LatencyMs());
         run.setP99LatencyMs(result.p99LatencyMs());
