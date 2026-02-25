@@ -5,208 +5,138 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class HealthCheckSchedulerTest {
 
+    @Mock
+    private HealthCheckConfigRepository repository;
+
     private MeterRegistry meterRegistry;
-    private ServerSocket kafkaServer;
-    private ServerSocket mqServer;
-    private ServerSocket redisServer;
+    private ServerSocket serverA;
+    private ServerSocket serverB;
 
     @BeforeEach
     void setUp() throws IOException {
         meterRegistry = new SimpleMeterRegistry();
-        kafkaServer = new ServerSocket(0);
-        mqServer = new ServerSocket(0);
-        redisServer = new ServerSocket(0);
+        serverA = new ServerSocket(0);
+        serverB = new ServerSocket(0);
     }
 
     @AfterEach
     void tearDown() {
-        closeServer(kafkaServer);
-        closeServer(mqServer);
-        closeServer(redisServer);
+        closeQuietly(serverA);
+        closeQuietly(serverB);
     }
 
-    private void closeServer(ServerSocket server) {
-        if (server != null && !server.isClosed()) {
+    private void closeQuietly(ServerSocket s) {
+        if (s != null && !s.isClosed()) {
             try {
-                server.close();
+                s.close();
             } catch (IOException e) {
-                // Ignore
+                // ignore
             }
         }
     }
 
-    private HealthCheckProperties createProperties(int kafkaPort, int mqPort, int redisPort) {
-        return new HealthCheckProperties(
-                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaPort),
-                new HealthCheckProperties.ServiceEndpoint("localhost", mqPort),
-                new HealthCheckProperties.ServiceEndpoint("localhost", redisPort),
-                5000,
-                60000
-        );
-    }
-
-    private HealthCheckScheduler createScheduler() {
-        var properties = createProperties(
-                kafkaServer.getLocalPort(),
-                mqServer.getLocalPort(),
-                redisServer.getLocalPort()
-        );
-        return new HealthCheckScheduler(properties, meterRegistry);
-    }
-
-    private HealthCheckScheduler createSchedulerWithBadPorts() {
-        return new HealthCheckScheduler(
-                new HealthCheckProperties(
-                        new HealthCheckProperties.ServiceEndpoint("localhost", 1),
-                        new HealthCheckProperties.ServiceEndpoint("localhost", 2),
-                        new HealthCheckProperties.ServiceEndpoint("localhost", 3),
-                        1000,
-                        60000
-                ),
-                meterRegistry
-        );
+    private HealthCheckConfig config(String service, String host, int port, boolean enabled) {
+        var cfg = new HealthCheckConfig();
+        cfg.setService(service);
+        cfg.setHost(host);
+        cfg.setPort(port);
+        cfg.setEnabled(enabled);
+        cfg.setConnectionTimeoutMs(1000);
+        cfg.setIntervalMs(0);
+        return cfg;
     }
 
     @Test
-    void constructorShouldRegisterGauges() {
-        createScheduler();
+    void performHealthChecksShouldSetGaugeToOneWhenPortIsOpen() {
+        var cfg = config("kafka", "localhost", serverA.getLocalPort(), true);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
+
+        var gauge = meterRegistry.find("health.infra.status").tag("service", "kafka").gauge();
+        assertThat(gauge).isNotNull();
+        assertThat(gauge.value()).isEqualTo(1.0);
+    }
+
+    @Test
+    void performHealthChecksShouldSetGaugeToZeroWhenPortIsClosed() throws IOException {
+        serverA.close();
+        var cfg = config("kafka", "localhost", serverA.getLocalPort(), true);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
+
+        var gauge = meterRegistry.find("health.infra.status").tag("service", "kafka").gauge();
+        assertThat(gauge).isNotNull();
+        assertThat(gauge.value()).isEqualTo(0.0);
+    }
+
+    @Test
+    void performHealthChecksShouldSkipDisabledConfigs() {
+        var cfg = config("kafka", "localhost", serverA.getLocalPort(), false);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
+
+        var gauge = meterRegistry.find("health.infra.status").tag("service", "kafka").gauge();
+        assertThat(gauge).isNull();
+    }
+
+    @Test
+    void performHealthChecksShouldRegisterTimerOnSuccess() {
+        var cfg = config("mq", "localhost", serverB.getLocalPort(), true);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
+
+        var timer = meterRegistry.find("health.ping.duration").tag("service", "mq").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    void performHealthChecksShouldRegisterTimerOnFailure() throws IOException {
+        serverB.close();
+        var cfg = config("mq", "localhost", serverB.getLocalPort(), true);
+        cfg.setConnectionTimeoutMs(500);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
+
+        var timer = meterRegistry.find("health.ping.duration").tag("service", "mq").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    void performHealthChecksShouldHandleMultipleServices() {
+        var cfgA = config("kafka", "localhost", serverA.getLocalPort(), true);
+        var cfgB = config("mq", "localhost", serverB.getLocalPort(), true);
+        when(repository.findAll()).thenReturn(List.of(cfgA, cfgB));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        scheduler.performHealthChecks();
 
         assertThat(meterRegistry.find("health.infra.status").tag("service", "kafka").gauge()).isNotNull();
-        assertThat(meterRegistry.find("health.infra.status").tag("service", "ibm-mq").gauge()).isNotNull();
-        assertThat(meterRegistry.find("health.infra.status").tag("service", "redis").gauge()).isNotNull();
-    }
-
-    @Test
-    void constructorShouldRegisterTimers() {
-        createScheduler();
-
-        assertThat(meterRegistry.find("health.ping.duration").tag("service", "kafka").timer()).isNotNull();
-        assertThat(meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer()).isNotNull();
-        assertThat(meterRegistry.find("health.ping.duration").tag("service", "redis").timer()).isNotNull();
-    }
-
-    @Test
-    void performHealthChecksShouldSetStatusToOneWhenAllServicesUp() {
-        var scheduler = createScheduler();
-        scheduler.performHealthChecks();
-
-        assertGaugeValue("kafka", 1.0);
-        assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("redis", 1.0);
-    }
-
-    @Test
-    void checkKafkaShouldSetStatusToZeroOnFailure() throws IOException {
-        kafkaServer.close();
-
-        var properties = new HealthCheckProperties(
-                new HealthCheckProperties.ServiceEndpoint("localhost", 1),
-                new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", redisServer.getLocalPort()),
-                1000,
-                60000
-        );
-        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
-        scheduler.performHealthChecks();
-
-        assertGaugeValue("kafka", 0.0);
-        assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("redis", 1.0);
-    }
-
-    @Test
-    void checkMqShouldSetStatusToZeroOnFailure() throws IOException {
-        mqServer.close();
-
-        var properties = new HealthCheckProperties(
-                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", 2),
-                new HealthCheckProperties.ServiceEndpoint("localhost", redisServer.getLocalPort()),
-                1000,
-                60000
-        );
-        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
-        scheduler.performHealthChecks();
-
-        assertGaugeValue("kafka", 1.0);
-        assertGaugeValue("ibm-mq", 0.0);
-        assertGaugeValue("redis", 1.0);
-    }
-
-    @Test
-    void checkRedisShouldSetStatusToZeroOnFailure() throws IOException {
-        redisServer.close();
-
-        var properties = new HealthCheckProperties(
-                new HealthCheckProperties.ServiceEndpoint("localhost", kafkaServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", mqServer.getLocalPort()),
-                new HealthCheckProperties.ServiceEndpoint("localhost", 4),
-                1000,
-                60000
-        );
-        var scheduler = new HealthCheckScheduler(properties, meterRegistry);
-        scheduler.performHealthChecks();
-
-        assertGaugeValue("kafka", 1.0);
-        assertGaugeValue("ibm-mq", 1.0);
-        assertGaugeValue("redis", 0.0);
-    }
-
-    @Test
-    void healthChecksShouldRecordTimerMetrics() {
-        var scheduler = createScheduler();
-        scheduler.performHealthChecks();
-
-        var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
-        var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
-        var redisTimer = meterRegistry.find("health.ping.duration").tag("service", "redis").timer();
-
-        assertThat(kafkaTimer).isNotNull();
-        assertThat(kafkaTimer.count()).isEqualTo(1);
-        assertThat(mqTimer).isNotNull();
-        assertThat(mqTimer.count()).isEqualTo(1);
-        assertThat(redisTimer).isNotNull();
-        assertThat(redisTimer.count()).isEqualTo(1);
-    }
-
-    @Test
-    void healthChecksShouldRecordTimerMetricsOnFailure() {
-        var scheduler = createSchedulerWithBadPorts();
-        scheduler.performHealthChecks();
-
-        var kafkaTimer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
-        var mqTimer = meterRegistry.find("health.ping.duration").tag("service", "ibm-mq").timer();
-        var redisTimer = meterRegistry.find("health.ping.duration").tag("service", "redis").timer();
-
-        assertThat(kafkaTimer).isNotNull();
-        assertThat(kafkaTimer.count()).isEqualTo(1);
-        assertThat(mqTimer).isNotNull();
-        assertThat(mqTimer.count()).isEqualTo(1);
-        assertThat(redisTimer).isNotNull();
-        assertThat(redisTimer.count()).isEqualTo(1);
-    }
-
-    @Test
-    void allServicesDownShouldSetAllStatusesToZero() {
-        var scheduler = createSchedulerWithBadPorts();
-        scheduler.performHealthChecks();
-
-        assertGaugeValue("kafka", 0.0);
-        assertGaugeValue("ibm-mq", 0.0);
-        assertGaugeValue("redis", 0.0);
-    }
-
-    private void assertGaugeValue(String service, double expectedValue) {
-        var gauge = meterRegistry.find("health.infra.status").tag("service", service).gauge();
-        assertThat(gauge).isNotNull();
-        assertThat(gauge.value()).isEqualTo(expectedValue);
+        assertThat(meterRegistry.find("health.infra.status").tag("service", "mq").gauge()).isNotNull();
     }
 }

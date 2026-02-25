@@ -1,8 +1,16 @@
 spring:
   application:
     name: perf-tester
-  config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  threads:
+    virtual:
+      enabled: true
+  task:
+    execution:
+      pool:
+        core-size: 100
+        max-size: 200
+        queue-capacity: 50000
+      thread-name-prefix: mq-sender-
   docker:
     compose:
       file: ../infrastructure/docker/compose.yaml
@@ -15,22 +23,46 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
   jms:
     pool:
       enabled: true
       max-connections: 20
       max-sessions-per-connection: 10
 
+server:
+  port: 8080
+  address: 0.0.0.0
+
+ibm:
+  mq:
+    queue-manager: QM1
+    channel: DEV.ADMIN.SVRCONN
+    conn-name: localhost(1414)
+    user: admin
+    password: passw0rd
+
 app:
   kubernetes:
     export-enabled: false
   kafka:
     bootstrap-servers: localhost:9092
-  monitoring:
-    outbound-queue: DEV.QUEUE.2
-    inbound-queue: DEV.QUEUE.1
-    kafka-request-consumer-group: ibm-mq-consumer
-    kafka-response-consumer-group: ibm-mq-consumer
+  mq:
+    queue:
+      inbound: DEV.QUEUE.1
+      outbound: DEV.QUEUE.2
+  grafana:
+    url: http://localhost:3000
+    export-path: ./grafana-exports
+    api-key:
+  prometheus:
+    url: http://localhost:9090
+    export-path: ./prometheus-exports
+  export:
+    path: ./test-exports
   loki:
     url: http://localhost:3100
   perf:
@@ -40,16 +72,6 @@ app:
     grafana-buffer-after-ms: 30000
     prometheus-buffer-seconds: 60
     prometheus-step-seconds: 15
-  healthcheck:
-    kafka:
-      host: localhost
-      port: 9092
-    mq:
-      host: localhost
-      port: 1414
-    redis:
-      host: localhost
-      port: 6379
 
 management:
   endpoints:
@@ -70,12 +92,27 @@ management:
     metrics:
       export:
         enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        jms: true
+        mq.e2e.latency: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        jms: 0.5,0.95,0.99
+        mq.e2e.latency: 0.5,0.75,0.9,0.95,0.99
 
 logging:
   level:
     root: INFO
     com.example: INFO
     org.springframework: INFO
+    org.springframework.web: INFO
     org.apache.kafka: WARN
     com.ibm.mq: INFO
     com.ibm.msg: INFO
+    io.micrometer: WARN
+    org.hibernate: WARN
+    org.flywaydb: INFO
+    org.springframework.jms: INFO

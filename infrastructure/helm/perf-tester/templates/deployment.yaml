@@ -37,8 +37,6 @@ spec:
               value: kubernetes
             - name: SPRING_APPLICATION_NAME
               value: perf-tester
-            - name: CONFIG_SERVER_URL
-              value: {{ .Values.configServer.url }}
             - name: SERVER_SERVLET_CONTEXTPATH
               value: /api
             - name: IBM_MQ_QUEUEMANAGER

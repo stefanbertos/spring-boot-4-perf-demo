@@ -46,4 +46,13 @@ export {
   updateTestCase,
   updateTestScenario,
   uploadTestCase,
+  listHealthCheckConfigs,
+  updateHealthCheckConfig,
+  listLokiServiceLabels,
+  addLokiServiceLabel,
+  deleteLokiServiceLabel,
+  listDbExportQueries,
+  createDbExportQuery,
+  updateDbExportQuery,
+  deleteDbExportQuery,
 } from './perfApi';

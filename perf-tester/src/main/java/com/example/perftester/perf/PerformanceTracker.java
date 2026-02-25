@@ -44,7 +44,7 @@ public class PerformanceTracker {
         this.tpsWindowMs = perfProperties.tpsWindowMs();
         this.e2eLatencyTimer = Timer.builder("mq.e2e.latency")
                 .description("End-to-end message processing latency")
-                .publishPercentiles(0.5, 0.75, 0.90, 0.95, 0.99)
+                .publishPercentiles(0.25, 0.5, 0.75, 0.90, 0.95, 0.99)
                 .publishPercentileHistogram()
                 .register(meterRegistry);
     }
@@ -202,14 +202,18 @@ public class PerformanceTracker {
 
         var rawBuf = latencyBuffer;
         var filled = rawBuf != null ? (int) Math.min(completed, rawBuf.length) : 0;
+        double p25 = 0;
         double p50 = 0;
+        double p75 = 0;
         double p90 = 0;
         double p95 = 0;
         double p99 = 0;
         if (filled > 0) {
             var buf = Arrays.copyOf(rawBuf, filled);
             Arrays.sort(buf);
+            p25 = buf[(int) (filled * 0.25)] / 1_000_000.0;
             p50 = buf[(int) (filled * 0.50)] / 1_000_000.0;
+            p75 = buf[(int) (filled * 0.75)] / 1_000_000.0;
             p90 = buf[(int) (filled * 0.90)] / 1_000_000.0;
             p95 = buf[(int) (filled * 0.95)] / 1_000_000.0;
             p99 = buf[Math.min((int) (filled * 0.99), filled - 1)] / 1_000_000.0;
@@ -223,7 +227,7 @@ public class PerformanceTracker {
                 avgLatencyMs,
                 minLatencyMs,
                 maxLatencyMs
-        ).withPercentiles(p50, p90, p95, p99);
+        ).withPercentiles(p25, p50, p75, p90, p95, p99);
     }
 
     /**

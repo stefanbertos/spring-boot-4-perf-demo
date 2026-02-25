@@ -29,13 +29,10 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
       SPRING_PROFILES_ACTIVE: docker
-      CONFIG_SERVER_URL: http://config-server:8888
     volumes:
       - perf-tester-data:/data/exports
       - perf-tester-h2:/data/h2
     depends_on:
-      config-server:
-        condition: service_healthy
       ibm-mq:
         condition: service_started
       redis:

@@ -50,7 +50,7 @@ class MessageSenderTest {
 
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
-        verify(jmsTemplate).convertAndSend(eq("DEV.QUEUE.2"), messageCaptor.capture(), processorCaptor.capture());
+        verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), messageCaptor.capture(), processorCaptor.capture());
 
         String sentMessage = messageCaptor.getValue();
         assertTrue(sentMessage.contains("|test payload"));
@@ -77,7 +77,7 @@ class MessageSenderTest {
         messageSender.sendMessage("test payload", Map.of("X-Type", "PERF"));
 
         ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
-        verify(jmsTemplate).convertAndSend(eq("DEV.QUEUE.2"), anyString(), processorCaptor.capture());
+        verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), anyString(), processorCaptor.capture());
 
         MessagePostProcessor processor = processorCaptor.getValue();
         Message result = processor.postProcessMessage(jmsMessage);

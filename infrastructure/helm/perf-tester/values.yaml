@@ -48,9 +48,6 @@ redis:
   host: perf-redis
   port: 6379
 
-configServer:
-  url: http://perf-config-server:8888
-
 tracing:
   url: http://perf-tempo:4318/v1/traces
 

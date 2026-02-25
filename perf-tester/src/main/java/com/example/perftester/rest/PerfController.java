@@ -2,6 +2,7 @@ package com.example.perftester.rest;
 
 import com.example.perftester.admin.LoggingAdminService;
 import com.example.perftester.config.PerfProperties;
+import com.example.perftester.export.DatabaseExportService;
 import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.grafana.GrafanaExportService;
 import com.example.perftester.kubernetes.KubernetesService;
@@ -69,6 +70,7 @@ public class PerfController {
     private final TestResultPackager testResultPackager;
     private final KubernetesService kubernetesService;
     private final LokiService lokiService;
+    private final DatabaseExportService databaseExportService;
     private final LoggingAdminService loggingAdminService;
     private final PerfProperties perfProperties;
     private final TestRunService testRunService;
@@ -109,7 +111,7 @@ public class PerfController {
         var request = new TestRunRequest(
                 testRunEntity.getId(), testRunId, effectiveMessage, effectiveCount, timeoutSeconds, delayMs,
                 runOptions.testId(), exportOptions.exportGrafana(), exportOptions.exportPrometheus(),
-                exportOptions.exportKubernetes(), exportOptions.exportLogs(),
+                exportOptions.exportKubernetes(), exportOptions.exportLogs(), exportOptions.exportDatabase(),
                 runOptions.debug(), runOptions.scenarioId(), warmupCount, thinkTimeConfig);
 
         Thread.ofVirtual().name("perf-test-" + testRunId).start(() -> runTestInBackground(request));
@@ -192,6 +194,11 @@ public class PerfController {
                 performanceTracker.setStatus("EXPORTING");
                 if (req.exportKubernetes()) {
                     result = result.withKubernetesExport(kubernetesService.exportClusterInfo());
+                }
+                if (req.exportDatabase()) {
+                    log.info("Executing database export queries...");
+                    result = result.withDbQueryResults(databaseExportService.executeExportQueries());
+                    log.info("Database export completed: {} queries", result.dbQueryResults().size());
                 }
                 Thread.sleep(perfProperties.metricsPropagationDelayMs());
                 var exports = exportTestArtifacts(result, testStartTimeMs, testEndTimeMs, req.testId(),
@@ -328,17 +335,11 @@ public class PerfController {
         private boolean exportPrometheus;
         private boolean exportKubernetes;
         private boolean exportLogs;
+        private boolean exportDatabase;
 
+        @SuppressWarnings("PMD.UnnecessaryConstructor")
         public ExportOptions() {
             // Used by Spring MVC @ModelAttribute binding.
-        }
-
-        public ExportOptions(boolean exportGrafana, boolean exportPrometheus,
-                             boolean exportKubernetes, boolean exportLogs) {
-            this.exportGrafana = exportGrafana;
-            this.exportPrometheus = exportPrometheus;
-            this.exportKubernetes = exportKubernetes;
-            this.exportLogs = exportLogs;
         }
 
         public boolean exportGrafana() {
@@ -371,6 +372,14 @@ public class PerfController {
 
         public void setExportLogs(boolean exportLogs) {
             this.exportLogs = exportLogs;
+        }
+
+        public boolean exportDatabase() {
+            return exportDatabase;
+        }
+
+        public void setExportDatabase(boolean exportDatabase) {
+            this.exportDatabase = exportDatabase;
         }
     }
 
@@ -427,11 +436,11 @@ public class PerfController {
     private record TestRunRequest(Long entityId, String testRunId, String message, int count,
                                   int timeoutSeconds, int delayMs, String testId,
                                   boolean exportGrafana, boolean exportPrometheus,
-                                  boolean exportKubernetes, boolean exportLogs,
+                                  boolean exportKubernetes, boolean exportLogs, boolean exportDatabase,
                                   boolean debug, Long scenarioId,
                                   int warmupCount, ThinkTimeConfig thinkTimeConfig) {
         boolean anyExport() {
-            return exportGrafana || exportPrometheus || exportKubernetes || exportLogs;
+            return exportGrafana || exportPrometheus || exportKubernetes || exportLogs || exportDatabase;
         }
     }
 

@@ -30,7 +30,7 @@ public class MessageSender {
                          @Value("${app.mq.queue.inbound}") String inboundQueue,
                          PerformanceTracker performanceTracker) throws JMSException {
         this.jmsTemplate = jmsTemplate;
-        this.outboundQueue = outboundQueue;
+        this.outboundQueue = convertToNonJmsQueueNameFormat(outboundQueue);
         this.replyToQueue = createQueue(inboundQueue);
         this.performanceTracker = performanceTracker;
     }
@@ -74,5 +74,9 @@ public class MessageSender {
         log.debug("Sent message [{}] to {} with replyTo {} and {} header(s)",
                 messageId, outboundQueue, replyToQueue, headers.size());
         return CompletableFuture.completedFuture(null);
+    }
+
+    private String convertToNonJmsQueueNameFormat(String queueName) {
+        return String.format("queue:///%s?targetClient=1", queueName);
     }
 }

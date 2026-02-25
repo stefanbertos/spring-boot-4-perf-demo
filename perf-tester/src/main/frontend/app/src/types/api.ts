@@ -311,3 +311,33 @@ export interface ResponseTemplateRequest {
   name: string;
   fields: ResponseTemplateField[];
 }
+
+export interface HealthCheckConfig {
+  service: string;
+  host: string;
+  port: number;
+  enabled: boolean;
+  connectionTimeoutMs: number;
+  intervalMs: number;
+}
+
+export interface HealthCheckConfigRequest {
+  host: string;
+  port: number;
+  enabled: boolean;
+  connectionTimeoutMs: number;
+  intervalMs: number;
+}
+
+export interface DbExportQuery {
+  id: number;
+  name: string;
+  sqlQuery: string;
+  displayOrder: number;
+}
+
+export interface DbExportQueryRequest {
+  name: string;
+  sqlQuery: string;
+  displayOrder: number;
+}

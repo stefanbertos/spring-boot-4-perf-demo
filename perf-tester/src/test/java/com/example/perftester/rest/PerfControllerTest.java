@@ -1,6 +1,7 @@
 package com.example.perftester.rest;
 
 import com.example.perftester.admin.LoggingAdminService;
+import com.example.perftester.export.DatabaseExportService;
 import com.example.perftester.config.PerfProperties;
 import com.example.perftester.export.TestResultPackager;
 import com.example.perftester.export.TestResultPackager.PackageResult;
@@ -86,6 +87,9 @@ class PerfControllerTest {
     private LokiService lokiService;
 
     @Mock
+    private DatabaseExportService databaseExportService;
+
+    @Mock
     private LoggingAdminService loggingAdminService;
 
     @Mock
@@ -115,8 +119,8 @@ class PerfControllerTest {
     void setUp() throws Exception {
         controller = new PerfController(messageSender, performanceTracker,
                 grafanaExportService, prometheusExportService, testResultPackager,
-                kubernetesService, lokiService, loggingAdminService, perfProperties, testRunService,
-                testScenarioService, thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
+                kubernetesService, lokiService, databaseExportService, loggingAdminService, perfProperties,
+                testRunService, testScenarioService, thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
@@ -195,7 +199,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 3, 1, 0, new PerfController.ExportOptions(true, false, false, false),
+        controller.sendMessages("test message", 3, 1, 0, exportOptions(true, false, false, false),
                 new PerfController.RunOptions("test-id", false, null));
 
         Awaitility.await()
@@ -223,7 +227,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), anyString(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 1, 1, 0, new PerfController.ExportOptions(true, true, false, false),
+        controller.sendMessages("test message", 1, 1, 0, exportOptions(true, true, false, false),
                 new PerfController.RunOptions("test-id", false, null));
 
         Awaitility.await()
@@ -311,7 +315,7 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), anyString(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 1, 1, 0, new PerfController.ExportOptions(false, true, false, false),
+        controller.sendMessages("test message", 1, 1, 0, exportOptions(false, true, false, false),
                 new PerfController.RunOptions("test-id", false, null));
 
         Awaitility.await()
@@ -370,12 +374,22 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        controller.sendMessages("test message", 1, 1, 0, new PerfController.ExportOptions(false, false, false, true),
+        controller.sendMessages("test message", 1, 1, 0, exportOptions(false, false, false, true),
                 new PerfController.RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> verify(lokiService).queryLogs(any(), any()));
+    }
+
+    private static PerfController.ExportOptions exportOptions(
+            boolean grafana, boolean prometheus, boolean kubernetes, boolean logs) {
+        var opts = new PerfController.ExportOptions();
+        opts.setExportGrafana(grafana);
+        opts.setExportPrometheus(prometheus);
+        opts.setExportKubernetes(kubernetes);
+        opts.setExportLogs(logs);
+        return opts;
     }
 }

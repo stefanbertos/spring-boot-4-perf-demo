@@ -19,12 +19,17 @@ public class LokiService {
     private static final String LOG_LEVEL_LABEL = "level";
     private static final String DEFAULT_LEVEL = "INFO";
     private static final int DEFAULT_LIMIT = 500;
+    private static final String FALLBACK_QUERY = "{job=\"perf-tester\"}";
 
     private final LokiProperties lokiProperties;
+    private final LokiServiceLabelRepository labelRepository;
     private final RestClient restClient;
 
-    public LokiService(LokiProperties lokiProperties, RestClient.Builder restClientBuilder) {
+    public LokiService(LokiProperties lokiProperties,
+                       LokiServiceLabelRepository labelRepository,
+                       RestClient.Builder restClientBuilder) {
         this.lokiProperties = lokiProperties;
+        this.labelRepository = labelRepository;
         this.restClient = restClientBuilder.build();
     }
 
@@ -37,9 +42,11 @@ public class LokiService {
         try {
             var startNs = String.valueOf(start.toEpochMilli() * 1_000_000L);
             var endNs = String.valueOf(end.toEpochMilli() * 1_000_000L);
+            var query = buildQuery();
+            log.debug("Querying Loki with: {}", query);
             var response = restClient.get()
                     .uri(url + "/loki/api/v1/query_range?query={q}&start={s}&end={e}&limit={l}&direction=forward",
-                            Map.of("q", "{job=\"perf-tester\"}", "s", startNs, "e", endNs,
+                            Map.of("q", query, "s", startNs, "e", endNs,
                                     "l", String.valueOf(DEFAULT_LIMIT)))
                     .retrieve()
                     .body(LokiResponse.class);
@@ -48,6 +55,20 @@ public class LokiService {
             log.warn("Failed to query Loki logs: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    private String buildQuery() {
+        var names = labelRepository.findAll().stream()
+                .map(LokiServiceLabel::getName)
+                .toList();
+        if (names.isEmpty()) {
+            return FALLBACK_QUERY;
+        }
+        if (names.size() == 1) {
+            return "{job=\"" + names.get(0) + "\"}";
+        }
+        var joined = String.join("|", names);
+        return "{job=~\"" + joined + "\"}";
     }
 
     private List<LogEntry> parseEntries(LokiResponse response) {

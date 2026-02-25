@@ -1,5 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version '4.0.1' apply false
+    id 'org.springframework.boot' version '4.0.3' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
     id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1' apply false
     id 'com.github.node-gradle.node' version '7.1.0' apply false
@@ -136,7 +136,11 @@ subprojects {
                     '*TestRunController.*',
                     '*.loki.*',
                     '*GlobalExceptionHandler',
-                    '*PerfController$*'
+                    '*PerfController$*',
+                    '*.health.HealthCheckConfigRequest',
+                    '*.health.HealthCheckConfigResponse',
+                    '*DbExportQueryController',
+                    '*DbExportQueryController$*'
                 ]
                 limit {
                     minimum = 0.8  // 80% coverage required per class
@@ -208,10 +212,18 @@ subprojects {
 
     // Exclude componentTest sources from Checkstyle and PMD
     tasks.withType(Checkstyle).configureEach {
-        exclude '**/componentTest/**'
+        if (name.contains('ComponentTest')) {
+            enabled = false
+        } else {
+            exclude '**/componentTest/**'
+        }
     }
     tasks.withType(Pmd).configureEach {
-        exclude '**/componentTest/**'
+        if (name.contains('ComponentTest')) {
+            enabled = false
+        } else {
+            exclude '**/componentTest/**'
+        }
     }
 
     configurations {

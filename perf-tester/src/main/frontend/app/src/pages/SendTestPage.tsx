@@ -145,6 +145,7 @@ export default function SendTestPage() {
   const [exportPrometheus, setExportPrometheus] = useState(false);
   const [exportKubernetes, setExportKubernetes] = useState(false);
   const [exportLogs, setExportLogs] = useState(false);
+  const [exportDatabase, setExportDatabase] = useState(false);
   const [debug, setDebug] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -186,7 +187,7 @@ export default function SendTestPage() {
     setResult(null);
     setProgress(null);
     setCurrentTestRunDbId(null);
-    const anyExport = exportGrafana || exportPrometheus || exportKubernetes || exportLogs;
+    const anyExport = exportGrafana || exportPrometheus || exportKubernetes || exportLogs || exportDatabase;
     setExportWasRequested(anyExport);
 
     try {
@@ -198,6 +199,7 @@ export default function SendTestPage() {
         exportPrometheus,
         exportKubernetes,
         exportLogs,
+        exportDatabase,
         debug,
       });
       setCurrentTestRunDbId(id);
@@ -297,6 +299,16 @@ export default function SendTestPage() {
                     />
                   }
                   label="Logs"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportDatabase}
+                      onChange={(e) => setExportDatabase(e.target.checked)}
+                    />
+                  }
+                  label="Database"
                 />
               </Stack>
             </Box>

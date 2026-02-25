@@ -1,7 +1,11 @@
 import { del, get, post, postFormData, put } from './client';
 import type {
   ApplyResult,
+  DbExportQuery,
+  DbExportQueryRequest,
   DeploymentInfo,
+  HealthCheckConfig,
+  HealthCheckConfigRequest,
   HeaderTemplateDetail,
   HeaderTemplateRequest,
   HeaderTemplateSummary,
@@ -41,6 +45,7 @@ export function sendTest(params: {
   exportPrometheus?: boolean;
   exportKubernetes?: boolean;
   exportLogs?: boolean;
+  exportDatabase?: boolean;
   debug?: boolean;
 }): Promise<TestStartResponse> {
   const query = new URLSearchParams();
@@ -53,6 +58,7 @@ export function sendTest(params: {
   if (params.exportPrometheus) query.set('exportPrometheus', 'true');
   if (params.exportKubernetes) query.set('exportKubernetes', 'true');
   if (params.exportLogs) query.set('exportLogs', 'true');
+  if (params.exportDatabase) query.set('exportDatabase', 'true');
   if (params.debug) query.set('debug', 'true');
 
   const qs = query.toString();
@@ -297,4 +303,43 @@ export function updateTestScenario(id: number, data: TestScenarioRequest): Promi
 
 export function deleteTestScenario(id: number): Promise<void> {
   return del(`/api/test-scenarios/${id}`);
+}
+
+// ── Health Check Admin ─────────────────────────────────────────────
+export function listHealthCheckConfigs(): Promise<HealthCheckConfig[]> {
+  return get('/api/admin/healthcheck');
+}
+
+export function updateHealthCheckConfig(service: string, data: HealthCheckConfigRequest): Promise<HealthCheckConfig> {
+  return put(`/api/admin/healthcheck/${encodeURIComponent(service)}`, data);
+}
+
+// ── Loki Admin ─────────────────────────────────────────────────────
+export function listLokiServiceLabels(): Promise<string[]> {
+  return get('/api/admin/loki/services');
+}
+
+export function addLokiServiceLabel(name: string): Promise<string> {
+  return post(`/api/admin/loki/services?name=${encodeURIComponent(name)}`);
+}
+
+export function deleteLokiServiceLabel(name: string): Promise<void> {
+  return del(`/api/admin/loki/services/${encodeURIComponent(name)}`);
+}
+
+// ── DB Export Queries ──────────────────────────────────────────────
+export function listDbExportQueries(): Promise<DbExportQuery[]> {
+  return get('/api/admin/db-queries');
+}
+
+export function createDbExportQuery(data: DbExportQueryRequest): Promise<DbExportQuery> {
+  return post('/api/admin/db-queries', data);
+}
+
+export function updateDbExportQuery(id: number, data: DbExportQueryRequest): Promise<DbExportQuery> {
+  return put(`/api/admin/db-queries/${id}`, data);
+}
+
+export function deleteDbExportQuery(id: number): Promise<void> {
+  return del(`/api/admin/db-queries/${id}`);
 }

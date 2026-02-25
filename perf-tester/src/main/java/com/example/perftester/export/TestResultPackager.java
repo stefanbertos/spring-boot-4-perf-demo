@@ -88,6 +88,14 @@ public class TestResultPackager {
                 addTextEntry(zos, "logs/application.log", logContent);
             }
 
+            // Add database export query results as CSV files
+            if (result.dbQueryResults() != null && !result.dbQueryResults().isEmpty()) {
+                for (var entry : result.dbQueryResults().entrySet()) {
+                    var csvFilename = sanitizeFilename(entry.getKey()) + ".csv";
+                    addTextEntry(zos, "db/" + csvFilename, entry.getValue());
+                }
+            }
+
             // Add Kubernetes cluster info - stream from disk
             if (result.kubernetesExportFile() != null) {
                 var kubernetesPath = Path.of(result.kubernetesExportFile());
@@ -188,6 +196,11 @@ public class TestResultPackager {
         if (logEntries != null && !logEntries.isEmpty()) {
             sb.append(String.format("  • logs/application.log (%d entries)%n", logEntries.size()));
         }
+        if (result.dbQueryResults() != null && !result.dbQueryResults().isEmpty()) {
+            for (var entry : result.dbQueryResults().entrySet()) {
+                sb.append(String.format("  • db/%s.csv%n", sanitizeFilename(entry.getKey())));
+            }
+        }
 
         sb.append("\n═══════════════════════════════════════════════════════════════\n");
         sb.append(String.format("Generated: %s%n", Instant.now()));
@@ -208,6 +221,10 @@ public class TestResultPackager {
         zos.putNextEntry(entry);
         zos.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         zos.closeEntry();
+    }
+
+    private String sanitizeFilename(String name) {
+        return name.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     private void addFileEntryStreaming(ZipOutputStream zos, Path file, String prefix) throws IOException {
