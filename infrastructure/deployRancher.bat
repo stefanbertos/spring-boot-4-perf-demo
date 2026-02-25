@@ -89,7 +89,6 @@ echo [3/9] Wave 0: Installing infrastructure (IBM MQ, Kafka, Redis, Postgres)...
 helm upgrade --install perf-ibm-mq "%HELM%\ibm-mq" -n %NS%
 helm upgrade --install perf-kafka "%HELM%\kafka" -n %NS%
 helm upgrade --install perf-redis "%HELM%\redis" -n %NS%
-helm upgrade --install perf-postgres "%HELM%\postgres" -n %NS%
 echo      Waiting 30s for infrastructure to start...
 timeout /t 30 /nobreak >nul
 echo      Done.

@@ -54,7 +54,6 @@ helm uninstall perf-grafana -n %NS% 2>nul
 helm uninstall perf-prometheus -n %NS% 2>nul
 
 echo      Wave 0: Infrastructure...
-helm uninstall perf-postgres -n %NS% 2>nul
 helm uninstall perf-redis -n %NS% 2>nul
 helm uninstall perf-kafka -n %NS% 2>nul
 helm uninstall perf-ibm-mq -n %NS% 2>nul
