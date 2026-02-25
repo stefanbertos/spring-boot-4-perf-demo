@@ -9,6 +9,38 @@ echo.
 set NS=perf-demo
 set HELM=%~dp0helm
 
+:: ============================================
+:: Detect JAVA_HOME from %USERPROFILE%\.jdks
+:: ============================================
+if defined JAVA_HOME (
+    if exist "%JAVA_HOME%\bin\java.exe" goto :java_ok
+)
+set "JDKS_DIR=%USERPROFILE%\.jdks"
+if not exist "%JDKS_DIR%" (
+    echo ERROR: JAVA_HOME is not set and %JDKS_DIR% not found.
+    echo Please set JAVA_HOME or install a JDK via IntelliJ IDEA ^(File ^> Project Structure ^> SDKs^).
+    exit /b 1
+)
+set "FOUND_JAVA="
+for /d %%d in ("%JDKS_DIR%\*25*") do (
+    if exist "%%d\bin\java.exe" if not defined FOUND_JAVA set "FOUND_JAVA=%%d"
+)
+if not defined FOUND_JAVA (
+    for /d %%d in ("%JDKS_DIR%\*") do (
+        if exist "%%d\bin\java.exe" if not defined FOUND_JAVA set "FOUND_JAVA=%%d"
+    )
+)
+if not defined FOUND_JAVA (
+    echo ERROR: No JDK found in %JDKS_DIR%.
+    echo Please install a JDK via IntelliJ IDEA ^(File ^> Project Structure ^> SDKs^).
+    exit /b 1
+)
+set "JAVA_HOME=%FOUND_JAVA%"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+:java_ok
+echo Using JAVA_HOME: %JAVA_HOME%
+echo.
+
 :: Check prerequisites
 where kubectl >nul 2>nul
 if %errorlevel% neq 0 (
