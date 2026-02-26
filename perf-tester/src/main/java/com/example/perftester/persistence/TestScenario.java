@@ -1,16 +1,12 @@
 package com.example.perftester.persistence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
@@ -39,9 +35,8 @@ public class TestScenario {
     @Column(name = "count", nullable = false)
     private int count = 100;
 
-    @Column(name = "entries", columnDefinition = "text")
-    @Convert(converter = EntryListConverter.class)
-    private List<ScenarioEntry> entries = new ArrayList<>();
+    @OneToMany(mappedBy = "scenario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ScenarioTestCase> entries = new ArrayList<>();
 
     @Column(name = "scheduled_enabled", nullable = false)
     private boolean scheduledEnabled;
@@ -80,38 +75,5 @@ public class TestScenario {
     @PreUpdate
     void onUpdate() {
         updatedAt = Instant.now();
-    }
-
-    public record HeaderField(String name, int size, String value, String type,
-                              String paddingChar, String uuidPrefix, String uuidSeparator,
-                              boolean correlationKey) {
-    }
-
-    public record ScenarioEntry(Long testCaseId, String content, int percentage, List<HeaderField> headerFields) {
-    }
-
-    @Converter
-    public static class EntryListConverter implements AttributeConverter<List<ScenarioEntry>, String> {
-
-        private static final ObjectMapper MAPPER = new ObjectMapper();
-        private static final TypeReference<List<ScenarioEntry>> TYPE = new TypeReference<>() {};
-
-        @Override
-        public String convertToDatabaseColumn(List<ScenarioEntry> attribute) {
-            try {
-                return attribute == null ? "[]" : MAPPER.writeValueAsString(attribute);
-            } catch (JsonProcessingException e) {
-                return "[]";
-            }
-        }
-
-        @Override
-        public List<ScenarioEntry> convertToEntityAttribute(String dbData) {
-            try {
-                return dbData == null || dbData.isEmpty() ? new ArrayList<>() : MAPPER.readValue(dbData, TYPE);
-            } catch (JsonProcessingException e) {
-                return new ArrayList<>();
-            }
-        }
     }
 }

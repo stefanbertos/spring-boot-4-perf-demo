@@ -129,6 +129,10 @@ export interface TestProgressEvent {
 export interface TestCaseSummary {
   id: number;
   name: string;
+  headerTemplateId: number | null;
+  headerTemplateName: string | null;
+  responseTemplateId: number | null;
+  responseTemplateName: string | null;
   updatedAt: string;
 }
 
@@ -136,6 +140,10 @@ export interface TestCaseDetail {
   id: number;
   name: string;
   message: string;
+  headerTemplateId: number | null;
+  headerTemplateName: string | null;
+  responseTemplateId: number | null;
+  responseTemplateName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -189,22 +197,18 @@ export interface TestScenarioSummary {
   updatedAt: string;
 }
 
-export interface HeaderFieldDto {
-  name: string;
-  size: number;
-  value: string;
-  type: string | null;
-  paddingChar: string | null;
-  uuidPrefix: string | null;
-  uuidSeparator: string | null;
-  correlationKey: boolean;
+export interface ScenarioEntryDto {
+  id: number;
+  testCaseId: number;
+  testCaseName: string;
+  percentage: number;
+  displayOrder: number;
 }
 
-export interface ScenarioEntryDto {
-  testCaseId: number | null;
-  content: string;
+export interface ScenarioEntryRequest {
+  testCaseId: number;
   percentage: number;
-  headerFields: HeaderFieldDto[];
+  displayOrder: number;
 }
 
 export interface ThresholdDef {
@@ -248,7 +252,7 @@ export interface TestScenarioDetail {
 export interface TestScenarioRequest {
   name: string;
   count: number;
-  entries: ScenarioEntryDto[];
+  entries: ScenarioEntryRequest[];
   scheduledEnabled: boolean;
   scheduledTime: string | null;
   warmupCount: number;

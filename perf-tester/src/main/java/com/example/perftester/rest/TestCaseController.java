@@ -1,7 +1,7 @@
 package com.example.perftester.rest;
 
-import com.example.perftester.persistence.TestCase;
 import com.example.perftester.persistence.TestCaseService;
+import com.example.perftester.persistence.TestCaseService.TestCaseDetail;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -31,40 +31,49 @@ public class TestCaseController {
 
     private final TestCaseService testCaseService;
 
-    public record CreateTestCaseRequest(@NotBlank String name, @NotBlank String message) { }
+    public record CreateTestCaseRequest(@NotBlank String name, @NotBlank String message,
+                                        Long headerTemplateId, Long responseTemplateId) { }
 
-    public record UpdateTestCaseRequest(@NotBlank String name, @NotBlank String message) { }
+    public record UpdateTestCaseRequest(@NotBlank String name, @NotBlank String message,
+                                        Long headerTemplateId, Long responseTemplateId) { }
 
     public record TestCaseResponse(long id, String name, String message,
+                                   Long headerTemplateId, String headerTemplateName,
+                                   Long responseTemplateId, String responseTemplateName,
                                    Instant createdAt, Instant updatedAt) { }
 
-    public record TestCaseSummaryResponse(long id, String name, Instant updatedAt) { }
+    public record TestCaseSummaryResponse(long id, String name,
+                                          Long headerTemplateId, String headerTemplateName,
+                                          Long responseTemplateId, String responseTemplateName,
+                                          Instant updatedAt) { }
 
     @GetMapping
     public List<TestCaseSummaryResponse> listAll() {
         return testCaseService.listAll().stream()
-                .map(tc -> new TestCaseSummaryResponse(tc.getId(), tc.getName(), tc.getUpdatedAt()))
+                .map(tc -> new TestCaseSummaryResponse(tc.id(), tc.name(),
+                        tc.headerTemplateId(), tc.headerTemplateName(),
+                        tc.responseTemplateId(), tc.responseTemplateName(),
+                        tc.updatedAt()))
                 .toList();
     }
 
     @GetMapping("/{id}")
     public TestCaseResponse getById(@PathVariable long id) {
-        var tc = testCaseService.getById(id);
-        return toResponse(tc);
+        return toResponse(testCaseService.getById(id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TestCaseResponse create(@Valid @RequestBody CreateTestCaseRequest request) {
-        var tc = testCaseService.create(request.name(), request.message());
-        return toResponse(tc);
+        return toResponse(testCaseService.create(request.name(), request.message(),
+                request.headerTemplateId(), request.responseTemplateId()));
     }
 
     @PutMapping("/{id}")
     public TestCaseResponse update(@PathVariable long id,
                                    @Valid @RequestBody UpdateTestCaseRequest request) {
-        var tc = testCaseService.update(id, request.name(), request.message());
-        return toResponse(tc);
+        return toResponse(testCaseService.update(id, request.name(), request.message(),
+                request.headerTemplateId(), request.responseTemplateId()));
     }
 
     @DeleteMapping("/{id}")
@@ -78,12 +87,13 @@ public class TestCaseController {
     public TestCaseResponse upload(@RequestParam String name,
                                    @RequestParam MultipartFile file) throws IOException {
         var message = new String(file.getBytes(), StandardCharsets.UTF_8);
-        var tc = testCaseService.create(name, message);
-        return toResponse(tc);
+        return toResponse(testCaseService.create(name, message, null, null));
     }
 
-    private TestCaseResponse toResponse(TestCase tc) {
-        return new TestCaseResponse(tc.getId(), tc.getName(), tc.getMessage(),
-                tc.getCreatedAt(), tc.getUpdatedAt());
+    private TestCaseResponse toResponse(TestCaseDetail tc) {
+        return new TestCaseResponse(tc.id(), tc.name(), tc.message(),
+                tc.headerTemplateId(), tc.headerTemplateName(),
+                tc.responseTemplateId(), tc.responseTemplateName(),
+                tc.createdAt(), tc.updatedAt());
     }
 }

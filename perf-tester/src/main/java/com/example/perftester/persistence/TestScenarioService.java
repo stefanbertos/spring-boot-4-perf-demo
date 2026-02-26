@@ -25,6 +25,7 @@ public class TestScenarioService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final TestScenarioRepository testScenarioRepository;
+    private final TestCaseRepository testCaseRepository;
 
     @Transactional(readOnly = true)
     public List<TestScenarioSummary> listAll() {
@@ -130,9 +131,9 @@ public class TestScenarioService {
             var entry = entries.get(i);
             int allocated = i == entries.size() - 1
                     ? count - totalAllocated
-                    : (int) Math.floor(entry.percentage() / 100.0 * count);
+                    : (int) Math.floor(entry.getPercentage() / 100.0 * count);
             for (int j = 0; j < allocated; j++) {
-                pool.add(buildScenarioMessage(entry));
+                pool.add(buildScenarioMessage(entry.getTestCase()));
             }
             totalAllocated += allocated;
         }
@@ -142,7 +143,6 @@ public class TestScenarioService {
     private void applyRequest(TestScenarioRequest request, TestScenario scenario) {
         scenario.setName(request.name());
         scenario.setCount(request.count());
-        scenario.setEntries(toEntries(request.entries()));
         scenario.setScheduledEnabled(request.scheduledEnabled());
         scenario.setScheduledTime(request.scheduledTime());
         scenario.setWarmupCount(request.warmupCount());
@@ -150,6 +150,21 @@ public class TestScenarioService {
         scenario.setInfraProfileId(request.infraProfileId());
         scenario.setThinkTimeJson(serializeJson(request.thinkTime()));
         scenario.setThresholdsJson(serializeJson(request.thresholds()));
+
+        scenario.getEntries().clear();
+        if (request.entries() != null) {
+            for (int i = 0; i < request.entries().size(); i++) {
+                var er = request.entries().get(i);
+                var tc = testCaseRepository.findById(er.testCaseId())
+                        .orElseThrow(() -> new TestCaseNotFoundException(er.testCaseId()));
+                var entry = new ScenarioTestCase();
+                entry.setScenario(scenario);
+                entry.setTestCase(tc);
+                entry.setPercentage(er.percentage());
+                entry.setDisplayOrder(i);
+                scenario.getEntries().add(entry);
+            }
+        }
     }
 
     private String serializeJson(Object obj) {
@@ -164,10 +179,12 @@ public class TestScenarioService {
         }
     }
 
-    private ScenarioMessage buildScenarioMessage(TestScenario.ScenarioEntry entry) {
-        var fields = entry.headerFields();
-        var content = entry.content() != null ? entry.content() : "";
-        if (fields == null || fields.isEmpty()) {
+    private ScenarioMessage buildScenarioMessage(TestCase tc) {
+        var fields = tc.getHeaderTemplate() != null
+                ? tc.getHeaderTemplate().getFields()
+                : List.<HeaderTemplate.TemplateField>of();
+        var content = tc.getMessage() != null ? tc.getMessage() : "";
+        if (fields.isEmpty()) {
             return new ScenarioMessage(content, Map.of(), null);
         }
         var header = new StringBuilder();
@@ -194,7 +211,7 @@ public class TestScenarioService {
         return new ScenarioMessage(header + "\n" + content, Map.copyOf(jmsProperties), transactionId);
     }
 
-    private String resolveFieldValue(TestScenario.HeaderField field, int messageLength) {
+    private String resolveFieldValue(HeaderTemplate.TemplateField field, int messageLength) {
         if ("TRANSACTION_ID".equals(field.type())) {
             return UUID.randomUUID().toString();
         }
@@ -212,13 +229,9 @@ public class TestScenarioService {
     private TestScenarioDetail toDetail(TestScenario scenario) {
         var entryDtos = scenario.getEntries() == null ? List.<ScenarioEntryDto>of()
                 : scenario.getEntries().stream()
-                        .map(e -> new ScenarioEntryDto(e.testCaseId(), e.content(), e.percentage(),
-                                e.headerFields() == null ? List.of()
-                                        : e.headerFields().stream()
-                                                .map(f -> new HeaderFieldDto(f.name(), f.size(), f.value(),
-                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
-                                f.correlationKey()))
-                                                .toList()))
+                        .map(e -> new ScenarioEntryDto(e.getId(),
+                                e.getTestCase().getId(), e.getTestCase().getName(),
+                                e.getPercentage(), e.getDisplayOrder()))
                         .toList();
         var thinkTime = parseThinkTime(scenario.getThinkTimeJson());
         var thresholds = parseThresholds(scenario.getThresholdsJson());
@@ -251,21 +264,6 @@ public class TestScenarioService {
         }
     }
 
-    private List<TestScenario.ScenarioEntry> toEntries(List<ScenarioEntryDto> dtos) {
-        if (dtos == null) {
-            return new ArrayList<>();
-        }
-        return dtos.stream()
-                .map(d -> new TestScenario.ScenarioEntry(d.testCaseId(), d.content(), d.percentage(),
-                        d.headerFields() == null ? List.of()
-                                : d.headerFields().stream()
-                                        .map(f -> new TestScenario.HeaderField(f.name(), f.size(), f.value(),
-                                f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
-                                f.correlationKey()))
-                                        .toList()))
-                .toList();
-    }
-
     public record TestScenarioSummary(Long id, String name, int count, String updatedAt) {
     }
 
@@ -276,16 +274,14 @@ public class TestScenarioService {
                                      String createdAt, String updatedAt) {
     }
 
-    public record HeaderFieldDto(String name, int size, String value, String type,
-                                 String paddingChar, String uuidPrefix, String uuidSeparator,
-                                 boolean correlationKey) {
+    public record ScenarioEntryDto(Long id, Long testCaseId, String testCaseName,
+                                   int percentage, int displayOrder) {
     }
 
-    public record ScenarioEntryDto(Long testCaseId, String content, int percentage,
-                                   List<HeaderFieldDto> headerFields) {
+    public record ScenarioEntryRequest(Long testCaseId, int percentage, int displayOrder) {
     }
 
-    public record TestScenarioRequest(String name, int count, List<ScenarioEntryDto> entries,
+    public record TestScenarioRequest(String name, int count, List<ScenarioEntryRequest> entries,
                                       boolean scheduledEnabled, String scheduledTime,
                                       int warmupCount, String testType, Long infraProfileId,
                                       ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds) {

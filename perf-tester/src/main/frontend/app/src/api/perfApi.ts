@@ -222,12 +222,23 @@ export function getTestCase(id: number): Promise<TestCaseDetail> {
   return get(`/api/test-cases/${id}`);
 }
 
-export function createTestCase(name: string, message: string): Promise<TestCaseDetail> {
-  return post('/api/test-cases', { name, message });
+export function createTestCase(
+  name: string,
+  message: string,
+  headerTemplateId?: number | null,
+  responseTemplateId?: number | null,
+): Promise<TestCaseDetail> {
+  return post('/api/test-cases', { name, message, headerTemplateId, responseTemplateId });
 }
 
-export function updateTestCase(id: number, name: string, message: string): Promise<TestCaseDetail> {
-  return put(`/api/test-cases/${id}`, { name, message });
+export function updateTestCase(
+  id: number,
+  name: string,
+  message: string,
+  headerTemplateId?: number | null,
+  responseTemplateId?: number | null,
+): Promise<TestCaseDetail> {
+  return put(`/api/test-cases/${id}`, { name, message, headerTemplateId, responseTemplateId });
 }
 
 export function deleteTestCase(id: number): Promise<void> {

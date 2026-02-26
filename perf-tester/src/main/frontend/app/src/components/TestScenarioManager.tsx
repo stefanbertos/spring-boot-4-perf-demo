@@ -107,11 +107,9 @@ function getFieldValidation(field: HeaderFieldForm): FieldValidation | null {
 }
 
 interface EntryForm {
+  id?: number;
   testCaseId: number | null;
-  testCaseName: string;
-  content: string;
   percentage: number;
-  headerFields: HeaderFieldForm[];
 }
 
 type TestType = 'SMOKE' | 'LOAD' | 'STRESS' | 'SOAK' | 'SPIKE';
@@ -146,6 +144,8 @@ interface TestCaseFormState {
   id?: number;
   name: string;
   message: string;
+  headerTemplateId: number | null;
+  responseTemplateId: number | null;
 }
 
 const EMPTY_SCENARIO: ScenarioForm = {
@@ -155,7 +155,7 @@ const EMPTY_SCENARIO: ScenarioForm = {
   thinkTimeMeanMs: 500, thinkTimeStdDevMs: 100, thresholds: [],
 };
 const EMPTY_TEMPLATE: TemplateForm = { name: '', fields: [] };
-const EMPTY_TC: TestCaseFormState = { mode: 'create', name: '', message: '' };
+const EMPTY_TC: TestCaseFormState = { mode: 'create', name: '', message: '', headerTemplateId: null, responseTemplateId: null };
 
 // ── Test Cases Tab ─────────────────────────────────────────────────
 
@@ -234,7 +234,14 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
     setExpandedResponseFields([]);
     loadTemplates();
     const detail = await getTestCase(tc.id);
-    setForm({ mode: 'edit', id: detail.id, name: detail.name, message: detail.message });
+    setForm({
+      mode: 'edit',
+      id: detail.id,
+      name: detail.name,
+      message: detail.message,
+      headerTemplateId: detail.headerTemplateId ?? null,
+      responseTemplateId: detail.responseTemplateId ?? null,
+    });
     setDialogOpen(true);
   };
 
@@ -242,9 +249,9 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
     setSaving(true);
     try {
       if (form.mode === 'edit' && form.id != null) {
-        await updateTestCase(form.id, form.name, form.message);
+        await updateTestCase(form.id, form.name, form.message, form.headerTemplateId, form.responseTemplateId);
       } else {
-        await createTestCase(form.name, form.message);
+        await createTestCase(form.name, form.message, form.headerTemplateId, form.responseTemplateId);
       }
       setDialogOpen(false);
       await refresh();
@@ -266,6 +273,8 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
 
   const columns: DataTableColumn<TestCaseSummary>[] = [
     { id: 'name', label: 'Name', render: (row) => row.name },
+    { id: 'headerTemplateName', label: 'Header Template', render: (row) => row.headerTemplateName ?? '—' },
+    { id: 'responseTemplateName', label: 'Response Template', render: (row) => row.responseTemplateName ?? '—' },
     { id: 'updatedAt', label: 'Updated', render: (row) => new Date(row.updatedAt).toLocaleString() },
     {
       id: 'actions',
@@ -452,6 +461,32 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
             multiline
             rows={8}
           />
+          <MuiTextField
+            select
+            label="Header Template"
+            value={form.headerTemplateId ?? ''}
+            onChange={e => setForm(f => ({ ...f, headerTemplateId: e.target.value ? Number(e.target.value) : null }))}
+            fullWidth
+            size="small"
+          >
+            <MenuItem value="">None</MenuItem>
+            {templates.map(t => (
+              <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+            ))}
+          </MuiTextField>
+          <MuiTextField
+            select
+            label="Response Template"
+            value={form.responseTemplateId ?? ''}
+            onChange={e => setForm(f => ({ ...f, responseTemplateId: e.target.value ? Number(e.target.value) : null }))}
+            fullWidth
+            size="small"
+          >
+            <MenuItem value="">None</MenuItem>
+            {responseTemplates.map(t => (
+              <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+            ))}
+          </MuiTextField>
         </Stack>
       </Dialog>
 
@@ -1150,51 +1185,38 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
 
 // ── Entry Row ──────────────────────────────────────────────────────
 
-interface EntryRowProps {
+function EntryRow({ entry, testCases, onChange, onRemove }: {
   entry: EntryForm;
   testCases: TestCaseSummary[];
-  onChange: (entry: EntryForm) => void;
+  onChange: (updated: EntryForm) => void;
   onRemove: () => void;
-}
-
-function EntryRow({ entry, testCases, onChange, onRemove }: EntryRowProps) {
-  const handleTestCaseChange = async (id: number) => {
-    const tc = testCases.find((t) => t.id === id);
-    const detail = await getTestCase(id);
-    onChange({ ...entry, testCaseId: id, testCaseName: tc?.name ?? '', content: detail.message });
-  };
-
+}) {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
       <MuiTextField
         select
-        size="small"
         label="Test Case"
         value={entry.testCaseId ?? ''}
-        onChange={(e) => {
-          if (e.target.value) void handleTestCaseChange(Number(e.target.value));
-        }}
-        sx={{ flex: 1 }}
-        required
+        onChange={e => onChange({ ...entry, testCaseId: e.target.value ? Number(e.target.value) : null })}
+        fullWidth
+        size="small"
       >
-        {testCases.map((tc) => (
+        {testCases.map(tc => (
           <MenuItem key={tc.id} value={tc.id}>{tc.name}</MenuItem>
         ))}
       </MuiTextField>
       <MuiTextField
-        label="%"
+        label="% of messages"
         type="number"
         value={entry.percentage}
-        onChange={(e) => onChange({ ...entry, percentage: Number(e.target.value) })}
+        onChange={e => onChange({ ...entry, percentage: Number(e.target.value) })}
         size="small"
-        sx={{ width: 80 }}
-        slotProps={{ htmlInput: { min: 1, max: 100 } }}
+        sx={{ width: 140 }}
+        inputProps={{ min: 0, max: 100 }}
       />
-      <Tooltip title="Remove">
-        <IconButton size="small" onClick={onRemove}>
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <IconButton onClick={onRemove} size="small" color="error">
+        <DeleteIcon />
+      </IconButton>
     </Stack>
   );
 }
@@ -1268,48 +1290,20 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
       thinkTimeMeanMs: detail.thinkTime?.meanMs ?? 500,
       thinkTimeStdDevMs: detail.thinkTime?.stdDevMs ?? 100,
       thresholds: detail.thresholds ?? [],
-      entries: detail.entries.map((e) => {
-        const tc = tcs.find((t) => t.id === e.testCaseId);
-        return {
-          testCaseId: e.testCaseId ?? null,
-          testCaseName: tc?.name ?? '',
-          content: e.content,
-          percentage: e.percentage,
-          headerFields: e.headerFields.map((h) => ({
-            name: h.name, size: h.size, value: h.value,
-            type: (h.type ?? 'STRING') as FieldType,
-            paddingChar: h.paddingChar ?? ' ',
-            uuidPrefix: h.uuidPrefix ?? '',
-            uuidSeparator: h.uuidSeparator ?? '-',
-            correlationKey: h.correlationKey ?? false,
-          })),
-        };
-      }),
+      entries: detail.entries.map((e) => ({
+        id: e.id,
+        testCaseId: e.testCaseId ?? null,
+        percentage: e.percentage,
+      })),
     });
   };
 
-  const addEntry = async () => {
-    const firstTc = testCases[0];
-    let content = '';
-    if (firstTc) {
-      try {
-        const detail = await getTestCase(firstTc.id);
-        content = detail.message;
-      } catch {
-        // ignore
-      }
-    }
+  const addEntry = () => {
     setForm((f) => ({
       ...f,
       entries: [
         ...f.entries,
-        {
-          testCaseId: firstTc?.id ?? null,
-          testCaseName: firstTc?.name ?? '',
-          content,
-          percentage: 100,
-          headerFields: [],
-        },
+        { testCaseId: null, percentage: 0 },
       ],
     }));
   };
@@ -1344,17 +1338,13 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
         infraProfileId: form.infraProfileId,
         thinkTime,
         thresholds: form.thresholds,
-        entries: form.entries.map((e) => ({
-          testCaseId: e.testCaseId,
-          content: e.content,
-          percentage: e.percentage,
-          headerFields: e.headerFields.map((h) => ({
-            name: h.name, size: h.size, value: h.value,
-            type: h.type, paddingChar: h.paddingChar,
-            uuidPrefix: h.uuidPrefix, uuidSeparator: h.uuidSeparator,
-            correlationKey: h.correlationKey,
+        entries: form.entries
+          .filter((e) => e.testCaseId != null)
+          .map((e, index) => ({
+            testCaseId: e.testCaseId as number,
+            percentage: e.percentage,
+            displayOrder: index,
           })),
-        })),
       };
       if (form.id != null) {
         await updateTestScenario(form.id, request);
@@ -1679,7 +1669,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
               <Typography variant="body2" color="text.secondary" fontWeight={500}>
                 Test Cases
               </Typography>
-              <Button size="small" onClick={() => void addEntry()} disabled={testCases.length === 0}>
+              <Button size="small" onClick={addEntry} disabled={testCases.length === 0}>
                 <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
                 Add Test Case
               </Button>
