@@ -34,28 +34,27 @@ class MessageListenerTest {
 
     @Test
     void receiveMessageShouldRecordReceiveForValidMessage() throws JMSException {
-        when(jmsMessage.getText()).thenReturn("msg-123|test payload processed");
         when(jmsMessage.getJMSCorrelationID()).thenReturn("corr-123");
 
         listener.receiveMessage(jmsMessage);
 
-        verify(performanceTracker).recordReceive("msg-123");
+        verify(performanceTracker).recordReceive("corr-123");
     }
 
     @Test
-    void receiveMessageShouldHandleNullTraceId() throws JMSException {
-        when(jmsMessage.getText()).thenReturn("msg-123|test payload");
+    void receiveMessageShouldNotRecordWhenCorrelationIdIsNull() throws JMSException {
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
+        when(jmsMessage.getText()).thenReturn("some body without correlation");
 
         listener.receiveMessage(jmsMessage);
 
-        verify(performanceTracker).recordReceive("msg-123");
+        verify(performanceTracker, never()).recordReceive(anyString());
     }
 
     @Test
-    void receiveMessageShouldNotRecordForInvalidMessage() throws JMSException {
-        when(jmsMessage.getText()).thenReturn("invalid message without separator");
+    void receiveMessageShouldNotRecordForMessageWithoutCorrelationId() throws JMSException {
         when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
+        when(jmsMessage.getText()).thenReturn("invalid message without separator");
 
         listener.receiveMessage(jmsMessage);
 
@@ -64,11 +63,9 @@ class MessageListenerTest {
 
     @Test
     void receiveMessageShouldRecordExceptionOnError() throws JMSException {
-        when(jmsMessage.getText()).thenReturn("msg-123|test payload");
-        when(jmsMessage.getJMSCorrelationID()).thenReturn(null);
+        when(jmsMessage.getJMSCorrelationID()).thenReturn("corr-123");
 
-        RuntimeException exception = new RuntimeException("Tracker failed");
-        doThrow(exception).when(performanceTracker).recordReceive(anyString());
+        doThrow(new RuntimeException("Tracker failed")).when(performanceTracker).recordReceive("corr-123");
 
         assertThrows(RuntimeException.class, () -> listener.receiveMessage(jmsMessage));
     }

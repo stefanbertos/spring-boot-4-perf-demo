@@ -18,7 +18,7 @@ public class LokiService {
 
     private static final String DEFAULT_LEVEL = "INFO";
     private static final int DEFAULT_LIMIT = 5000;
-    private static final String FALLBACK_QUERY = "{job=\"perf-tester\"}";
+    private static final String FALLBACK_QUERY = "{service_name=\"perf-tester\"}";
     private static final Pattern SPRING_LOG_PATTERN =
             Pattern.compile("^\\S+\\s+(TRACE|DEBUG|INFO|WARN|ERROR)\\s+");
 
@@ -66,10 +66,10 @@ public class LokiService {
             return FALLBACK_QUERY;
         }
         if (names.size() == 1) {
-            return "{job=\"" + names.get(0) + "\"}";
+            return "{service_name=\"" + names.get(0) + "\"}";
         }
         var joined = String.join("|", names);
-        return "{job=~\"" + joined + "\"}";
+        return "{service_name=~\"" + joined + "\"}";
     }
 
     private List<LogEntry> parseEntries(LokiResponse response) {

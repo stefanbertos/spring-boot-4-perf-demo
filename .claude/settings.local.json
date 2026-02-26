@@ -93,7 +93,8 @@
       "Bash(cd:*)",
       "Bash(tail:*)",
       "Bash(docker rm docker-perf-tester-1 2>&1 && docker volume rm docker_perf-tester-h2 2>&1)",
-      "Bash(docker image:*)"
+      "Bash(docker image:*)",
+      "Bash(node:*)"
     ]
   }
 }
