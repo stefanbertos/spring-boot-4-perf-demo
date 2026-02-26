@@ -128,6 +128,7 @@ class PerfControllerTest {
                 thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        when(messageSender.sendMessage(anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
         var perfResult = new PerfTestResult(10, 0, 1.0, 10.0, 50.0, 10.0, 100.0);
         when(performanceTracker.getResult()).thenReturn(perfResult);
@@ -292,7 +293,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldUseScenarioPoolWhenScenarioIdProvided() {
-        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload", Map.of());
+        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload", Map.of(), null);
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(
                 List.of(scenarioMsg, scenarioMsg, scenarioMsg));
@@ -306,7 +307,7 @@ class PerfControllerTest {
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString()));
+                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString(), any(), any()));
     }
 
     @Test

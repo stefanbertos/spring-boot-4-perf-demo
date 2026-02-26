@@ -260,9 +260,7 @@ public class PerfController {
         for (int i = 0; i < count; i++) {
             if (!pool.isEmpty()) {
                 var msg = pool.get(i);
-                futures[i] = msg.jmsProperties().isEmpty()
-                        ? messageSender.sendMessage(msg.content() + "-" + i)
-                        : messageSender.sendMessage(msg.content() + "-" + i, msg.jmsProperties());
+                futures[i] = messageSender.sendMessage(msg.content(), msg.jmsProperties(), msg.transactionId());
             } else {
                 futures[i] = messageSender.sendMessage(message + "-" + i);
             }

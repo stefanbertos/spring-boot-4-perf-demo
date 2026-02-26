@@ -128,12 +128,11 @@ public class TestScenarioService {
         int totalAllocated = 0;
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i);
-            var scenarioMessage = buildScenarioMessage(entry);
             int allocated = i == entries.size() - 1
                     ? count - totalAllocated
                     : (int) Math.floor(entry.percentage() / 100.0 * count);
             for (int j = 0; j < allocated; j++) {
-                pool.add(scenarioMessage);
+                pool.add(buildScenarioMessage(entry));
             }
             totalAllocated += allocated;
         }
@@ -169,10 +168,11 @@ public class TestScenarioService {
         var fields = entry.headerFields();
         var content = entry.content() != null ? entry.content() : "";
         if (fields == null || fields.isEmpty()) {
-            return new ScenarioMessage(content, Map.of());
+            return new ScenarioMessage(content, Map.of(), null);
         }
         var header = new StringBuilder();
         var jmsProperties = new LinkedHashMap<String, String>();
+        String transactionId = null;
         int messageLength = content.length();
         for (var field : fields) {
             var val = resolveFieldValue(field, messageLength);
@@ -186,9 +186,12 @@ public class TestScenarioService {
             }
             if ("TRANSACTION_ID".equals(field.type()) || field.correlationKey()) {
                 jmsProperties.put(field.name(), val);
+                if (transactionId == null) {
+                    transactionId = val;
+                }
             }
         }
-        return new ScenarioMessage(header + "\n" + content, Map.copyOf(jmsProperties));
+        return new ScenarioMessage(header + "\n" + content, Map.copyOf(jmsProperties), transactionId);
     }
 
     private String resolveFieldValue(TestScenario.HeaderField field, int messageLength) {
@@ -288,6 +291,6 @@ public class TestScenarioService {
                                       ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds) {
     }
 
-    public record ScenarioMessage(String content, Map<String, String> jmsProperties) {
+    public record ScenarioMessage(String content, Map<String, String> jmsProperties, String transactionId) {
     }
 }

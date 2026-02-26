@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -82,12 +81,12 @@ public class ScheduledScenarioService {
             var pool = testScenarioService.buildMessagePool(scenarioId);
             var futures = new CompletableFuture<?>[count];
             for (int i = 0; i < count; i++) {
-                var msg = pool.isEmpty() ? null : pool.get(i % pool.size());
-                var content = msg != null ? msg.content() : "";
-                var props = msg != null ? msg.jmsProperties() : Map.<String, String>of();
-                futures[i] = props.isEmpty()
-                        ? messageSender.sendMessage(content + "-" + i)
-                        : messageSender.sendMessage(content + "-" + i, props);
+                if (!pool.isEmpty()) {
+                    var msg = pool.get(i % pool.size());
+                    futures[i] = messageSender.sendMessage(msg.content(), msg.jmsProperties(), msg.transactionId());
+                } else {
+                    futures[i] = messageSender.sendMessage("msg-" + i);
+                }
             }
             CompletableFuture.allOf(futures).join();
 

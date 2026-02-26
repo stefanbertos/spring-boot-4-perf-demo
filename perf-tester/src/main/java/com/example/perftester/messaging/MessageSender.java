@@ -55,22 +55,23 @@ public class MessageSender {
     }
 
     @Async(AsyncConfig.MQ_SENDER_EXECUTOR)
-    public CompletableFuture<Void> sendMessage(String payload, Map<String, String> headers) {
+    public CompletableFuture<Void> sendMessage(String content, Map<String, String> jmsProperties,
+                                               String transactionId) {
         var messageId = UUID.randomUUID().toString();
-        var message = PerformanceTracker.createMessage(messageId, payload);
+        var message = PerformanceTracker.createMessage(messageId, content);
 
         performanceTracker.recordSend(messageId);
         jmsTemplate.convertAndSend(outboundQueue, message, m -> {
             m.setJMSReplyTo(replyToQueue);
             m.setJMSCorrelationID(messageId);
-            for (var entry : headers.entrySet()) {
+            for (var entry : jmsProperties.entrySet()) {
                 m.setStringProperty(entry.getKey(), entry.getValue());
             }
             return m;
         });
 
-        log.debug("Sent message [{}] to {} with replyTo {} and {} header(s): {}",
-                messageId, outboundQueue, replyToQueue, headers.size(), payload);
+        log.debug("Sent message [{}] transactionId=[{}] to {} with replyTo {} and {} jms propert(ies): {}",
+                messageId, transactionId, outboundQueue, replyToQueue, jmsProperties.size(), content);
         return CompletableFuture.completedFuture(null);
     }
 

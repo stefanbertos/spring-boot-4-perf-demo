@@ -76,7 +76,7 @@ class MessageSenderTest {
 
     @Test
     void sendMessageWithHeadersShouldSetJmsStringProperties() throws JMSException {
-        messageSender.sendMessage("test payload", Map.of("X-Type", "PERF"));
+        messageSender.sendMessage("test payload", Map.of("X-Type", "PERF"), "txn-123");
 
         ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
         verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), anyString(), processorCaptor.capture());
@@ -85,5 +85,18 @@ class MessageSenderTest {
         Message result = processor.postProcessMessage(jmsMessage);
         assertNotNull(result);
         verify(jmsMessage).setStringProperty("X-Type", "PERF");
+    }
+
+    @Test
+    void sendMessageWithNullTransactionIdShouldStillSend() throws JMSException {
+        messageSender.sendMessage("test payload", Map.of("CORR_ID", "abc-123"), null);
+
+        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
+        verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), anyString(), processorCaptor.capture());
+
+        MessagePostProcessor processor = processorCaptor.getValue();
+        Message result = processor.postProcessMessage(jmsMessage);
+        assertNotNull(result);
+        verify(jmsMessage).setStringProperty("CORR_ID", "abc-123");
     }
 }
