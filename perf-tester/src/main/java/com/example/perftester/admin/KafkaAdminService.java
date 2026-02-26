@@ -8,7 +8,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.admin.ListOffsetsResult;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.errors.InvalidPartitionsException;
 
 import com.example.perftester.config.KafkaAdminProperties;
@@ -35,10 +37,24 @@ public class KafkaAdminService implements AutoCloseable {
 
     public void resizeTopic(String topicName, int partitions)
             throws ExecutionException, InterruptedException, TimeoutException {
+        var description = adminClient.describeTopics(List.of(topicName))
+                .allTopicNames().get(TIMEOUT_SECONDS, TimeUnit.SECONDS).get(topicName);
+        int currentPartitions = description.partitions().size();
+        if (partitions == currentPartitions) {
+            return;
+        }
+        if (partitions > currentPartitions) {
+            increasePartitions(topicName, partitions);
+        } else {
+            deleteAndRecreate(topicName, partitions, description);
+        }
+    }
+
+    private void increasePartitions(String topicName, int partitions)
+            throws ExecutionException, InterruptedException, TimeoutException {
         try {
-            var newPartitions = Map.of(topicName, NewPartitions.increaseTo(partitions));
-            adminClient.createPartitions(newPartitions).all()
-                    .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            adminClient.createPartitions(Map.of(topicName, NewPartitions.increaseTo(partitions)))
+                    .all().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.info("Resized topic '{}' to {} partitions", topicName, partitions);
         } catch (ExecutionException e) {
             if (e.getCause() instanceof InvalidPartitionsException cause) {
@@ -46,6 +62,17 @@ public class KafkaAdminService implements AutoCloseable {
             }
             throw e;
         }
+    }
+
+    private void deleteAndRecreate(String topicName, int partitions, TopicDescription description)
+            throws ExecutionException, InterruptedException, TimeoutException {
+        var replicationFactor = (short) description.partitions().get(0).replicas().size();
+        adminClient.deleteTopics(List.of(topicName)).all().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        log.info("Deleted topic '{}' to reduce partitions from {} to {}",
+                topicName, description.partitions().size(), partitions);
+        adminClient.createTopics(List.of(new NewTopic(topicName, partitions, replicationFactor)))
+                .all().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        log.info("Recreated topic '{}' with {} partitions", topicName, partitions);
     }
 
     public List<TopicInfo> listTopics()
