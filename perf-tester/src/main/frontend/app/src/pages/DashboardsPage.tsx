@@ -10,7 +10,7 @@ import Typography from '@mui/material/Typography';
 import { Alert, Card, Loading, PageHeader, Tabs } from 'perf-ui-components';
 import type { TabItem } from 'perf-ui-components';
 import type { ReactNode } from 'react';
-import { getTestRuns } from '@/api';
+import { getDashboardLinks, getTestRuns } from '@/api';
 import { useApi } from '@/hooks';
 
 const IFRAME_HEIGHT = 'calc(100vh - 200px)';
@@ -94,45 +94,30 @@ function OverviewPanel() {
   );
 }
 
-const tabs: TabItem[] = [
-  {
-    label: 'Overview',
-    content: <OverviewPanel />,
-  },
-  {
-    label: 'Grafana',
-    content: <IframePanel src="/grafana" title="Grafana" />,
-  },
-  {
-    label: 'Prometheus',
-    content: <IframePanel src="/prometheus" title="Prometheus" />,
-  },
-  {
-    label: 'Kafdrop',
-    content: <IframePanel src="/kafdrop" title="Kafdrop" />,
-  },
-  {
-    label: 'Redis Commander',
-    content: <IframePanel src="/redis-commander" title="Redis Commander" />,
-  },
-  {
-    label: 'Loki',
-    content: (
-      <IframePanel
-        src="/grafana/explore?orgId=1&left=%7B%22datasource%22:%22loki%22%7D"
-        title="Loki"
-      />
-    ),
-  },
-];
+const OVERVIEW_TAB: TabItem = {
+  label: 'Overview',
+  content: <OverviewPanel />,
+};
 
 export default function DashboardsPage() {
+  const { data: links, error } = useApi(() => getDashboardLinks());
+
+  const tabs: TabItem[] = [
+    OVERVIEW_TAB,
+    ...(links ?? []).map((link) => ({
+      label: link.label,
+      content: <IframePanel src={link.url} title={link.label} />,
+    })),
+  ];
+
   return (
     <Box>
-      <PageHeader
-        title="Dashboards"
-        subtitle="Overview, Grafana, Prometheus, Kafdrop, Redis Commander, and Loki"
-      />
+      <PageHeader title="Dashboards" subtitle="Overview and monitoring dashboards" />
+      {error && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Could not load dashboard links: {error.message}
+        </Alert>
+      )}
       <Tabs tabs={tabs} />
     </Box>
   );

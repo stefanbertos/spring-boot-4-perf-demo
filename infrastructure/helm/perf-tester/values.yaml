@@ -37,7 +37,7 @@ prometheus:
   exportPath: /data/exports/prometheus-exports
   scrape:
     enabled: "true"
-    path: /api/actuator/prometheus
+    path: /actuator/prometheus
     port: "8080"
     job: perf-tester
 

@@ -99,6 +99,33 @@ data:
         queue:
           inbound: DEV.QUEUE.1
           outbound: DEV.QUEUE.2
+      monitoring:
+        inbound-queue: DEV.QUEUE.1
+        outbound-queue: DEV.QUEUE.2
+        kafka-request-consumer-group: kafka-consumer-group
+        kafka-response-consumer-group: ibm-mq-consumer-group
+      dashboards:
+        - label: Grafana
+          url: /grafana
+          enabled: true
+        - label: Prometheus
+          url: /prometheus
+          enabled: true
+        - label: Kafdrop
+          url: /kafdrop
+          enabled: true
+        - label: Redis Commander
+          url: /redis-commander
+          enabled: true
+        - label: Loki
+          url: /grafana/explore?orgId=1&left=%7B%22datasource%22:%22loki%22%7D
+          enabled: true
+        - label: IBM MQ
+          url: /ibmmq
+          enabled: true
+        - label: SonarQube
+          url: /sonar
+          enabled: true
       grafana:
         url: ${GRAFANA_URL:http://perf-grafana:3000}
         export-path: ./grafana-exports

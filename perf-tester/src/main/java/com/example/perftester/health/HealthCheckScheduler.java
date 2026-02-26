@@ -28,6 +28,10 @@ public class HealthCheckScheduler {
     private final Map<String, Timer> timers = new ConcurrentHashMap<>();
     private final Map<String, Long> lastCheckedAt = new ConcurrentHashMap<>();
 
+    public void resetServiceTimer(String service) {
+        lastCheckedAt.remove(service);
+    }
+
     @Scheduled(fixedDelay = 5000)
     public void performHealthChecks() {
         var configs = repository.findAll();
@@ -75,7 +79,7 @@ public class HealthCheckScheduler {
             status.set(0);
             var duration = System.nanoTime() - startTime;
             timer.record(duration, TimeUnit.NANOSECONDS);
-            log.warn("{} health check failed: {}", config.getService(), e.getMessage());
+            log.warn("{} health check failed: {} host: {} port: {}", config.getService(), e.getMessage(), config.getHost(), config.getPort());
         }
     }
 }

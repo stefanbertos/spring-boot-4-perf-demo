@@ -13,6 +13,7 @@ import java.util.List;
 public class HealthCheckConfigService {
 
     private final HealthCheckConfigRepository repository;
+    private final HealthCheckScheduler scheduler;
 
     @Transactional(readOnly = true)
     public List<HealthCheckConfigResponse> findAll() {
@@ -30,7 +31,9 @@ public class HealthCheckConfigService {
         config.setEnabled(request.enabled());
         config.setConnectionTimeoutMs(request.connectionTimeoutMs());
         config.setIntervalMs(request.intervalMs());
-        return toResponse(repository.save(config));
+        var saved = toResponse(repository.save(config));
+        scheduler.resetServiceTimer(service);
+        return saved;
     }
 
     private HealthCheckConfigResponse toResponse(HealthCheckConfig config) {

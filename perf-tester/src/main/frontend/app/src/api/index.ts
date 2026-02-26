@@ -55,4 +55,5 @@ export {
   createDbExportQuery,
   updateDbExportQuery,
   deleteDbExportQuery,
+  getDashboardLinks,
 } from './perfApi';

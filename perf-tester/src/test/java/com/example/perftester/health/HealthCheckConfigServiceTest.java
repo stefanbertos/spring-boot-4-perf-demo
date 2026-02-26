@@ -21,6 +21,9 @@ class HealthCheckConfigServiceTest {
     @Mock
     private HealthCheckConfigRepository repository;
 
+    @Mock
+    private HealthCheckScheduler scheduler;
+
     @InjectMocks
     private HealthCheckConfigService service;
 

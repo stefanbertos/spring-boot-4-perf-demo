@@ -274,7 +274,15 @@ function IbmMqTab() {
   );
 }
 
-function DeploymentScaleAction({ name, namespace }: { name: string; namespace: string }) {
+function DeploymentScaleAction({
+  name,
+  namespace,
+  onScaled,
+}: {
+  name: string;
+  namespace: string;
+  onScaled: () => void;
+}) {
   const [replicas, setReplicas] = useState('4');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -285,6 +293,7 @@ function DeploymentScaleAction({ name, namespace }: { name: string; namespace: s
     try {
       await scaleDeployment(name, namespace, Number(replicas));
       setResult({ type: 'success', text: `Scaled to ${replicas}` });
+      onScaled();
     } catch (err) {
       setResult({ type: 'error', text: err instanceof Error ? err.message : 'Failed to scale' });
     } finally {
@@ -321,6 +330,7 @@ function KubernetesTab() {
   const [deployments, setDeployments] = useState<DeploymentInfo[]>([]);
   const [deploymentsLoading, setDeploymentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     listNamespaces()
@@ -342,7 +352,7 @@ function KubernetesTab() {
       .then(setDeployments)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load deployments'))
       .finally(() => setDeploymentsLoading(false));
-  }, [selectedNamespace]);
+  }, [selectedNamespace, refreshKey]);
 
   const namespaceOptions = namespaces.map((ns) => ({ value: ns.name, label: ns.name }));
 
@@ -354,7 +364,13 @@ function KubernetesTab() {
       id: 'scale',
       label: 'Scale To',
       minWidth: 240,
-      render: (row) => <DeploymentScaleAction name={row.name} namespace={row.namespace} />,
+      render: (row) => (
+        <DeploymentScaleAction
+          name={row.name}
+          namespace={row.namespace}
+          onScaled={() => setRefreshKey((k) => k + 1)}
+        />
+      ),
     },
   ];
 

@@ -346,3 +346,8 @@ export interface DbExportQueryRequest {
   sqlQuery: string;
   displayOrder: number;
 }
+
+export interface DashboardLink {
+  label: string;
+  url: string;
+}

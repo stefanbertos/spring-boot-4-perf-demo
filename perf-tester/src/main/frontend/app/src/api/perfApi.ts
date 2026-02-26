@@ -1,6 +1,7 @@
 import { del, get, post, postFormData, put } from './client';
 import type {
   ApplyResult,
+  DashboardLink,
   DbExportQuery,
   DbExportQueryRequest,
   DeploymentInfo,
@@ -342,4 +343,10 @@ export function updateDbExportQuery(id: number, data: DbExportQueryRequest): Pro
 
 export function deleteDbExportQuery(id: number): Promise<void> {
   return del(`/api/admin/db-queries/${id}`);
+}
+
+// ── Dashboards ──────────────────────────────────────────────────────
+
+export function getDashboardLinks(): Promise<DashboardLink[]> {
+  return get('/api/dashboards');
 }

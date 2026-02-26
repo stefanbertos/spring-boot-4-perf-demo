@@ -1,19 +1,9 @@
+# perf-tester application configuration
+server:
+  port: 8080
+  address: 0.0.0.0
+
 spring:
-  application:
-    name: perf-tester
-  threads:
-    virtual:
-      enabled: true
-  task:
-    execution:
-      pool:
-        core-size: 100
-        max-size: 200
-        queue-capacity: 50000
-      thread-name-prefix: mq-sender-
-  docker:
-    compose:
-      file: ../infrastructure/docker/compose.yaml
   datasource:
     url: jdbc:h2:file:./data/perfdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
     driver-class-name: org.h2.Driver
@@ -28,16 +18,15 @@ spring:
       enabled: true
       max-connections: 20
       max-sessions-per-connection: 10
-
-server:
-  port: 8080
-  address: 0.0.0.0
+  task:
+    execution:
+      thread-name-prefix: mq-sender-
 
 ibm:
   mq:
     queue-manager: QM1
     channel: DEV.ADMIN.SVRCONN
-    conn-name: localhost(1414)
+    conn-name: ${IBM_MQ_CONNNAME:localhost(1414)}
     user: admin
     password: passw0rd
 
@@ -96,26 +85,21 @@ app:
     grafana-buffer-after-ms: 30000
     prometheus-buffer-seconds: 60
     prometheus-step-seconds: 15
+  healthcheck:
+    enabled: true
+    interval-ms: 60000
+    connection-timeout-ms: 5000
+    kafka:
+      host: localhost
+      port: 9092
+    mq:
+      host: localhost
+      port: 1414
+    redis:
+      host: localhost
+      port: 6379
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
-  endpoint:
-    health:
-      probes:
-        enabled: true
-      show-details: always
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
-  prometheus:
-    metrics:
-      export:
-        enabled: true
   metrics:
     distribution:
       percentiles-histogram:
@@ -129,14 +113,7 @@ management:
 
 logging:
   level:
-    root: INFO
-    com.example: INFO
-    org.springframework: INFO
-    org.springframework.web: INFO
-    org.apache.kafka: WARN
-    com.ibm.mq: INFO
-    com.ibm.msg: INFO
-    io.micrometer: WARN
-    org.hibernate: WARN
     org.flywaydb: INFO
     org.springframework.jms: INFO
+    com.ibm.mq: INFO
+    com.ibm.msg: INFO
