@@ -16,6 +16,8 @@ CREATE TABLE test_run (
     started_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
     completed_at    TIMESTAMP,
     created_at      TIMESTAMP       NOT NULL DEFAULT NOW(),
+    p25_latency_ms DOUBLE PRECISION,
+    p75_latency_ms DOUBLE PRECISION,
     p50_latency_ms FLOAT8,
     p90_latency_ms FLOAT8,
     p95_latency_ms FLOAT8,
@@ -25,3 +27,5 @@ CREATE TABLE test_run (
     threshold_status VARCHAR(20),
     threshold_results TEXT
 );
+
+

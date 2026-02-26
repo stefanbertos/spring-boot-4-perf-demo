@@ -195,11 +195,13 @@ public class TestScenarioService {
             var val = resolveFieldValue(field, messageLength);
             var padChar = field.paddingChar() != null && !field.paddingChar().isEmpty()
                     ? field.paddingChar().charAt(0) : ' ';
-            if (val.length() >= field.size()) {
-                header.append(val, 0, field.size());
-            } else {
-                header.append(val);
-                header.append(String.valueOf(padChar).repeat(field.size() - val.length()));
+            if (!"MESSAGE_LENGTH".equals(field.type())) {
+                if (val.length() >= field.size()) {
+                    header.append(val, 0, field.size());
+                } else {
+                    header.append(val);
+                    header.append(String.valueOf(padChar).repeat(field.size() - val.length()));
+                }
             }
             if ("TRANSACTION_ID".equals(field.type()) || field.correlationKey()) {
                 jmsProperties.put(field.name(), val);
@@ -207,9 +209,23 @@ public class TestScenarioService {
                     transactionId = val;
                 }
             }
+            if ("MESSAGE_LENGTH".equals(field.type())) {
+                header.append(padOrTrunctate(String.valueOf(content.length()), field.size(), field.paddingChar()));
+            }
         }
-        return new ScenarioMessage(header + "\n" + content, Map.copyOf(jmsProperties), transactionId);
+        return new ScenarioMessage(header + content, Map.copyOf(jmsProperties), transactionId);
     }
+
+    private String padOrTrunctate(final String value, final int lenght, final String padChar) {
+        if (value == null) {
+            return padChar.repeat(lenght);
+        }
+        if (value.length() >= lenght) {
+            return value.substring(0, lenght);
+        }
+        return value + padChar.repeat(lenght - value.length());
+    }
+
 
     private String resolveFieldValue(HeaderTemplate.TemplateField field, int messageLength) {
         if ("TRANSACTION_ID".equals(field.type())) {

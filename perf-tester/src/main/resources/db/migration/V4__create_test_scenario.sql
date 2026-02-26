@@ -12,5 +12,6 @@ CREATE TABLE test_scenario (
     think_time TEXT,
     test_type VARCHAR(20),
     thresholds TEXT,
-    count INT NOT NULL DEFAULT 100
+    count INT NOT NULL DEFAULT 100,
+    infra_profile_id BIGINT
 );
