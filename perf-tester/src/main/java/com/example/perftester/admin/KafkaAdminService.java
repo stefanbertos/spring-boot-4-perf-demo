@@ -66,7 +66,8 @@ public class KafkaAdminService implements AutoCloseable {
 
     private void deleteAndRecreate(String topicName, int partitions, TopicDescription description)
             throws ExecutionException, InterruptedException, TimeoutException {
-        var replicationFactor = (short) description.partitions().get(0).replicas().size();
+        var replicationFactor = (short) description.partitions().
+                getFirst().replicas().size();
         adminClient.deleteTopics(List.of(topicName)).all().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         log.info("Deleted topic '{}' to reduce partitions from {} to {}",
                 topicName, description.partitions().size(), partitions);

@@ -187,6 +187,8 @@ export default function InfraProfileManager() {
   const [deploymentOptions, setDeploymentOptions] = useState<{ value: string; label: string }[]>([]);
   const [queueOptions, setQueueOptions] = useState<{ value: string; label: string }[]>([]);
   const [kubernetesAvailable, setKubernetesAvailable] = useState(false);
+  const [namespaceOptions, setNamespaceOptions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedNamespace, setSelectedNamespace] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -198,6 +200,17 @@ export default function InfraProfileManager() {
       setLoading(false);
     }
   }, []);
+
+  const loadDeploymentsForNamespace = useCallback((namespace: string) => {
+    listDeployments(namespace)
+      .then((deployments) => setDeploymentOptions(deployments.map((d) => ({ value: d.name, label: d.name }))))
+      .catch(() => {});
+  }, []);
+
+  const handleNamespaceChange = (namespace: string) => {
+    setSelectedNamespace(namespace);
+    loadDeploymentsForNamespace(namespace);
+  };
 
   const loadTopicsAndDeployments = useCallback(() => {
     listTopics()
@@ -217,13 +230,14 @@ export default function InfraProfileManager() {
         const hasK8s = namespaces.length > 0;
         setKubernetesAvailable(hasK8s);
         if (hasK8s) {
-          listDeployments(namespaces[0].name)
-            .then((deployments) => setDeploymentOptions(deployments.map((d) => ({ value: d.name, label: d.name }))))
-            .catch(() => {});
+          const opts = namespaces.map((ns) => ({ value: ns.name, label: ns.name }));
+          setNamespaceOptions(opts);
+          setSelectedNamespace(namespaces[0].name);
+          loadDeploymentsForNamespace(namespaces[0].name);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [loadDeploymentsForNamespace]);
 
   useEffect(() => {
     void refresh();
@@ -401,15 +415,26 @@ export default function InfraProfileManager() {
           {kubernetesAvailable && (
             <>
               <Divider />
-              <KvEditor
-                label="Kubernetes Replicas (deployment → replicas)"
-                entries={form.kubernetesReplicas}
-                onChange={(e) => setForm({ ...form, kubernetesReplicas: e })}
-                valueType="number"
-                keyLabel="Deployment"
-                valuePlaceholder="Replicas"
-                keyOptions={deploymentOptions}
-              />
+              <Box>
+                <Box sx={{ minWidth: 200, mb: 1.5 }}>
+                  <Select
+                    label="Namespace"
+                    value={selectedNamespace}
+                    options={namespaceOptions}
+                    onChange={(e: SelectChangeEvent) => handleNamespaceChange(e.target.value)}
+                    size="small"
+                  />
+                </Box>
+                <KvEditor
+                  label="Kubernetes Replicas (deployment → replicas)"
+                  entries={form.kubernetesReplicas}
+                  onChange={(e) => setForm({ ...form, kubernetesReplicas: e })}
+                  valueType="number"
+                  keyLabel="Deployment"
+                  valuePlaceholder="Replicas"
+                  keyOptions={deploymentOptions}
+                />
+              </Box>
             </>
           )}
         </Stack>

@@ -30,16 +30,18 @@ import {
   deleteDbExportQuery,
   deleteLokiServiceLabel,
   downloadTestRunUrl,
+  getRunTestPreferences,
   listDbExportQueries,
   listLokiServiceLabels,
   listNamespaces,
   listTestScenarios,
+  saveRunTestPreferences,
   sendTest,
   subscribeTestProgress,
   updateDbExportQuery,
 } from '@/api';
 import { TestScenarioManager } from '@/components';
-import type { DbExportQuery, TestProgressEvent, TestScenarioSummary } from '@/types/api';
+import type { DbExportQuery, RunTestPreferences, TestProgressEvent, TestScenarioSummary } from '@/types/api';
 
 // ── Progress Panel ─────────────────────────────────────────────────
 
@@ -449,6 +451,31 @@ export default function SendTestPage() {
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [dbDialogOpen, setDbDialogOpen] = useState(false);
 
+  const prefsRef = useRef<RunTestPreferences>({
+    exportGrafana: false,
+    exportPrometheus: false,
+    exportKubernetes: false,
+    exportLogs: false,
+    exportDatabase: false,
+    debug: false,
+  });
+
+  const applyPreferences = (prefs: RunTestPreferences) => {
+    prefsRef.current = prefs;
+    setExportGrafana(prefs.exportGrafana);
+    setExportPrometheus(prefs.exportPrometheus);
+    setExportKubernetes(prefs.exportKubernetes);
+    setExportLogs(prefs.exportLogs);
+    setExportDatabase(prefs.exportDatabase);
+    setDebug(prefs.debug);
+  };
+
+  const persistPreferences = (patch: Partial<RunTestPreferences>) => {
+    const updated = { ...prefsRef.current, ...patch };
+    prefsRef.current = updated;
+    saveRunTestPreferences(updated).catch(() => {});
+  };
+
   const refreshScenarios = useCallback(async () => {
     try {
       setTestScenarios(await listTestScenarios());
@@ -460,6 +487,7 @@ export default function SendTestPage() {
   useEffect(() => {
     void refreshScenarios();
     listNamespaces().then((ns) => setKubernetesAvailable(ns.length > 0)).catch(() => {});
+    getRunTestPreferences().then(applyPreferences).catch(() => {});
     return () => {
       unsubscribeRef.current?.();
     };
@@ -555,7 +583,10 @@ export default function SendTestPage() {
                       <Checkbox
                         size="small"
                         checked={exportGrafana}
-                        onChange={(e) => setExportGrafana(e.target.checked)}
+                        onChange={(e) => {
+                          setExportGrafana(e.target.checked);
+                          persistPreferences({ exportGrafana: e.target.checked });
+                        }}
                       />
                     }
                     label="Grafana"
@@ -567,7 +598,10 @@ export default function SendTestPage() {
                       <Checkbox
                         size="small"
                         checked={exportPrometheus}
-                        onChange={(e) => setExportPrometheus(e.target.checked)}
+                        onChange={(e) => {
+                          setExportPrometheus(e.target.checked);
+                          persistPreferences({ exportPrometheus: e.target.checked });
+                        }}
                       />
                     }
                     label="Prometheus"
@@ -580,7 +614,10 @@ export default function SendTestPage() {
                         <Checkbox
                           size="small"
                           checked={exportKubernetes}
-                          onChange={(e) => setExportKubernetes(e.target.checked)}
+                          onChange={(e) => {
+                            setExportKubernetes(e.target.checked);
+                            persistPreferences({ exportKubernetes: e.target.checked });
+                          }}
                         />
                       }
                       label="Kubernetes"
@@ -594,7 +631,10 @@ export default function SendTestPage() {
                         <Checkbox
                           size="small"
                           checked={exportLogs}
-                          onChange={(e) => setExportLogs(e.target.checked)}
+                          onChange={(e) => {
+                            setExportLogs(e.target.checked);
+                            persistPreferences({ exportLogs: e.target.checked });
+                          }}
                         />
                       }
                       label="Logs"
@@ -613,7 +653,10 @@ export default function SendTestPage() {
                         <Checkbox
                           size="small"
                           checked={exportDatabase}
-                          onChange={(e) => setExportDatabase(e.target.checked)}
+                          onChange={(e) => {
+                            setExportDatabase(e.target.checked);
+                            persistPreferences({ exportDatabase: e.target.checked });
+                          }}
                         />
                       }
                       label="Database"
@@ -638,7 +681,10 @@ export default function SendTestPage() {
                     <Checkbox
                       size="small"
                       checked={debug}
-                      onChange={(e) => setDebug(e.target.checked)}
+                      onChange={(e) => {
+                        setDebug(e.target.checked);
+                        persistPreferences({ debug: e.target.checked });
+                      }}
                     />
                   }
                   label="Enable debug logging"

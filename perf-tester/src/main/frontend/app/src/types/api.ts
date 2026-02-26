@@ -351,3 +351,12 @@ export interface DashboardLink {
   label: string;
   url: string;
 }
+
+export interface RunTestPreferences {
+  exportGrafana: boolean;
+  exportPrometheus: boolean;
+  exportKubernetes: boolean;
+  exportLogs: boolean;
+  exportDatabase: boolean;
+  debug: boolean;
+}

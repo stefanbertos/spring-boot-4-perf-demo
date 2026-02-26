@@ -2,6 +2,7 @@ import { del, get, post, postFormData, put } from './client';
 import type {
   ApplyResult,
   DashboardLink,
+  RunTestPreferences,
   DbExportQuery,
   DbExportQueryRequest,
   DeploymentInfo,
@@ -349,4 +350,14 @@ export function deleteDbExportQuery(id: number): Promise<void> {
 
 export function getDashboardLinks(): Promise<DashboardLink[]> {
   return get('/api/dashboards');
+}
+
+// ── Run Test Preferences ─────────────────────────────────────────────
+
+export function getRunTestPreferences(): Promise<RunTestPreferences> {
+  return get('/api/run-test/preferences');
+}
+
+export function saveRunTestPreferences(data: RunTestPreferences): Promise<RunTestPreferences> {
+  return put('/api/run-test/preferences', data);
 }

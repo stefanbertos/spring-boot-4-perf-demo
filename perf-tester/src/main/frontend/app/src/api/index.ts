@@ -56,4 +56,6 @@ export {
   updateDbExportQuery,
   deleteDbExportQuery,
   getDashboardLinks,
+  getRunTestPreferences,
+  saveRunTestPreferences,
 } from './perfApi';
