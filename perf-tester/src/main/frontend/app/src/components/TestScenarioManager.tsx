@@ -46,10 +46,8 @@ import {
   updateTestScenario,
 } from '@/api';
 import type {
-  HeaderTemplateField,
   HeaderTemplateSummary,
   InfraProfileSummary,
-  ResponseTemplateField,
   ResponseTemplateSummary,
   TestCaseSummary,
   TestScenarioSummary,
@@ -171,11 +169,7 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<HeaderTemplateSummary[]>([]);
-  const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
-  const [expandedFields, setExpandedFields] = useState<HeaderTemplateField[]>([]);
   const [responseTemplates, setResponseTemplates] = useState<ResponseTemplateSummary[]>([]);
-  const [expandedResponseTemplateId, setExpandedResponseTemplateId] = useState<number | null>(null);
-  const [expandedResponseFields, setExpandedResponseFields] = useState<ResponseTemplateField[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -195,43 +189,13 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
     listResponseTemplates().then(setResponseTemplates).catch(() => {});
   };
 
-  const toggleTemplate = async (id: number) => {
-    if (expandedTemplateId === id) {
-      setExpandedTemplateId(null);
-      setExpandedFields([]);
-    } else {
-      const detail = await getHeaderTemplate(id);
-      setExpandedTemplateId(id);
-      setExpandedFields(detail.fields);
-    }
-  };
-
-  const toggleResponseTemplate = async (id: number) => {
-    if (expandedResponseTemplateId === id) {
-      setExpandedResponseTemplateId(null);
-      setExpandedResponseFields([]);
-    } else {
-      const detail = await getResponseTemplate(id);
-      setExpandedResponseTemplateId(id);
-      setExpandedResponseFields(detail.fields);
-    }
-  };
-
   const openCreate = () => {
     setForm({ ...EMPTY_TC, mode: 'create' });
-    setExpandedTemplateId(null);
-    setExpandedFields([]);
-    setExpandedResponseTemplateId(null);
-    setExpandedResponseFields([]);
     loadTemplates();
     setDialogOpen(true);
   };
 
   const openEdit = async (tc: TestCaseSummary) => {
-    setExpandedTemplateId(null);
-    setExpandedFields([]);
-    setExpandedResponseTemplateId(null);
-    setExpandedResponseFields([]);
     loadTemplates();
     const detail = await getTestCase(tc.id);
     setForm({
@@ -332,126 +296,6 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
             fullWidth
             required
           />
-          {templates.length > 0 && (
-            <Box>
-              <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 1 }}>
-                Header Templates
-              </Typography>
-              <Stack spacing={0.5}>
-                {templates.map((t) => (
-                  <Box key={t.id}>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        px: 1.5,
-                        py: 0.75,
-                        border: '1px solid',
-                        borderColor: expandedTemplateId === t.id ? 'primary.main' : 'divider',
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': { borderColor: 'primary.main' },
-                      }}
-                      onClick={() => void toggleTemplate(t.id)}
-                    >
-                      <Typography variant="body2">{t.name}</Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="caption" color="text.secondary">
-                          {t.fieldCount} {t.fieldCount === 1 ? 'field' : 'fields'}
-                        </Typography>
-                        <Typography variant="caption" color="primary">
-                          {expandedTemplateId === t.id ? 'hide' : 'show'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                    {expandedTemplateId === t.id && expandedFields.length > 0 && (
-                      <Box
-                        sx={{
-                          mt: 0.5,
-                          px: 1.5,
-                          py: 1,
-                          borderLeft: '2px solid',
-                          borderColor: 'primary.main',
-                          bgcolor: 'action.hover',
-                          borderRadius: '0 4px 4px 0',
-                        }}
-                      >
-                        <Stack spacing={0.25}>
-                          {expandedFields.map((f, fi) => (
-                            <Typography key={fi} variant="caption" color="text.secondary">
-                              <strong>{f.name}</strong> — size: {f.size}
-                              {f.value ? `, default: "${f.value}"` : ''}
-                            </Typography>
-                          ))}
-                        </Stack>
-                      </Box>
-                    )}
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          )}
-          {responseTemplates.length > 0 && (
-            <Box>
-              <Typography variant="body2" fontWeight={500} color="text.secondary" sx={{ mb: 1 }}>
-                Response Templates
-              </Typography>
-              <Stack spacing={0.5}>
-                {responseTemplates.map((t) => (
-                  <Box key={t.id}>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{
-                        px: 1.5,
-                        py: 0.75,
-                        border: '1px solid',
-                        borderColor: expandedResponseTemplateId === t.id ? 'secondary.main' : 'divider',
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': { borderColor: 'secondary.main' },
-                      }}
-                      onClick={() => void toggleResponseTemplate(t.id)}
-                    >
-                      <Typography variant="body2">{t.name}</Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="caption" color="text.secondary">
-                          {t.fieldCount} {t.fieldCount === 1 ? 'field' : 'fields'}
-                        </Typography>
-                        <Typography variant="caption" color="secondary">
-                          {expandedResponseTemplateId === t.id ? 'hide' : 'show'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                    {expandedResponseTemplateId === t.id && expandedResponseFields.length > 0 && (
-                      <Box
-                        sx={{
-                          mt: 0.5,
-                          px: 1.5,
-                          py: 1,
-                          borderLeft: '2px solid',
-                          borderColor: 'secondary.main',
-                          bgcolor: 'action.hover',
-                          borderRadius: '0 4px 4px 0',
-                        }}
-                      >
-                        <Stack spacing={0.25}>
-                          {expandedResponseFields.map((f, fi) => (
-                            <Typography key={fi} variant="caption" color="text.secondary">
-                              <strong>{f.name}</strong> — size: {f.size}, type: {f.type ?? 'STATIC'}
-                              {f.value ? `, expected: "${f.value}"` : ''}
-                            </Typography>
-                          ))}
-                        </Stack>
-                      </Box>
-                    )}
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          )}
           <TextField
             label="Message"
             value={form.message}
