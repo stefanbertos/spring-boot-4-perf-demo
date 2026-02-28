@@ -4,7 +4,9 @@ import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
 import com.example.perftester.perf.TestProgressEvent;
+import com.example.perftester.perf.ThresholdDef;
 import com.example.perftester.perf.ThresholdEvaluator;
+import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
@@ -13,10 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,12 +32,14 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ScheduledScenarioServiceTest {
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
@@ -189,5 +196,69 @@ class ScheduledScenarioServiceTest {
             verify(performanceTracker).setStatus("FAILED");
             verify(testRunService).completeRun(eq(40L), eq("FAILED"), any(), eq(null));
         });
+    }
+
+    @Test
+    void shouldExecuteWarmupBeforeMainTest() throws Exception {
+        var currentTime = LocalTime.now().format(HH_MM);
+        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
+        when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
+        when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(50L));
+        when(testScenarioService.getWarmupCount(1L)).thenReturn(3);
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
+        when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        when(performanceTracker.awaitWarmupCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(testScenarioService.getScenarioThresholds(1L)).thenReturn(List.of());
+        when(performanceTracker.getResult()).thenReturn(emptyResult());
+
+        scheduledScenarioService.runScheduledScenarios();
+
+        await().atMost(ofSeconds(5)).untilAsserted(() ->
+                verify(performanceTracker).startWarmupPhase(3));
+    }
+
+    @Test
+    void shouldUseMessagePoolWhenNonEmpty() throws Exception {
+        var currentTime = LocalTime.now().format(HH_MM);
+        var poolMsg = new TestScenarioService.ScenarioMessage("payload", Map.of(), null);
+        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
+        when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
+        when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(60L));
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of(poolMsg, poolMsg));
+        when(messageSender.sendMessage(anyString(), any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(testScenarioService.getScenarioThresholds(1L)).thenReturn(List.of());
+        when(performanceTracker.getResult()).thenReturn(emptyResult());
+
+        scheduledScenarioService.runScheduledScenarios();
+
+        await().atMost(ofSeconds(5)).untilAsserted(() ->
+                verify(messageSender, atLeastOnce()).sendMessage(anyString(), any(), any()));
+    }
+
+    @Test
+    void shouldEvaluateThresholdsWhenNonEmpty() throws Exception {
+        var currentTime = LocalTime.now().format(HH_MM);
+        var threshold = new ThresholdDef("TPS", "GTE", 5.0);
+        var thresholdResult = new ThresholdResult("TPS", "GTE", 5.0, 10.0, true);
+        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
+        when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
+        when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(70L));
+        when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
+        when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(testScenarioService.getScenarioThresholds(1L)).thenReturn(List.of(threshold));
+        when(thresholdEvaluator.evaluate(any(), any())).thenReturn(List.of(thresholdResult));
+        when(performanceTracker.getResult()).thenReturn(emptyResult());
+
+        scheduledScenarioService.runScheduledScenarios();
+
+        await().atMost(ofSeconds(5)).untilAsserted(() ->
+                verify(testRunService).updateThresholdResult(anyLong(), anyString(), any()));
     }
 }

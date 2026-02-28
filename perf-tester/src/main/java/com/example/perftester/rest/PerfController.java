@@ -21,6 +21,8 @@ import com.example.perftester.persistence.InfraProfileService;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Tag(name = "Performance Test", description = "Start performance tests and stream real-time progress")
 @Slf4j
 @Validated
 @RestController
@@ -79,10 +82,9 @@ public class PerfController {
     private final ThresholdEvaluator thresholdEvaluator;
     private final InfraSnapshotService infraSnapshotService;
 
-    /**
-     * Starts a performance test asynchronously and returns a testRunId immediately.
-     * Progress can be streamed via GET /api/perf/progress/{testRunId}.
-     */
+    @Operation(summary = "Start a performance test",
+            description = "Starts a performance test asynchronously and returns a testRunId immediately. " +
+                    "Progress can be streamed via GET /api/perf/progress/{testRunId}.")
     @PostMapping("/send")
     public ResponseEntity<TestStartResponse> sendMessages(
             @RequestBody(required = false) String message,
@@ -122,11 +124,9 @@ public class PerfController {
         return ResponseEntity.accepted().body(new TestStartResponse(testRunEntity.getId(), testRunId));
     }
 
-    /**
-     * Streams real-time test progress as Server-Sent Events.
-     * Sends a progress update every 500ms until the test completes, times out, or fails.
-     * The stream remains open during the EXPORTING phase (when export flags are enabled).
-     */
+    @Operation(summary = "Stream test progress via SSE",
+            description = "Streams real-time test progress as Server-Sent Events every 500 ms. " +
+                    "The stream closes when status becomes COMPLETED, TIMEOUT, or FAILED.")
     @GetMapping(value = "/progress/{testRunId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamProgress(@PathVariable String testRunId) {
         var emitter = new SseEmitter(SSE_TIMEOUT_MS);

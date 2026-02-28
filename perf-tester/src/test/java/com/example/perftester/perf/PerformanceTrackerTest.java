@@ -247,4 +247,42 @@ class PerformanceTrackerTest {
         tracker.setStatus("COMPLETED");
         assertEquals("COMPLETED", tracker.getProgressSnapshot().status());
     }
+
+    @Test
+    void startWarmupPhaseShouldSetupAndTimeoutWhenNoMessages() throws InterruptedException {
+        tracker.startWarmupPhase(2);
+        // awaitWarmupCompletion times out because no messages arrive
+        assertFalse(tracker.awaitWarmupCompletion(100, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void awaitWarmupCompletionShouldReturnTrueWhenLatchIsNull() throws InterruptedException {
+        // warmupLatch is null by default (startWarmupPhase not called)
+        assertTrue(tracker.awaitWarmupCompletion(100, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void recordReceiveDuringWarmupShouldCountDownLatch() throws InterruptedException {
+        tracker.startWarmupPhase(1);
+        tracker.recordSend("warmup-msg");
+        tracker.recordReceive("warmup-msg");
+        // Latch is counted down — should complete immediately
+        assertTrue(tracker.awaitWarmupCompletion(100, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void calculateWindowedTpsShouldCleanupOldTimestamps() throws InterruptedException {
+        // Use 1ms TPS window so timestamps immediately age out
+        var shortWindowProperties = new PerfProperties(100, 1, 60000, 30000, 60, 15);
+        var shortWindowTracker = new PerformanceTracker(new SimpleMeterRegistry(), shortWindowProperties);
+        shortWindowTracker.startTest(1, "tps-window-test");
+        shortWindowTracker.recordSend("msg-1");
+        shortWindowTracker.recordReceive("msg-1");
+
+        Thread.sleep(5); // Allow the 1ms window to expire
+
+        // getProgressSnapshot calls calculateWindowedTps which removes old timestamps
+        var snapshot = shortWindowTracker.getProgressSnapshot();
+        assertEquals(0.0, snapshot.tps(), 0.01);
+    }
 }

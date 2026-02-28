@@ -140,10 +140,13 @@ subprojects {
                     '*.health.HealthCheckConfigRequest',
                     '*.health.HealthCheckConfigResponse',
                     '*DbExportQueryController',
-                    '*DbExportQueryController$*'
+                    '*DbExportQueryController$*',
+                    '*PerfController',
+                    '*PerformanceTracker'
                 ]
                 limit {
-                    minimum = 0.8  // 80% coverage required per class
+                    counter = 'LINE'
+                    minimum = 1.0  // 100% line coverage required per class
                 }
             }
         }

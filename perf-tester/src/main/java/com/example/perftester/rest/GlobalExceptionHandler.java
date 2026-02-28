@@ -2,8 +2,10 @@ package com.example.perftester.rest;
 
 import com.example.perftester.persistence.HeaderTemplateNotFoundException;
 import com.example.perftester.persistence.InfraProfileNotFoundException;
+import com.example.perftester.persistence.ResponseTemplateNotFoundException;
 import com.example.perftester.persistence.TestCaseNameConflictException;
 import com.example.perftester.persistence.TestCaseNotFoundException;
+import com.example.perftester.persistence.TestRunNotFoundException;
 import com.example.perftester.persistence.TestScenarioNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,20 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleTestCaseNotFound(TestCaseNotFoundException ex) {
         var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problem.setTitle("Test Case Not Found");
+        return problem;
+    }
+
+    @ExceptionHandler(ResponseTemplateNotFoundException.class)
+    public ProblemDetail handleResponseTemplateNotFound(ResponseTemplateNotFoundException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Response Template Not Found");
+        return problem;
+    }
+
+    @ExceptionHandler(TestRunNotFoundException.class)
+    public ProblemDetail handleTestRunNotFound(TestRunNotFoundException ex) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Test Run Not Found");
         return problem;
     }
 

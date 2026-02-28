@@ -58,6 +58,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -455,6 +456,34 @@ class PerfControllerTest {
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> assertFalse(Files.exists(kubeFile)));
+    }
+
+    @Test
+    void sendMessagesShouldSetStatusFailedWhenInterrupted() throws Exception {
+        doThrow(new InterruptedException())
+                .when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
+
+        controller.sendMessages("test", 3, 1, 0,
+                new PerfController.ExportOptions(), new PerfController.RunOptions());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).setStatus("FAILED"));
+    }
+
+    @Test
+    void sendMessagesShouldSetStatusFailedOnUnexpectedException() {
+        when(messageSender.sendMessage(anyString()))
+                .thenThrow(new RuntimeException("Unexpected send failure"));
+
+        controller.sendMessages("test", 3, 1, 0,
+                new PerfController.ExportOptions(), new PerfController.RunOptions());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> verify(performanceTracker).setStatus("FAILED"));
     }
 
     private static PerfController.ExportOptions exportOptions(

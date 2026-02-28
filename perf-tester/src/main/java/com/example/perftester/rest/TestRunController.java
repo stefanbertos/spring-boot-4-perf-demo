@@ -4,6 +4,8 @@ import com.example.perftester.loki.LogEntry;
 import com.example.perftester.loki.LokiService;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.TestRunService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -24,6 +26,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
+@Tag(name = "Test Runs", description = "Query and manage historical test run records and results")
 @Slf4j
 @RestController
 @RequestMapping("/api/perf/test-runs")
@@ -96,6 +99,7 @@ public class TestRunController {
             Long kafkaResponsesLag) {
     }
 
+    @Operation(summary = "List all test runs")
     @GetMapping
     public List<TestRunListResponse> listAll() {
         return testRunService.findAll().stream()
@@ -103,18 +107,21 @@ public class TestRunController {
                 .toList();
     }
 
+    @Operation(summary = "Get a test run by ID")
     @GetMapping("/{id}")
     public TestRunDetailResponse getById(@PathVariable long id) {
         var run = testRunService.findById(id);
         return toDetailResponse(run);
     }
 
+    @Operation(summary = "Delete a test run")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable long id) {
         testRunService.delete(id);
     }
 
+    @Operation(summary = "Download test results ZIP", description = "Downloads the packaged ZIP file containing dashboards, metrics, logs, and summary for this run")
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadZip(@PathVariable long id) {
         var run = testRunService.findById(id);
@@ -135,6 +142,7 @@ public class TestRunController {
                 .body(resource);
     }
 
+    @Operation(summary = "Get application logs for a test run", description = "Queries Loki for application logs in the time window of the test run")
     @GetMapping("/{id}/logs")
     public List<LogEntry> getLogs(@PathVariable long id) {
         var run = testRunService.findById(id);
@@ -142,6 +150,7 @@ public class TestRunController {
         return lokiService.queryLogs(run.getStartedAt(), end);
     }
 
+    @Operation(summary = "Get infrastructure snapshots for a test run", description = "Returns queue depth and Kafka consumer lag snapshots captured during the test")
     @GetMapping("/{id}/snapshots")
     public List<TestRunSnapshotResponse> getSnapshots(@PathVariable long id) {
         return testRunService.findSnapshots(id).stream()

@@ -1,6 +1,8 @@
 package com.example.perftester.rest;
 
 import com.example.perftester.admin.LoggingAdminService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.logging.LogLevel;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Admin: Logging", description = "Change and query log levels at runtime without restarting the application")
 @Validated
 @RestController
 @RequestMapping("/api/admin/logging")
@@ -24,6 +27,7 @@ public class LoggingAdminController {
 
     private final LoggingAdminService loggingAdminService;
 
+    @Operation(summary = "Set log level", description = "Valid values: TRACE, DEBUG, INFO, WARN, ERROR, OFF")
     @PostMapping("/level")
     public ResponseEntity<LogLevelResponse> changeLogLevel(
             @RequestParam(defaultValue = DEFAULT_LOGGER) String loggerName,
@@ -34,6 +38,7 @@ public class LoggingAdminController {
         return ResponseEntity.ok(LogLevelResponse.from(config));
     }
 
+    @Operation(summary = "Get current log level")
     @GetMapping("/level")
     public ResponseEntity<LogLevelResponse> getLogLevel(
             @RequestParam(defaultValue = DEFAULT_LOGGER) String loggerName) {

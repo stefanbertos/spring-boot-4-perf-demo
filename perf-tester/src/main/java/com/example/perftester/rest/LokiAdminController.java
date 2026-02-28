@@ -1,6 +1,8 @@
 package com.example.perftester.rest;
 
 import com.example.perftester.loki.LokiServiceLabelService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "Admin: Loki", description = "Manage the list of service labels used when querying logs from Loki")
 @RestController
 @RequestMapping("/api/admin/loki/services")
 @RequiredArgsConstructor
@@ -24,17 +27,20 @@ public class LokiAdminController {
 
     private final LokiServiceLabelService lokiServiceLabelService;
 
+    @Operation(summary = "List Loki service labels")
     @GetMapping
     public List<String> list() {
         return lokiServiceLabelService.findAll();
     }
 
+    @Operation(summary = "Add a Loki service label")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public String add(@NotBlank @RequestParam String name) {
         return lokiServiceLabelService.add(name.trim());
     }
 
+    @Operation(summary = "Remove a Loki service label")
     @DeleteMapping("/{name}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String name) {

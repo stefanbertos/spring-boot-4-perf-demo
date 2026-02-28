@@ -139,4 +139,24 @@ class HealthCheckSchedulerTest {
         assertThat(meterRegistry.find("health.infra.status").tag("service", "kafka").gauge()).isNotNull();
         assertThat(meterRegistry.find("health.infra.status").tag("service", "mq").gauge()).isNotNull();
     }
+
+    @Test
+    void resetServiceTimerShouldRemoveCachedTime() {
+        var cfg = config("kafka", "localhost", serverA.getLocalPort(), true);
+        when(repository.findAll()).thenReturn(List.of(cfg));
+
+        var scheduler = new HealthCheckScheduler(repository, meterRegistry);
+        // First run populates lastCheckedAt for "kafka"
+        scheduler.performHealthChecks();
+
+        // Reset clears the cached time — covers lines 31-33
+        scheduler.resetServiceTimer("kafka");
+
+        // Second run executes checkService again (re-registers timer)
+        scheduler.performHealthChecks();
+
+        var timer = meterRegistry.find("health.ping.duration").tag("service", "kafka").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(2);
+    }
 }

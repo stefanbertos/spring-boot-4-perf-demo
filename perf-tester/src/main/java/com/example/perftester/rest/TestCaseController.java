@@ -2,6 +2,8 @@ package com.example.perftester.rest;
 
 import com.example.perftester.persistence.TestCaseService;
 import com.example.perftester.persistence.TestCaseService.TestCaseDetail;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 
+@Tag(name = "Test Cases", description = "Manage test case messages used as payloads in performance tests")
 @RestController
 @RequestMapping("/api/test-cases")
 @RequiredArgsConstructor
@@ -47,6 +50,7 @@ public class TestCaseController {
                                           Long responseTemplateId, String responseTemplateName,
                                           Instant updatedAt) { }
 
+    @Operation(summary = "List all test cases")
     @GetMapping
     public List<TestCaseSummaryResponse> listAll() {
         return testCaseService.listAll().stream()
@@ -57,11 +61,13 @@ public class TestCaseController {
                 .toList();
     }
 
+    @Operation(summary = "Get a test case by ID")
     @GetMapping("/{id}")
     public TestCaseResponse getById(@PathVariable long id) {
         return toResponse(testCaseService.getById(id));
     }
 
+    @Operation(summary = "Create a test case")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TestCaseResponse create(@Valid @RequestBody CreateTestCaseRequest request) {
@@ -69,6 +75,7 @@ public class TestCaseController {
                 request.headerTemplateId(), request.responseTemplateId()));
     }
 
+    @Operation(summary = "Update a test case")
     @PutMapping("/{id}")
     public TestCaseResponse update(@PathVariable long id,
                                    @Valid @RequestBody UpdateTestCaseRequest request) {
@@ -76,12 +83,14 @@ public class TestCaseController {
                 request.headerTemplateId(), request.responseTemplateId()));
     }
 
+    @Operation(summary = "Delete a test case")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable long id) {
         testCaseService.delete(id);
     }
 
+    @Operation(summary = "Upload a test case from a file", description = "Creates a test case by reading the message content from an uploaded file")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public TestCaseResponse upload(@RequestParam String name,
