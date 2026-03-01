@@ -9,9 +9,9 @@
 |===
 |Service |Port |Description
 
-|perf-tester
+|perf-tester (+ perf-ui frontend)
 |8080
-|Main application REST API
+|Main application REST API and React frontend
 
 |ibm-mq-consumer
 |8081
@@ -21,9 +21,17 @@
 |8082
 |Kafka message processor
 
+|config-server
+|8888
+|Spring Cloud Config Server
+
 |api-gateway
 |8090
 |API Gateway
+
+|Redis
+|6379
+|Cache
 
 |IBM MQ (MQ)
 |1414
@@ -214,6 +222,47 @@ WARNING: Change all default credentials for production deployments.
 
 |`:api-gateway:bootRun`
 |Run api-gateway locally
+
+|`:config-server:bootRun`
+|Run config-server locally
+|===
+
+=== Docker Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`dockerBuildAll`
+|Build OCI images for all Spring Boot modules
+
+|`:perf-tester:dockerBuild`
+|Build OCI image for perf-tester only
+|===
+
+=== Component Test Tasks
+
+[cols="2,3"]
+|===
+|Task |Description
+
+|`componentTest`
+|Run all component tests (requires Docker)
+
+|`:perf-tester:componentTest`
+|Component tests for perf-tester (Testcontainers IBM MQ)
+
+|`:ibm-mq-consumer:componentTest`
+|Component tests for ibm-mq-consumer (Testcontainers Kafka + IBM MQ)
+
+|`:kafka-consumer:componentTest`
+|Component tests for kafka-consumer (Testcontainers Kafka)
+
+|`:config-server:componentTest`
+|Component tests for config-server (in-process, no containers)
+
+|`:api-gateway:componentTest`
+|Component tests for api-gateway (WireMock stubs)
 |===
 
 [appendix]
@@ -233,9 +282,9 @@ WARNING: Change all default credentials for production deployments.
 |varies
 |HTTP server port
 
-|JAVA_OPTS
-|-XX:+UseZGC
-|JVM options
+|JAVA_TOOL_OPTIONS
+|`-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0`
+|JVM options (read automatically by the JVM)
 |===
 
 === IBM MQ Configuration

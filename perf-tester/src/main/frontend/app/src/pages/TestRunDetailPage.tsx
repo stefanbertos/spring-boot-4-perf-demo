@@ -6,11 +6,14 @@ import Grid from '@mui/material/Grid';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
+import Snackbar from '@mui/material/Snackbar';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Alert, Card, Chip, DataTable, Loading, PageHeader, Tabs } from 'perf-ui-components';
 import type { DataTableColumn, TabItem } from 'perf-ui-components';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { downloadTestRunUrl, getTestRunLogs, getTestRunSnapshots, getTestRunSummary } from '@/api';
+import { downloadTestRunUrl, getTestRunLogs, getTestRunSnapshots, getTestRunSummary, setTestRunTags } from '@/api';
 import { useApi } from '@/hooks';
 import type { LogEntry, TestRunSnapshotResponse, ThresholdResult } from '@/types/api';
 
@@ -130,6 +133,43 @@ export default function TestRunDetailPage() {
     () => getTestRunSnapshots(numericId),
     [numericId],
   );
+
+  const [tags, setTagsState] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (summary) {
+      setTagsState(summary.tags ?? []);
+    }
+  }, [summary]);
+
+  const handleAddTag = async () => {
+    const trimmed = newTag.trim();
+    if (!trimmed) {
+      return;
+    }
+    const updated = [...tags, trimmed];
+    setTagsState(updated);
+    setNewTag('');
+    try {
+      await setTestRunTags(numericId, updated);
+    } catch {
+      setTagError('Failed to update tags.');
+      setTagsState(tags);
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    const updated = tags.filter((t) => t !== tag);
+    setTagsState(updated);
+    try {
+      await setTestRunTags(numericId, updated);
+    } catch {
+      setTagError('Failed to update tags.');
+      setTagsState(tags);
+    }
+  };
 
   if (loadingSummary) return <Loading message="Loading test run..." />;
   if (errorSummary) return <Alert severity="error">{errorSummary.message}</Alert>;
@@ -291,7 +331,7 @@ export default function TestRunDetailPage() {
       >
         Back to Test Runs
       </MuiButton>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
         <PageHeader
           title={`Test Run #${id}`}
           subtitle={summary.testId ? `Test ID: ${summary.testId}` : `Run ID: ${summary.testRunId}`}
@@ -327,7 +367,40 @@ export default function TestRunDetailPage() {
           </MuiButton>
         )}
       </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+        {tags.map((tag) => (
+          <Chip
+            key={tag}
+            label={tag}
+            size="small"
+            onDelete={() => void handleRemoveTag(tag)}
+          />
+        ))}
+        <TextField
+          size="small"
+          placeholder="Add tag"
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') void handleAddTag(); }}
+          sx={{ width: 140 }}
+        />
+        <MuiButton size="small" variant="outlined" onClick={() => void handleAddTag()}>
+          Add
+        </MuiButton>
+      </Box>
+
       <Tabs tabs={tabs} />
+
+      <Snackbar
+        open={tagError != null}
+        autoHideDuration={4000}
+        onClose={() => setTagError(null)}
+      >
+        <Alert severity="error" onClose={() => setTagError(null)}>
+          {tagError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

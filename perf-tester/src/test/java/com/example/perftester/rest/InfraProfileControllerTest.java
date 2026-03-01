@@ -1,6 +1,10 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.ApplyResult;
+import com.example.perftester.persistence.InfraProfileDetail;
+import com.example.perftester.persistence.InfraProfileRequest;
 import com.example.perftester.persistence.InfraProfileService;
+import com.example.perftester.persistence.InfraProfileSummary;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,7 +30,7 @@ class InfraProfileControllerTest {
 
     @Test
     void listAllShouldReturnOk() {
-        var summary = new InfraProfileService.InfraProfileSummary(1L, "profile-a", "2024-01-01T00:00:00Z");
+        var summary = new InfraProfileSummary(1L, "profile-a", "2024-01-01T00:00:00Z");
         when(infraProfileService.listAll()).thenReturn(List.of(summary));
 
         var response = controller.listAll();
@@ -37,7 +41,7 @@ class InfraProfileControllerTest {
 
     @Test
     void getByIdShouldReturnProfile() {
-        var detail = new InfraProfileService.InfraProfileDetail(
+        var detail = new InfraProfileDetail(
                 1L, "profile-a", Map.of(), Map.of(), Map.of(), Map.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(infraProfileService.getById(1L)).thenReturn(detail);
 
@@ -49,8 +53,8 @@ class InfraProfileControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var request = new InfraProfileService.InfraProfileRequest("profile-a", Map.of(), Map.of(), Map.of(), Map.of());
-        var detail = new InfraProfileService.InfraProfileDetail(
+        var request = new InfraProfileRequest("profile-a", Map.of(), Map.of(), Map.of(), Map.of());
+        var detail = new InfraProfileDetail(
                 1L, "profile-a", Map.of(), Map.of(), Map.of(), Map.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(infraProfileService.create(request)).thenReturn(detail);
 
@@ -62,8 +66,8 @@ class InfraProfileControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var request = new InfraProfileService.InfraProfileRequest("profile-a", Map.of(), Map.of(), Map.of(), Map.of());
-        var detail = new InfraProfileService.InfraProfileDetail(
+        var request = new InfraProfileRequest("profile-a", Map.of(), Map.of(), Map.of(), Map.of());
+        var detail = new InfraProfileDetail(
                 1L, "profile-a", Map.of(), Map.of(), Map.of(), Map.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(infraProfileService.update(1L, request)).thenReturn(detail);
 
@@ -83,7 +87,7 @@ class InfraProfileControllerTest {
 
     @Test
     void applyShouldReturnApplyResult() {
-        var result = new InfraProfileService.ApplyResult(List.of("log:com.example=DEBUG"), List.of());
+        var result = new ApplyResult(List.of("log:com.example=DEBUG"), List.of());
         when(infraProfileService.applyProfile(1L)).thenReturn(result);
 
         var response = controller.apply(1L);

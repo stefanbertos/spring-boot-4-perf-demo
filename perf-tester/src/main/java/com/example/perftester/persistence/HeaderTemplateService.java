@@ -77,18 +77,4 @@ public class HeaderTemplateService {
                 .toList();
     }
 
-    public record TemplateFieldDto(String name, int size, String value, String type,
-                                   String paddingChar, String uuidPrefix, String uuidSeparator,
-                                   boolean correlationKey) {
-    }
-
-    public record HeaderTemplateSummary(Long id, String name, int fieldCount, String updatedAt) {
-    }
-
-    public record HeaderTemplateDetail(Long id, String name, List<TemplateFieldDto> fields,
-                                       String createdAt, String updatedAt) {
-    }
-
-    public record HeaderTemplateRequest(String name, List<TemplateFieldDto> fields) {
-    }
 }

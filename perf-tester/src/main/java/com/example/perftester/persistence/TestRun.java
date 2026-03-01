@@ -93,6 +93,9 @@ public class TestRun {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Column(name = "tags", columnDefinition = "text")
+    private String tags;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

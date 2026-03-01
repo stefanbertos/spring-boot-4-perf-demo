@@ -1,9 +1,9 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.TestScenarioDetail;
+import com.example.perftester.persistence.TestScenarioRequest;
 import com.example.perftester.persistence.TestScenarioService;
-import com.example.perftester.persistence.TestScenarioService.TestScenarioDetail;
-import com.example.perftester.persistence.TestScenarioService.TestScenarioRequest;
-import com.example.perftester.persistence.TestScenarioService.TestScenarioSummary;
+import com.example.perftester.persistence.TestScenarioSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

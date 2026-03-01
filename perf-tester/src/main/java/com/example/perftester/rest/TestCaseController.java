@@ -1,11 +1,10 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.TestCaseDetail;
 import com.example.perftester.persistence.TestCaseService;
-import com.example.perftester.persistence.TestCaseService.TestCaseDetail;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 
 @Tag(name = "Test Cases", description = "Manage test case messages used as payloads in performance tests")
@@ -33,22 +31,6 @@ import java.util.List;
 public class TestCaseController {
 
     private final TestCaseService testCaseService;
-
-    public record CreateTestCaseRequest(@NotBlank String name, @NotBlank String message,
-                                        Long headerTemplateId, Long responseTemplateId) { }
-
-    public record UpdateTestCaseRequest(@NotBlank String name, @NotBlank String message,
-                                        Long headerTemplateId, Long responseTemplateId) { }
-
-    public record TestCaseResponse(long id, String name, String message,
-                                   Long headerTemplateId, String headerTemplateName,
-                                   Long responseTemplateId, String responseTemplateName,
-                                   Instant createdAt, Instant updatedAt) { }
-
-    public record TestCaseSummaryResponse(long id, String name,
-                                          Long headerTemplateId, String headerTemplateName,
-                                          Long responseTemplateId, String responseTemplateName,
-                                          Instant updatedAt) { }
 
     @Operation(summary = "List all test cases")
     @GetMapping

@@ -1,6 +1,7 @@
 export { ApiError } from './client';
 export {
   applyInfraProfile,
+  bulkDeleteTestRuns,
   changeQueueMaxDepth,
   createHeaderTemplate,
   createInfraProfile,
@@ -12,6 +13,8 @@ export {
   deleteResponseTemplate,
   deleteTestCase,
   deleteTestRun,
+  getAllTestRunTags,
+  getTrendData,
   deleteTestScenario,
   downloadTestRunUrl,
   getHeaderTemplate,
@@ -58,4 +61,5 @@ export {
   getDashboardLinks,
   getRunTestPreferences,
   saveRunTestPreferences,
+  setTestRunTags,
 } from './perfApi';

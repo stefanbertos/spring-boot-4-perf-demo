@@ -17,6 +17,7 @@ import type {
   InfraProfileSummary,
   LogEntry,
   LogLevelResponse,
+  PagedResponse,
   QueueInfo,
   ResponseTemplateDetail,
   ResponseTemplateRequest,
@@ -32,6 +33,7 @@ import type {
   TestScenarioSummary,
   TestStartResponse,
   TopicInfo,
+  TrendPoint,
 } from '@/types/api';
 
 // ── Performance Tests ──────────────────────────────────────────────
@@ -98,8 +100,29 @@ export function subscribeTestProgress(
 
 // ── Test Runs ──────────────────────────────────────────────────────
 
-export function getTestRuns(): Promise<TestRunResponse[]> {
-  return get('/api/perf/test-runs');
+export function getTestRuns(params?: { page?: number; size?: number; tag?: string }): Promise<PagedResponse<TestRunResponse>> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.size != null && params.size !== 20) query.set('size', String(params.size));
+  if (params?.tag) query.set('tag', params.tag);
+  const qs = query.toString();
+  return get(qs ? `/api/perf/test-runs?${qs}` : '/api/perf/test-runs');
+}
+
+export function getAllTestRunTags(): Promise<string[]> {
+  return get('/api/perf/test-runs/tags');
+}
+
+export function setTestRunTags(id: number, tags: string[]): Promise<void> {
+  return put(`/api/perf/test-runs/${id}/tags`, { tags });
+}
+
+export function bulkDeleteTestRuns(ids: number[]): Promise<void> {
+  return del('/api/perf/test-runs/bulk', { ids });
+}
+
+export function getTrendData(): Promise<TrendPoint[]> {
+  return get('/api/perf/test-runs/trends');
 }
 
 export function getTestRunSummary(id: number): Promise<TestRunDetailResponse> {

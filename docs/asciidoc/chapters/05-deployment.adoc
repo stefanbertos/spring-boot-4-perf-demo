@@ -77,69 +77,62 @@ Recommended resources for Docker Desktop:
 |100 GB
 |===
 
-== Kubernetes Deployment with Helm
+== Kubernetes Deployment with ArgoCD
+
+The application uses **ArgoCD** (App of Apps pattern) for GitOps Kubernetes deployment. ArgoCD watches `infrastructure/argocd/apps/` and deploys all services in the correct dependency order using sync waves.
 
 === Prerequisites
 
-* Kubernetes cluster (minikube, kind, GKE, EKS, AKS)
-* Helm 3.x installed
-* kubectl configured
+* Kubernetes cluster (Rancher Desktop, minikube, kind, GKE, EKS, AKS)
+* `kubectl` configured and pointing to the target cluster
+* Container images built and available in the cluster's image registry
 
-=== Deployment Steps
+=== Build Images First
 
-[source,bash]
-----
-cd infrastructure/helm
-
-# Deploy all components
-deployHelm.bat          # Windows
-./deployHelm.sh         # Linux/macOS
-----
-
-=== Deployment Script Details
-
-The deployment script performs the following steps:
-
-. Build application JARs with Gradle
-. Build Docker images for all modules
-. Load/push images to cluster
-. Create namespace `perf-demo`
-. Deploy infrastructure (MQ, Kafka, databases)
-. Deploy observability stack (Prometheus, Grafana, Loki, Tempo)
-. Deploy application modules
-. Deploy API Gateway and Ingress
-
-=== Manual Helm Deployment
-
-Deploy individual components:
+For local clusters (Rancher Desktop), build images directly into the local Docker daemon:
 
 [source,bash]
 ----
-# Create namespace
-kubectl create namespace perf-demo
+./gradlew dockerBuildAll
+----
 
-# Deploy IBM MQ
-helm upgrade --install perf-ibm-mq ./ibm-mq \
-    --namespace perf-demo \
-    --wait --timeout 5m
+=== Bootstrap ArgoCD and Deploy
 
-# Deploy Kafka
-helm upgrade --install perf-kafka ./kafka \
-    --namespace perf-demo \
-    --wait --timeout 5m
+[source,bash]
+----
+# Full setup: installs ArgoCD into 'argocd' namespace, then deploys all apps
+infrastructure\deployArgo.bat
+----
 
-# Deploy application
-helm upgrade --install perf-perf-tester ./perf-tester \
-    --namespace perf-demo \
-    --set image.tag=latest \
-    --wait --timeout 3m
+The script:
+
+. Installs ArgoCD into the `argocd` namespace
+. Applies `infrastructure/argocd/project.yaml` (AppProject)
+. Applies `infrastructure/argocd/root-app.yaml` (root Application)
+. ArgoCD then deploys all child Applications in sync wave order
+
+=== Manual ArgoCD Bootstrap
+
+[source,bash]
+----
+# Install ArgoCD
+kubectl create namespace argocd
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Apply project and root app
+kubectl apply -f infrastructure/argocd/project.yaml
+kubectl apply -f infrastructure/argocd/root-app.yaml
 ----
 
 === Verifying Deployment
 
 [source,bash]
 ----
-# Check all pods
+# Check ArgoCD applications
+kubectl get applications -n argocd
+
+# Check all pods in perf-demo
 kubectl get pods -n perf-demo
 
 # Check services
@@ -156,75 +149,17 @@ kubectl logs -f deployment/perf-perf-tester -n perf-demo
 
 [source,bash]
 ----
-cd infrastructure/helm
-
-# Uninstall all components
-cleanup.bat             # Windows
-./cleanup.sh            # Linux/macOS
+# Full cleanup: deletes all ArgoCD apps and the argocd namespace
+infrastructure\cleanupKubernetes.bat
 ----
 
-== GCP/GKE Deployment
-
-=== Prerequisites
-
-* GCP project with billing enabled
-* gcloud CLI installed and authenticated
-* GKE cluster created
-
-=== Configuration
-
-Set required environment variables:
+=== Manual Teardown
 
 [source,bash]
 ----
-# Required
-set GCP_PROJECT=your-project-id
-
-# Optional (defaults shown)
-set GCP_REGION=us-central1
-set GCP_REGISTRY=%GCP_REGION%-docker.pkg.dev/%GCP_PROJECT%/perf-demo
-----
-
-=== Deployment
-
-[source,bash]
-----
-# Connect to GKE cluster
-gcloud container clusters get-credentials your-cluster \
-    --region us-central1 \
-    --project your-project-id
-
-# Deploy
-cd infrastructure/helm
-deployHelm.bat
-----
-
-The script automatically:
-
-. Configures Docker for Artifact Registry
-. Creates Artifact Registry repository if needed
-. Tags and pushes images to Artifact Registry
-. Deploys using Helm with correct image references
-
-=== GKE-Specific Configuration
-
-For GKE, update Helm values:
-
-.values.yaml overrides
-[source,yaml]
-----
-# Enable GKE ingress
-ingress:
-  enabled: true
-  className: "gce"
-  annotations:
-    kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.global-static-ip-name: "perf-demo-ip"
-
-# Use workload identity
-serviceAccount:
-  annotations:
-    iam.gke.io/gcp-service-account: perf-demo@PROJECT.iam.gserviceaccount.com
+kubectl delete application perf-demo -n argocd
+kubectl delete appproject perf-demo -n argocd
+kubectl delete namespace perf-demo
 ----
 
 == Helm Chart Structure
@@ -270,6 +205,10 @@ resources:
 |Spring Cloud Gateway
 |1
 
+|config-server
+|Spring Cloud Config Server
+|1
+
 |grafana
 |Visualization
 |1
@@ -307,7 +246,7 @@ resources:
 |1
 
 |oracle
-|Database
+|Oracle XE database
 |1
 
 |oracle-exporter
@@ -315,7 +254,7 @@ resources:
 |1
 
 |perf-tester
-|Main application
+|Main application (includes perf-ui frontend)
 |1
 
 |prometheus
@@ -326,12 +265,24 @@ resources:
 |Log shipping
 |DaemonSet
 
+|redis
+|Cache / session store
+|1
+
+|redis-commander
+|Redis web UI
+|1
+
 |sonarqube
 |Code quality
 |1
 
 |tempo
 |Tracing
+|1
+
+|trivy-operator
+|Container image CVE scanning
 |1
 |===
 

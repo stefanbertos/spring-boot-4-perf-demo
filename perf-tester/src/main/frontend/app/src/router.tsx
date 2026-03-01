@@ -8,6 +8,7 @@ import {
   TestRunComparePage,
   TestRunDetailPage,
   TestRunsPage,
+  TrendsPage,
 } from '@/pages';
 
 const router = createBrowserRouter([
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
       { path: 'test-runs', element: <TestRunsPage /> },
       { path: 'test-runs/compare', element: <TestRunComparePage /> },
       { path: 'test-runs/:id', element: <TestRunDetailPage /> },
+      { path: 'trends', element: <TrendsPage /> },
       { path: 'dashboards', element: <DashboardsPage /> },
       { path: 'admin', element: <AdminPage /> },
       { path: '*', element: <NotFoundPage /> },

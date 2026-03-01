@@ -1,5 +1,6 @@
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import InboxIcon from '@mui/icons-material/Inbox';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';
@@ -9,14 +10,19 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Pagination from '@mui/material/Pagination';
+import Select from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import { Alert, Chip, DataTable, EmptyState, Loading, PageHeader } from 'perf-ui-components';
 import type { DataTableColumn } from 'perf-ui-components';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deleteTestRun, getTestRuns } from '@/api';
+import { bulkDeleteTestRuns, deleteTestRun, getAllTestRunTags, getTestRuns } from '@/api';
 import { useApi } from '@/hooks';
 import type { TestRunResponse } from '@/types/api';
 
@@ -36,18 +42,30 @@ const testTypeColor: Record<string, 'info' | 'primary' | 'warning' | 'default' |
 };
 
 export default function TestRunsPage() {
-  const { data: runs, loading, error, refetch } = useApi(() => getTestRuns());
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(20);
+  const [selectedTag, setSelectedTag] = useState('');
+
+  const { data, loading, error, refetch } = useApi(
+    () => getTestRuns({ page, size: pageSize, tag: selectedTag || undefined }),
+    [page, pageSize, selectedTag],
+  );
+  const { data: allTags } = useApi(() => getAllTestRunTags());
+
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
   const [snackbarError, setSnackbarError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const runs = data?.content ?? [];
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-      } else if (next.size < 2) {
+      } else {
         next.add(id);
       }
       return next;
@@ -68,6 +86,17 @@ export default function TestRunsPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkConfirm(false);
+    try {
+      await bulkDeleteTestRuns([...selectedIds]);
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      setSnackbarError('Failed to delete selected test runs.');
+    }
+  };
+
   const columns: DataTableColumn<TestRunResponse>[] = [
     {
       id: 'select',
@@ -78,7 +107,6 @@ export default function TestRunsPage() {
           size="small"
           checked={selectedIds.has(row.id)}
           onClick={(e) => { e.stopPropagation(); toggleSelect(row.id); }}
-          disabled={!selectedIds.has(row.id) && selectedIds.size >= 2}
         />
       ),
     },
@@ -123,6 +151,17 @@ export default function TestRunsPage() {
         ) : null,
     },
     {
+      id: 'tags',
+      label: 'Tags',
+      render: (row) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {(row.tags ?? []).map((t) => (
+            <Chip key={t} label={t} size="small" variant="outlined" />
+          ))}
+        </Box>
+      ),
+    },
+    {
       id: 'duration',
       label: 'Duration',
       align: 'right',
@@ -159,26 +198,65 @@ export default function TestRunsPage() {
     <Box>
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: 2 }}>
         <PageHeader title="Test Runs" subtitle="Recent performance test results" />
-        <MuiButton
-          variant="outlined"
-          disabled={selectedIds.size !== 2}
-          startIcon={<CompareArrowsIcon />}
-          onClick={() => {
-            const [id1, id2] = [...selectedIds];
-            void navigate(`/test-runs/compare?id1=${id1}&id2=${id2}`);
-          }}
-          sx={{ mt: 1 }}
-        >
-          Compare Selected
-        </MuiButton>
+        <Stack direction="row" gap={1} sx={{ mt: 1 }}>
+          <MuiButton
+            variant="outlined"
+            color="error"
+            disabled={selectedIds.size < 1}
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setBulkConfirm(true)}
+          >
+            Delete Selected
+          </MuiButton>
+          <MuiButton
+            variant="outlined"
+            disabled={selectedIds.size !== 2}
+            startIcon={<CompareArrowsIcon />}
+            onClick={() => {
+              const [id1, id2] = [...selectedIds];
+              void navigate(`/test-runs/compare?id1=${id1}&id2=${id2}`);
+            }}
+          >
+            Compare Selected
+          </MuiButton>
+        </Stack>
       </Stack>
-      {runs && runs.length > 0 ? (
-        <DataTable
-          columns={columns}
-          rows={runs}
-          keyExtractor={(row) => row.id}
-          onRowClick={(row) => navigate(`/test-runs/${row.id}`)}
-        />
+
+      <Stack direction="row" alignItems="center" gap={2} sx={{ mb: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel>Filter by tag</InputLabel>
+          <Select
+            value={selectedTag}
+            label="Filter by tag"
+            onChange={(e) => { setSelectedTag(e.target.value); setPage(0); }}
+          >
+            <MenuItem value="">All tags</MenuItem>
+            {(allTags ?? []).map((t) => (
+              <MenuItem key={t} value={t}>{t}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Stack>
+
+      {runs.length > 0 ? (
+        <>
+          <DataTable
+            columns={columns}
+            rows={runs}
+            keyExtractor={(row) => row.id}
+            onRowClick={(row) => navigate(`/test-runs/${row.id}`)}
+          />
+          {data && data.totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Pagination
+                count={data.totalPages}
+                page={page + 1}
+                onChange={(_, value) => setPage(value - 1)}
+                color="primary"
+              />
+            </Box>
+          )}
+        </>
       ) : (
         <EmptyState
           icon={<InboxIcon sx={{ fontSize: 48 }} />}
@@ -198,6 +276,22 @@ export default function TestRunsPage() {
         <DialogActions>
           <MuiButton onClick={() => setConfirmId(null)}>Cancel</MuiButton>
           <MuiButton color="error" variant="contained" onClick={() => void handleDeleteConfirm()}>
+            Delete
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={bulkConfirm} onClose={() => setBulkConfirm(false)}>
+        <DialogTitle>Delete Test Runs</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Delete {selectedIds.size} test run{selectedIds.size !== 1 ? 's' : ''}? This will also
+            remove any associated ZIP export files. This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton onClick={() => setBulkConfirm(false)}>Cancel</MuiButton>
+          <MuiButton color="error" variant="contained" onClick={() => void handleBulkDelete()}>
             Delete
           </MuiButton>
         </DialogActions>

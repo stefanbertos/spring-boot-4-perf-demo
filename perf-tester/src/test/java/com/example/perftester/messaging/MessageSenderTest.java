@@ -1,6 +1,5 @@
 package com.example.perftester.messaging;
 
-import com.example.perftester.messaging.MqProperties;
 import com.example.perftester.perf.PerformanceTracker;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
@@ -14,11 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessagePostProcessor;
 
-import java.util.Map;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -55,7 +52,7 @@ class MessageSenderTest {
         verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), messageCaptor.capture(), processorCaptor.capture());
 
         String sentMessage = messageCaptor.getValue();
-        assertTrue(sentMessage.contains("|test payload"));
+        assertEquals("test payload", sentMessage);
         verify(performanceTracker).recordSend(anyString());
 
         // Invoke the lambda to cover the MessagePostProcessor code
@@ -74,29 +71,4 @@ class MessageSenderTest {
         assertThrows(RuntimeException.class, () -> messageSender.sendMessage("test payload"));
     }
 
-    @Test
-    void sendMessageWithHeadersShouldSetJmsStringProperties() throws JMSException {
-        messageSender.sendMessage("test payload", Map.of("X-Type", "PERF"), "txn-123");
-
-        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
-        verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), anyString(), processorCaptor.capture());
-
-        MessagePostProcessor processor = processorCaptor.getValue();
-        Message result = processor.postProcessMessage(jmsMessage);
-        assertNotNull(result);
-        verify(jmsMessage).setStringProperty("X-Type", "PERF");
-    }
-
-    @Test
-    void sendMessageWithNullTransactionIdShouldStillSend() throws JMSException {
-        messageSender.sendMessage("test payload", Map.of("CORR_ID", "abc-123"), null);
-
-        ArgumentCaptor<MessagePostProcessor> processorCaptor = ArgumentCaptor.forClass(MessagePostProcessor.class);
-        verify(jmsTemplate).convertAndSend(eq("queue:///DEV.QUEUE.2?targetClient=1"), anyString(), processorCaptor.capture());
-
-        MessagePostProcessor processor = processorCaptor.getValue();
-        Message result = processor.postProcessMessage(jmsMessage);
-        assertNotNull(result);
-        verify(jmsMessage).setStringProperty("CORR_ID", "abc-123");
-    }
 }

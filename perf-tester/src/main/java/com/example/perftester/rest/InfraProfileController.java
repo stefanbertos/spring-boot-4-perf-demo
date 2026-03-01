@@ -1,12 +1,10 @@
 package com.example.perftester.rest;
 
-import java.util.List;
-
+import com.example.perftester.persistence.ApplyResult;
+import com.example.perftester.persistence.InfraProfileDetail;
+import com.example.perftester.persistence.InfraProfileRequest;
 import com.example.perftester.persistence.InfraProfileService;
-import com.example.perftester.persistence.InfraProfileService.ApplyResult;
-import com.example.perftester.persistence.InfraProfileService.InfraProfileDetail;
-import com.example.perftester.persistence.InfraProfileService.InfraProfileRequest;
-import com.example.perftester.persistence.InfraProfileService.InfraProfileSummary;
+import com.example.perftester.persistence.InfraProfileSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +21,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Tag(name = "Infrastructure Profiles", description = "Manage and apply infrastructure profiles that preset Kafka partitions and MQ queue depths for test scenarios")
 @Slf4j

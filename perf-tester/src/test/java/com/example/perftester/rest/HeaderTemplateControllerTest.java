@@ -1,6 +1,10 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.HeaderTemplateDetail;
+import com.example.perftester.persistence.HeaderTemplateRequest;
 import com.example.perftester.persistence.HeaderTemplateService;
+import com.example.perftester.persistence.HeaderTemplateSummary;
+import com.example.perftester.persistence.TemplateFieldDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,7 +29,7 @@ class HeaderTemplateControllerTest {
 
     @Test
     void listAllShouldReturnOk() {
-        var summary = new HeaderTemplateService.HeaderTemplateSummary(1L, "Correlation", 2, "2024-01-01T00:00:00Z");
+        var summary = new HeaderTemplateSummary(1L, "Correlation", 2, "2024-01-01T00:00:00Z");
         when(headerTemplateService.listAll()).thenReturn(List.of(summary));
 
         var response = controller.listAll();
@@ -36,8 +40,8 @@ class HeaderTemplateControllerTest {
 
     @Test
     void getByIdShouldReturnDetail() {
-        var field = new HeaderTemplateService.TemplateFieldDto("CorrelationId", 32, "ABC", null, null, null, null, false);
-        var detail = new HeaderTemplateService.HeaderTemplateDetail(
+        var field = new TemplateFieldDto("CorrelationId", 32, "ABC", null, null, null, null, false);
+        var detail = new HeaderTemplateDetail(
                 1L, "Correlation", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(headerTemplateService.getById(1L)).thenReturn(detail);
 
@@ -49,9 +53,9 @@ class HeaderTemplateControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var field = new HeaderTemplateService.TemplateFieldDto("MsgType", 10, "REQUEST", null, null, null, null, false);
-        var request = new HeaderTemplateService.HeaderTemplateRequest("New Template", List.of(field));
-        var detail = new HeaderTemplateService.HeaderTemplateDetail(
+        var field = new TemplateFieldDto("MsgType", 10, "REQUEST", null, null, null, null, false);
+        var request = new HeaderTemplateRequest("New Template", List.of(field));
+        var detail = new HeaderTemplateDetail(
                 2L, "New Template", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(headerTemplateService.create(request)).thenReturn(detail);
 
@@ -63,9 +67,9 @@ class HeaderTemplateControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var field = new HeaderTemplateService.TemplateFieldDto("System", 8, "PERF", null, null, null, null, false);
-        var request = new HeaderTemplateService.HeaderTemplateRequest("Updated Template", List.of(field));
-        var detail = new HeaderTemplateService.HeaderTemplateDetail(
+        var field = new TemplateFieldDto("System", 8, "PERF", null, null, null, null, false);
+        var request = new HeaderTemplateRequest("Updated Template", List.of(field));
+        var detail = new HeaderTemplateDetail(
                 1L, "Updated Template", List.of(field), "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z");
         when(headerTemplateService.update(1L, request)).thenReturn(detail);
 

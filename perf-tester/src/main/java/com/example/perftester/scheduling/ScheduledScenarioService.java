@@ -34,9 +34,8 @@ public class ScheduledScenarioService {
     @Scheduled(cron = "0 * * * * *")
     public void runScheduledScenarios() {
         var currentTime = LocalTime.now().format(HH_MM);
-        var snapshot = performanceTracker.getProgressSnapshot();
-        if ("RUNNING".equals(snapshot.status()) || "EXPORTING".equals(snapshot.status())) {
-            log.debug("Skipping scheduled scenarios at {} — a test is already running", currentTime);
+        if (performanceTracker.isActive()) {
+            log.debug("Skipping scheduled scenarios at {} — a test is already active", currentTime);
             return;
         }
 
@@ -61,6 +60,7 @@ public class ScheduledScenarioService {
         var testId = "scheduled-" + scenarioName;
         var scenario = testScenarioService.getById(scenarioId);
         var testRunEntity = testRunService.createRun(testRunId, testId, count, scenario.testType());
+        var testStarted = false;
 
         try {
             log.info("Starting scheduled test: scenario='{}', count={}, testRunId={}",
@@ -76,14 +76,20 @@ public class ScheduledScenarioService {
                 log.info("Warmup complete for scenario '{}'", scenarioName);
             }
 
-            performanceTracker.startTest(count, testRunId);
+            if (!performanceTracker.tryStart(count, testRunId)) {
+                log.warn("Scheduled test rejected — tracker already active: scenario='{}', testRunId={}",
+                        scenarioName, testRunId);
+                testRunService.completeRun(testRunEntity.getId(), "FAILED", performanceTracker.getResult(), null);
+                return;
+            }
+            testStarted = true;
 
             var pool = testScenarioService.buildMessagePool(scenarioId);
             var futures = new CompletableFuture<?>[count];
             for (int i = 0; i < count; i++) {
                 if (!pool.isEmpty()) {
                     var msg = pool.get(i % pool.size());
-                    futures[i] = messageSender.sendMessage(msg.content(), msg.jmsProperties(), msg.transactionId());
+                    futures[i] = messageSender.sendMessage(msg.content());
                 } else {
                     futures[i] = messageSender.sendMessage("msg-" + i);
                 }
@@ -118,6 +124,10 @@ public class ScheduledScenarioService {
             performanceTracker.setStatus("FAILED");
             testRunService.completeRun(testRunEntity.getId(), "FAILED", performanceTracker.getResult(), null);
             log.error("Scheduled test failed: scenario='{}', testRunId={}", scenarioName, testRunId, e);
+        } finally {
+            if (testStarted) {
+                performanceTracker.markIdle();
+            }
         }
     }
 }

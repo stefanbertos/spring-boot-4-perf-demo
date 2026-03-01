@@ -27,7 +27,7 @@ class PerformanceTrackerTest {
 
     @Test
     void startTestShouldInitializeState() {
-        tracker.startTest(10, "test-run");
+        tracker.tryStart(10, "test-run");
 
         PerfTestResult result = tracker.getResult();
         assertEquals(0, result.completedMessages());
@@ -36,7 +36,7 @@ class PerformanceTrackerTest {
 
     @Test
     void recordSendAndReceiveShouldTrackMessages() throws InterruptedException {
-        tracker.startTest(1, "test-run");
+        tracker.tryStart(1, "test-run");
 
         tracker.recordSend("msg-1");
         Thread.sleep(10); // Small delay to ensure measurable latency
@@ -50,7 +50,7 @@ class PerformanceTrackerTest {
 
     @Test
     void recordReceiveForUnknownMessageShouldNotCount() {
-        tracker.startTest(1, "test-run");
+        tracker.tryStart(1, "test-run");
 
         tracker.recordReceive("unknown-msg");
 
@@ -60,7 +60,7 @@ class PerformanceTrackerTest {
 
     @Test
     void awaitCompletionShouldReturnTrueWhenAllMessagesReceived() throws InterruptedException {
-        tracker.startTest(2, "test-run");
+        tracker.tryStart(2, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordSend("msg-2");
@@ -72,7 +72,7 @@ class PerformanceTrackerTest {
 
     @Test
     void awaitCompletionShouldReturnFalseOnTimeout() throws InterruptedException {
-        tracker.startTest(2, "test-run");
+        tracker.tryStart(2, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordReceive("msg-1");
@@ -88,7 +88,7 @@ class PerformanceTrackerTest {
 
     @Test
     void getResultShouldCalculateStatistics() throws InterruptedException {
-        tracker.startTest(3, "test-run");
+        tracker.tryStart(3, "test-run");
 
         for (int i = 0; i < 3; i++) {
             String msgId = "msg-" + i;
@@ -108,7 +108,7 @@ class PerformanceTrackerTest {
 
     @Test
     void getResultWithNoCompletedMessagesShouldReturnZeroLatency() {
-        tracker.startTest(1, "test-run");
+        tracker.tryStart(1, "test-run");
 
         PerfTestResult result = tracker.getResult();
         assertEquals(0, result.avgLatencyMs());
@@ -135,7 +135,7 @@ class PerformanceTrackerTest {
 
     @Test
     void minMaxLatencyShouldTrackExtremesCorrectly() throws InterruptedException {
-        tracker.startTest(3, "test-run");
+        tracker.tryStart(3, "test-run");
 
         // Send all messages first
         tracker.recordSend("fast");
@@ -156,7 +156,7 @@ class PerformanceTrackerTest {
 
     @Test
     void pendingMessagesShouldTrackUnreceivedMessages() {
-        tracker.startTest(3, "test-run");
+        tracker.tryStart(3, "test-run");
 
         tracker.recordSend("msg-1");
         tracker.recordSend("msg-2");
@@ -170,7 +170,7 @@ class PerformanceTrackerTest {
 
     @Test
     void updateMinShouldNotUpdateWhenValueIsLarger() throws InterruptedException {
-        tracker.startTest(2, "test-run");
+        tracker.tryStart(2, "test-run");
 
         // First message with short latency
         tracker.recordSend("short");
@@ -192,7 +192,7 @@ class PerformanceTrackerTest {
 
     @Test
     void updateMaxShouldNotUpdateWhenValueIsSmaller() throws InterruptedException {
-        tracker.startTest(2, "test-run");
+        tracker.tryStart(2, "test-run");
 
         // First message with long latency
         tracker.recordSend("long");
@@ -225,7 +225,7 @@ class PerformanceTrackerTest {
 
     @Test
     void getProgressSnapshotShouldReturnCurrentState() throws InterruptedException {
-        tracker.startTest(5, "snapshot-test");
+        tracker.tryStart(5, "snapshot-test");
 
         tracker.recordSend("msg-1");
         Thread.sleep(5);
@@ -241,7 +241,7 @@ class PerformanceTrackerTest {
 
     @Test
     void setStatusShouldUpdateStatus() {
-        tracker.startTest(1, "status-test");
+        tracker.tryStart(1, "status-test");
         assertEquals("RUNNING", tracker.getProgressSnapshot().status());
 
         tracker.setStatus("COMPLETED");
@@ -275,7 +275,7 @@ class PerformanceTrackerTest {
         // Use 1ms TPS window so timestamps immediately age out
         var shortWindowProperties = new PerfProperties(100, 1, 60000, 30000, 60, 15);
         var shortWindowTracker = new PerformanceTracker(new SimpleMeterRegistry(), shortWindowProperties);
-        shortWindowTracker.startTest(1, "tps-window-test");
+        shortWindowTracker.tryStart(1, "tps-window-test");
         shortWindowTracker.recordSend("msg-1");
         shortWindowTracker.recordReceive("msg-1");
 

@@ -1,9 +1,9 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.ResponseTemplateDetail;
+import com.example.perftester.persistence.ResponseTemplateRequest;
 import com.example.perftester.persistence.ResponseTemplateService;
-import com.example.perftester.persistence.ResponseTemplateService.ResponseTemplateDetail;
-import com.example.perftester.persistence.ResponseTemplateService.ResponseTemplateRequest;
-import com.example.perftester.persistence.ResponseTemplateService.ResponseTemplateSummary;
+import com.example.perftester.persistence.ResponseTemplateSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

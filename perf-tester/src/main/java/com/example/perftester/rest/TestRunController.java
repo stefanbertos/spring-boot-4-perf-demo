@@ -4,6 +4,9 @@ import com.example.perftester.loki.LogEntry;
 import com.example.perftester.loki.LokiService;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.TestRunService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +21,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,78 +39,33 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TestRunController {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private final TestRunService testRunService;
     private final LokiService lokiService;
 
-    public record TestRunListResponse(
-            Long id,
-            String testRunId,
-            String testId,
-            String status,
-            int messageCount,
-            long completedCount,
-            Double tps,
-            Double avgLatencyMs,
-            Double minLatencyMs,
-            Double maxLatencyMs,
-            Double p25LatencyMs,
-            Double p50LatencyMs,
-            Double p75LatencyMs,
-            Double p90LatencyMs,
-            Double p95LatencyMs,
-            Double p99LatencyMs,
-            Long timeoutCount,
-            String testType,
-            String thresholdStatus,
-            Long durationMs,
-            Instant startedAt,
-            Instant completedAt,
-            String zipFilePath) {
-    }
-
-    public record TestRunDetailResponse(
-            Long id,
-            String testRunId,
-            String testId,
-            String status,
-            int messageCount,
-            long completedCount,
-            Double tps,
-            Double avgLatencyMs,
-            Double minLatencyMs,
-            Double maxLatencyMs,
-            Double p25LatencyMs,
-            Double p50LatencyMs,
-            Double p75LatencyMs,
-            Double p90LatencyMs,
-            Double p95LatencyMs,
-            Double p99LatencyMs,
-            Long timeoutCount,
-            String testType,
-            String thresholdStatus,
-            String thresholdResults,
-            Long durationMs,
-            Instant startedAt,
-            Instant completedAt,
-            String zipFilePath) {
-    }
-
-    public record TestRunSnapshotResponse(
-            Long id,
-            Long testRunId,
-            Instant sampledAt,
-            Integer outboundQueueDepth,
-            Integer inboundQueueDepth,
-            Long kafkaRequestsLag,
-            Long kafkaResponsesLag) {
-    }
-
-    @Operation(summary = "List all test runs")
+    @Operation(summary = "List test runs with pagination")
     @GetMapping
-    public List<TestRunListResponse> listAll() {
-        return testRunService.findAll().stream()
-                .map(this::toListResponse)
-                .toList();
+    public PagedResponse<TestRunListResponse> listAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String tag) {
+        var result = testRunService.findAll(page, size, tag);
+        var content = result.getContent().stream().map(this::toListResponse).toList();
+        return new PagedResponse<>(content, result.getNumber(), result.getSize(),
+                result.getTotalElements(), result.getTotalPages());
+    }
+
+    @Operation(summary = "Get all unique tags across test runs")
+    @GetMapping("/tags")
+    public List<String> getAllTags() {
+        return testRunService.getAllUniqueTags();
+    }
+
+    @Operation(summary = "Get trend data for completed test runs")
+    @GetMapping("/trends")
+    public List<TrendPoint> getTrends() {
+        return testRunService.getTrendData().stream().map(this::toTrendPoint).toList();
     }
 
     @Operation(summary = "Get a test run by ID")
@@ -114,11 +75,25 @@ public class TestRunController {
         return toDetailResponse(run);
     }
 
+    @Operation(summary = "Set tags on a test run")
+    @PutMapping("/{id}/tags")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setTags(@PathVariable long id, @RequestBody SetTagsRequest request) {
+        testRunService.setTags(id, request.tags());
+    }
+
     @Operation(summary = "Delete a test run")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable long id) {
         testRunService.delete(id);
+    }
+
+    @Operation(summary = "Bulk delete test runs")
+    @DeleteMapping("/bulk")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void bulkDelete(@RequestBody BulkDeleteRequest request) {
+        testRunService.bulkDelete(request.ids());
     }
 
     @Operation(summary = "Download test results ZIP", description = "Downloads the packaged ZIP file containing dashboards, metrics, logs, and summary for this run")
@@ -168,7 +143,8 @@ public class TestRunController {
                 run.getP25LatencyMs(), run.getP50LatencyMs(), run.getP75LatencyMs(),
                 run.getP90LatencyMs(), run.getP95LatencyMs(), run.getP99LatencyMs(),
                 run.getTimeoutCount(), run.getTestType(), run.getThresholdStatus(),
-                run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath());
+                run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath(),
+                parseTags(run.getTags()));
     }
 
     private TestRunDetailResponse toDetailResponse(TestRun run) {
@@ -180,6 +156,24 @@ public class TestRunController {
                 run.getP90LatencyMs(), run.getP95LatencyMs(), run.getP99LatencyMs(),
                 run.getTimeoutCount(), run.getTestType(), run.getThresholdStatus(),
                 run.getThresholdResults(),
-                run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath());
+                run.getDurationMs(), run.getStartedAt(), run.getCompletedAt(), run.getZipFilePath(),
+                parseTags(run.getTags()));
+    }
+
+    private TrendPoint toTrendPoint(TestRun run) {
+        return new TrendPoint(run.getId(), run.getTestId(), run.getStartedAt(),
+                run.getTps(), run.getP99LatencyMs(), run.getStatus(), run.getTestType());
+    }
+
+    private List<String> parseTags(String tagsJson) {
+        if (tagsJson == null) {
+            return List.of();
+        }
+        try {
+            return MAPPER.readValue(tagsJson, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse tags JSON: {}", e.getMessage());
+            return List.of();
+        }
     }
 }

@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -84,9 +83,4 @@ public class TestCaseService {
                 tc.getCreatedAt(), tc.getUpdatedAt());
     }
 
-    public record TestCaseDetail(long id, String name, String message,
-                                 Long headerTemplateId, String headerTemplateName,
-                                 Long responseTemplateId, String responseTemplateName,
-                                 Instant createdAt, Instant updatedAt) {
-    }
 }

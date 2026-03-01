@@ -6,3 +6,4 @@ export { default as SendTestPage } from './SendTestPage';
 export { default as TestRunComparePage } from './TestRunComparePage';
 export { default as TestRunDetailPage } from './TestRunDetailPage';
 export { default as TestRunsPage } from './TestRunsPage';
+export { default as TrendsPage } from './TrendsPage';

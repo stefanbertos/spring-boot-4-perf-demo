@@ -92,7 +92,7 @@ public class MessageSendReceiveSteps {
                 .until(() -> !"RUNNING".equals(performanceTracker.getProgressSnapshot().status()));
 
         pendingMessageId = UUID.randomUUID().toString();
-        performanceTracker.startTest(1, "ct-scenario-2-" + pendingMessageId);
+        performanceTracker.tryStart(1, "ct-scenario-2-" + pendingMessageId);
         performanceTracker.recordSend(pendingMessageId);
 
         var messageText = PerformanceTracker.createMessage(pendingMessageId, "ct-response");

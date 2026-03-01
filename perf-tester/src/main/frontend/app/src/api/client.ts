@@ -74,7 +74,12 @@ export async function put<T>(url: string, body: unknown): Promise<T> {
   return handleResponse<T>(response);
 }
 
-export async function del<T>(url: string): Promise<T> {
-  const response = await fetch(url, { method: 'DELETE' });
+export async function del<T>(url: string, body?: unknown): Promise<T> {
+  const options: RequestInit = { method: 'DELETE' };
+  if (body !== undefined) {
+    options.headers = { 'Content-Type': 'application/json' };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(url, options);
   return handleResponse<T>(response);
 }

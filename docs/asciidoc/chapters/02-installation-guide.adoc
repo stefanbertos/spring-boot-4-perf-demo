@@ -133,18 +133,31 @@ To generate only the documentation:
 
 === Option 1: Docker Compose (Recommended)
 
-Start all services using Docker Compose:
+Build images first, then start all services using the provided script:
 
 [source,bash]
 ----
-docker compose -f infrastructure/docker/compose.yaml up --build
+# Build all OCI images and start Docker Compose
+infrastructure\runLocalDocker.bat
+----
+
+Or manually:
+
+[source,bash]
+----
+# Build all module images
+./gradlew dockerBuildAll
+
+# Start all services
+docker compose -f infrastructure/docker/compose.yaml up -d
 ----
 
 This will start:
 
-* All application modules
+* All application modules (perf-tester, ibm-mq-consumer, kafka-consumer, api-gateway, config-server)
 * IBM MQ
 * Kafka
+* Redis
 * Prometheus
 * Grafana
 * Loki
@@ -217,9 +230,13 @@ Expected response:
 
 [source,bash]
 ----
-curl -X POST http://localhost:8080/api/perf/send \
+# Start a test (returns 202 with testRunId immediately)
+curl -X POST "http://localhost:8080/api/perf/send?count=100&timeoutSeconds=30" \
   -H "Content-Type: text/plain" \
   -d "Hello, World!"
+
+# Stream real-time progress (SSE)
+curl -N "http://localhost:8080/api/perf/progress/<testRunId>"
 ----
 
 === Access Web UIs
@@ -229,6 +246,9 @@ Verify access to all web interfaces:
 [cols="2,3"]
 |===
 |Service |URL
+
+|Perf-UI (frontend)
+|http://localhost:8080
 
 |Grafana
 |http://localhost:3000 (admin/admin)

@@ -3,6 +3,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import MonitorIcon from '@mui/icons-material/Monitor';
 import ScienceIcon from '@mui/icons-material/Science';
 import SpeedIcon from '@mui/icons-material/Speed';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -14,6 +15,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 const navigation = [
   { name: 'Run Test', to: '/send', icon: ScienceIcon },
   { name: 'Test Runs', to: '/test-runs', icon: AssessmentIcon },
+  { name: 'Trends', to: '/trends', icon: TrendingUpIcon },
   { name: 'Dashboards', to: '/dashboards', icon: MonitorIcon },
   { name: 'Admin', to: '/admin', icon: AdminPanelSettingsIcon },
 ];

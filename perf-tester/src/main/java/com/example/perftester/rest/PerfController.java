@@ -18,6 +18,7 @@ import com.example.perftester.perf.ThresholdEvaluator;
 import com.example.perftester.perf.ThresholdResult;
 import com.example.perftester.perf.TestStartResponse;
 import com.example.perftester.persistence.InfraProfileService;
+import com.example.perftester.persistence.ScenarioMessage;
 import com.example.perftester.persistence.TestRunService;
 import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
@@ -44,10 +45,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -158,6 +159,7 @@ public class PerfController {
     }
 
     private void runTestInBackground(TestRunRequest req) {
+        var testStarted = false;
         LogLevel previousLevel = null;
         if (req.debug()) {
             previousLevel = enableDebugLogging();
@@ -167,15 +169,15 @@ public class PerfController {
                     req.testRunId(), req.count(), req.timeoutSeconds(), req.delayMs(), req.testId());
 
             if (req.warmupCount() > 0) {
-                performanceTracker.startWarmupPhase(req.warmupCount());
-                for (int i = 0; i < req.warmupCount(); i++) {
-                    messageSender.sendMessage("warmup-" + i);
-                }
-                performanceTracker.awaitWarmupCompletion(60, TimeUnit.SECONDS);
-                log.info("Warmup phase complete: {} messages", req.warmupCount());
+                runWarmupPhase(req);
             }
 
-            performanceTracker.startTest(req.count(), req.testRunId());
+            if (!performanceTracker.tryStart(req.count(), req.testRunId())) {
+                log.warn("Test rejected — tracker already active: testRunId={}", req.testRunId());
+                testRunService.completeRun(req.entityId(), "FAILED", performanceTracker.getResult(), null);
+                return;
+            }
+            testStarted = true;
             infraSnapshotService.startMonitoring(req.entityId());
             long testStartTimeMs = System.currentTimeMillis();
 
@@ -218,13 +220,7 @@ public class PerfController {
             testRunService.completeRun(req.entityId(), finalStatus, result, zipPath);
 
             if (req.scenarioId() != null) {
-                var thresholds = testScenarioService.getScenarioThresholds(req.scenarioId());
-                if (!thresholds.isEmpty()) {
-                    var thresholdResults = thresholdEvaluator.evaluate(thresholds, result);
-                    var passed = thresholdResults.stream().allMatch(ThresholdResult::passed);
-                    testRunService.updateThresholdResult(req.entityId(),
-                            passed ? "PASSED" : "FAILED", thresholdResults);
-                }
+                evaluateThresholds(req, result);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -236,10 +232,32 @@ public class PerfController {
             testRunService.completeRun(req.entityId(), "FAILED", performanceTracker.getResult(), null);
             log.error("Performance test failed: testRunId={}", req.testRunId(), e);
         } finally {
-            infraSnapshotService.stopMonitoring();
+            if (testStarted) {
+                infraSnapshotService.stopMonitoring();
+                performanceTracker.markIdle();
+            }
             if (req.debug() && previousLevel != null) {
                 loggingAdminService.setLogLevel(DEBUG_LOGGER, previousLevel);
             }
+        }
+    }
+
+    private void runWarmupPhase(TestRunRequest req) throws InterruptedException {
+        performanceTracker.startWarmupPhase(req.warmupCount());
+        for (int i = 0; i < req.warmupCount(); i++) {
+            messageSender.sendMessage("warmup-" + i);
+        }
+        performanceTracker.awaitWarmupCompletion(60, TimeUnit.SECONDS);
+        log.info("Warmup phase complete: {} messages", req.warmupCount());
+    }
+
+    private void evaluateThresholds(TestRunRequest req, PerfTestResult result) {
+        var thresholds = testScenarioService.getScenarioThresholds(req.scenarioId());
+        if (!thresholds.isEmpty()) {
+            var thresholdResults = thresholdEvaluator.evaluate(thresholds, result);
+            var passed = thresholdResults.stream().allMatch(ThresholdResult::passed);
+            testRunService.updateThresholdResult(req.entityId(),
+                    passed ? "PASSED" : "FAILED", thresholdResults);
         }
     }
 
@@ -254,13 +272,13 @@ public class PerfController {
     private boolean runPerformanceTest(String message, int count, int timeoutSeconds, int delayMs,
                                        Long scenarioId, ThinkTimeConfig thinkTimeConfig)
             throws InterruptedException {
-        List<TestScenarioService.ScenarioMessage> pool = scenarioId != null
+        List<ScenarioMessage> pool = scenarioId != null
                 ? testScenarioService.buildMessagePool(scenarioId) : List.of();
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             if (!pool.isEmpty()) {
                 var msg = pool.get(i);
-                futures[i] = messageSender.sendMessage(msg.content(), msg.jmsProperties(), msg.transactionId());
+                futures[i] = messageSender.sendMessage(msg.content());
             } else {
                 futures[i] = messageSender.sendMessage(message + "-" + i);
             }
@@ -323,99 +341,6 @@ public class PerfController {
         }
 
         return new ExportContext(enrichedResult, dashboardFiles, prometheusFile, logEntries);
-    }
-
-    public static class ExportOptions {
-        private boolean exportGrafana;
-        private boolean exportPrometheus;
-        private boolean exportKubernetes;
-        private boolean exportLogs;
-        private boolean exportDatabase;
-
-        @SuppressWarnings("PMD.UnnecessaryConstructor")
-        public ExportOptions() {
-            // Used by Spring MVC @ModelAttribute binding.
-        }
-
-        public boolean exportGrafana() {
-            return exportGrafana;
-        }
-
-        public void setExportGrafana(boolean exportGrafana) {
-            this.exportGrafana = exportGrafana;
-        }
-
-        public boolean exportPrometheus() {
-            return exportPrometheus;
-        }
-
-        public void setExportPrometheus(boolean exportPrometheus) {
-            this.exportPrometheus = exportPrometheus;
-        }
-
-        public boolean exportKubernetes() {
-            return exportKubernetes;
-        }
-
-        public void setExportKubernetes(boolean exportKubernetes) {
-            this.exportKubernetes = exportKubernetes;
-        }
-
-        public boolean exportLogs() {
-            return exportLogs;
-        }
-
-        public void setExportLogs(boolean exportLogs) {
-            this.exportLogs = exportLogs;
-        }
-
-        public boolean exportDatabase() {
-            return exportDatabase;
-        }
-
-        public void setExportDatabase(boolean exportDatabase) {
-            this.exportDatabase = exportDatabase;
-        }
-    }
-
-    public static class RunOptions {
-        private String testId;
-        private boolean debug;
-        private Long scenarioId;
-
-        public RunOptions() {
-            // Used by Spring MVC @ModelAttribute binding.
-        }
-
-        public RunOptions(String testId, boolean debug, Long scenarioId) {
-            this.testId = testId;
-            this.debug = debug;
-            this.scenarioId = scenarioId;
-        }
-
-        public String testId() {
-            return testId;
-        }
-
-        public void setTestId(String testId) {
-            this.testId = testId;
-        }
-
-        public boolean debug() {
-            return debug;
-        }
-
-        public void setDebug(boolean debug) {
-            this.debug = debug;
-        }
-
-        public Long scenarioId() {
-            return scenarioId;
-        }
-
-        public void setScenarioId(Long scenarioId) {
-            this.scenarioId = scenarioId;
-        }
     }
 
     private record ExportContext(PerfTestResult result, List<String> dashboardFiles,

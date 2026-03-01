@@ -2,7 +2,7 @@
 
 == Overview
 
-The perf-tester module exposes REST APIs for performance testing, Kafka topic administration, IBM MQ queue administration, and runtime log level management.
+The perf-tester module exposes REST APIs for performance testing, test scenario management, test run history, Kafka topic administration, IBM MQ queue administration, database export queries, and runtime log level management.
 
 == Base URL
 
@@ -22,15 +22,15 @@ The perf-tester module exposes REST APIs for performance testing, Kafka topic ad
 
 == Performance Testing API
 
-=== Send Messages
+=== Start a Performance Test (Async)
 
-Sends messages through the entire message flow pipeline and tracks performance metrics. When `exportStatistics` is enabled, the response is a ZIP file containing test results, Grafana dashboard exports, Prometheus metrics, and Kubernetes cluster info.
+Starts a performance test asynchronously. The endpoint returns immediately with a `testRunId` that can be used to stream real-time progress via SSE. The test runs in a virtual thread.
 
 [cols="1,3"]
 |===
 |Method |`POST`
 |Path |`/api/perf/send`
-|Content-Type |`text/plain`
+|Returns |`202 Accepted` with a JSON body containing `entityId` and `testRunId`
 |===
 
 ==== Request Parameters
@@ -41,39 +41,75 @@ Sends messages through the entire message flow pipeline and tracks performance m
 
 |Body
 |string
-|Yes
+|No
 |-
-|The message content to send (plain text, must not be blank)
+|Message content to send (plain text). Ignored when `scenarioId` is provided.
 
 |`count`
 |integer
 |No
 |`1000`
-|Number of messages to send (min: 1, max: 100,000)
+|Number of messages to send (min: 1, max: 100,000). Ignored when `scenarioId` is provided (scenario count is used instead).
 
 |`timeoutSeconds`
 |integer
 |No
 |`60`
-|Maximum time to wait for all responses (min: 1, max: 3,600)
+|Maximum wait time for all responses (min: 1, max: 3,600)
 
 |`delayMs`
 |integer
 |No
 |`0`
-|Delay between each message send in milliseconds (min: 0, max: 60,000)
+|Fixed delay between sends in ms (min: 0, max: 60,000). Overridden by `scenarioId` think time.
 
 |`testId`
 |string
 |No
 |-
-|Optional identifier for the test run, used in export filenames
+|Optional label for the test run (used in export filenames and history)
 
-|`exportStatistics`
+|`scenarioId`
+|long
+|No
+|-
+|ID of a saved test scenario. When set, uses the scenario's count, headers, warmup, think time, and thresholds.
+
+|`debug`
 |boolean
 |No
 |`false`
-|When true, returns a ZIP file with test results and exported metrics
+|When `true`, temporarily enables DEBUG logging for `com.example` during the test.
+
+|`exportGrafana`
+|boolean
+|No
+|`false`
+|Export Grafana dashboard PDFs at test completion
+
+|`exportPrometheus`
+|boolean
+|No
+|`false`
+|Export Prometheus metrics snapshot at test completion
+
+|`exportKubernetes`
+|boolean
+|No
+|`false`
+|Export Kubernetes cluster info at test completion
+
+|`exportLogs`
+|boolean
+|No
+|`false`
+|Export application logs from Loki at test completion
+
+|`exportDatabase`
+|boolean
+|No
+|`false`
+|Execute configured DB export queries and include CSV results in the ZIP
 |===
 
 ==== Request Example
@@ -85,26 +121,20 @@ curl -X POST "http://localhost:8080/api/perf/send?count=500&timeoutSeconds=30" \
   -H "Content-Type: text/plain" \
   -d "Hello MQ"
 
-# Test with statistics export
-curl -X POST "http://localhost:8080/api/perf/send?count=1000&exportStatistics=true&testId=load-test-01" \
-  -H "Content-Type: text/plain" \
-  -d "Hello MQ" \
-  --output test-results.zip
+# Scenario-based test with full export
+curl -X POST "http://localhost:8080/api/perf/send?scenarioId=1&exportGrafana=true&exportPrometheus=true&testId=load-test-01" \
+  -H "Content-Type: text/plain"
 ----
 
-==== Response
+==== Response Body
 
-When `exportStatistics=false` (default):
-
-* Returns `200 OK` with an empty body.
-
-When `exportStatistics=true`:
-
-* Returns `200 OK` with a ZIP file attachment containing:
-** `test-results.json` -- performance test results (TPS, latency, message counts)
-** Grafana dashboard PDF exports (if Grafana is available)
-** Prometheus metrics snapshot (if Prometheus is available)
-** Kubernetes cluster info (if running in Kubernetes)
+[source,json]
+----
+{
+  "entityId": 42,
+  "testRunId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+----
 
 ==== Response Codes
 
@@ -112,14 +142,333 @@ When `exportStatistics=true`:
 |===
 |Code |Description
 
-|200
-|Test completed (or ZIP file returned when `exportStatistics=true`)
+|202
+|Test started; use `testRunId` to stream progress
 
 |400
-|Invalid parameters (count out of range, blank message body, etc.)
+|Invalid parameters (count out of range, blank message body when required, etc.)
 
 |500
 |Internal error (MQ connection failure, message send failure)
+|===
+
+=== Stream Test Progress (SSE)
+
+Streams real-time progress as Server-Sent Events every 500 ms. The stream closes automatically when the test reaches a terminal status (`COMPLETED`, `TIMEOUT`, or `FAILED`).
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/progress/{testRunId}`
+|Produces |`text/event-stream`
+|===
+
+==== Path Parameters
+
+[cols="2,1,3"]
+|===
+|Parameter |Type |Description
+
+|`testRunId`
+|string
+|The UUID returned by `POST /api/perf/send`
+|===
+
+==== SSE Event Payload (JSON)
+
+[source,json]
+----
+{
+  "testRunId": "a1b2c3d4-...",
+  "status": "RUNNING",
+  "sentCount": 342,
+  "receivedCount": 338,
+  "tps": 112.5,
+  "avgLatencyMs": 8.9,
+  "minLatencyMs": 2.1,
+  "maxLatencyMs": 34.7,
+  "p99LatencyMs": 28.0,
+  "errorCount": 0,
+  "timeoutCount": 0
+}
+----
+
+==== Terminal Statuses
+
+[cols="1,3"]
+|===
+|Status |Meaning
+
+|`COMPLETED`
+|All messages received within the timeout
+
+|`TIMEOUT`
+|Timeout elapsed before all responses arrived
+
+|`FAILED`
+|An exception occurred during the test
+
+|`EXPORTING`
+|Test complete; export artifacts being packaged
+|===
+
+==== Request Example
+
+[source,bash]
+----
+curl -N "http://localhost:8080/api/perf/progress/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+----
+
+== Test Runs API
+
+Historical test run records are persisted in Oracle. Each run captures latency percentiles, TPS, threshold evaluation results, and an optional ZIP export.
+
+=== List All Test Runs
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/test-runs`
+|===
+
+==== Response (array)
+
+[source,json]
+----
+[
+  {
+    "id": 42,
+    "testRunId": "a1b2c3d4-...",
+    "testId": "load-test-01",
+    "status": "COMPLETED",
+    "messageCount": 1000,
+    "completedCount": 1000,
+    "tps": 118.4,
+    "avgLatencyMs": 8.4,
+    "minLatencyMs": 1.2,
+    "maxLatencyMs": 89.3,
+    "p50LatencyMs": 7.8,
+    "p95LatencyMs": 22.1,
+    "p99LatencyMs": 41.5,
+    "timeoutCount": 0,
+    "testType": null,
+    "thresholdStatus": "PASSED",
+    "durationMs": 8432,
+    "startedAt": "2025-01-15T10:00:00Z",
+    "completedAt": "2025-01-15T10:00:08Z",
+    "zipFilePath": null
+  }
+]
+----
+
+=== Get Test Run by ID
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/test-runs/{id}`
+|===
+
+Returns the same fields as the list response plus `thresholdResults` (JSON string with per-threshold pass/fail detail).
+
+=== Delete Test Run
+
+[cols="1,3"]
+|===
+|Method |`DELETE`
+|Path |`/api/perf/test-runs/{id}`
+|Returns |`204 No Content`
+|===
+
+=== Download Test Results ZIP
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/test-runs/{id}/download`
+|Returns |ZIP file attachment, or `404` if no export was generated
+|===
+
+The ZIP contains:
+* `test-results.json` — full metrics snapshot
+* Grafana dashboard PDFs (if exported)
+* `prometheus-metrics.json` (if exported)
+* Kubernetes cluster YAML (if exported)
+* `db/` directory with CSV files per export query (if exported)
+* Application logs from Loki (if exported)
+
+=== Get Application Logs for a Test Run
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/test-runs/{id}/logs`
+|===
+
+Queries Loki for application logs in the time window of the test run.
+
+=== Get Infrastructure Snapshots for a Test Run
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/perf/test-runs/{id}/snapshots`
+|===
+
+Returns queue depth and Kafka consumer lag samples captured every few seconds during the test:
+
+[source,json]
+----
+[
+  {
+    "id": 1,
+    "testRunId": 42,
+    "sampledAt": "2025-01-15T10:00:02Z",
+    "outboundQueueDepth": 250,
+    "inboundQueueDepth": 0,
+    "kafkaRequestsLag": 180,
+    "kafkaResponsesLag": 42
+  }
+]
+----
+
+== Test Scenarios API
+
+Test scenarios are reusable test configurations stored in the database. Each scenario captures message count, custom headers, warmup count, think time settings, performance thresholds, and an optional scheduled execution time.
+
+=== List All Scenarios
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/test-scenarios`
+|===
+
+=== Get Scenario by ID
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/test-scenarios/{id}`
+|===
+
+==== Response
+
+[source,json]
+----
+{
+  "id": 1,
+  "name": "baseline-1000",
+  "count": 1000,
+  "entries": [],
+  "scheduledEnabled": false,
+  "scheduledTime": null,
+  "warmupCount": 50,
+  "testType": null,
+  "thinkTime": null,
+  "thresholds": [
+    { "metric": "TPS", "operator": "GTE", "value": 100.0 }
+  ],
+  "createdAt": "2025-01-01T00:00:00Z",
+  "updatedAt": "2025-01-15T00:00:00Z"
+}
+----
+
+=== Create Scenario
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/test-scenarios`
+|Returns |`201 Created`
+|===
+
+==== Request Body
+
+[source,json]
+----
+{
+  "name": "peak-load",
+  "count": 5000,
+  "entries": [],
+  "scheduledEnabled": true,
+  "scheduledTime": "08:00",
+  "warmupCount": 100,
+  "testType": null,
+  "thinkTime": { "minMs": 10, "maxMs": 50 },
+  "thresholds": [
+    { "metric": "TPS", "operator": "GTE", "value": 200.0 },
+    { "metric": "P99_LATENCY_MS", "operator": "LTE", "value": 100.0 }
+  ]
+}
+----
+
+=== Update Scenario
+
+[cols="1,3"]
+|===
+|Method |`PUT`
+|Path |`/api/test-scenarios/{id}`
+|===
+
+=== Delete Scenario
+
+[cols="1,3"]
+|===
+|Method |`DELETE`
+|Path |`/api/test-scenarios/{id}`
+|Returns |`204 No Content`
+|===
+
+== DB Export Queries API
+
+Manage custom SQL SELECT queries that are executed after a performance test when `exportDatabase=true`. Results are written as CSV files inside the export ZIP.
+
+=== List All DB Export Queries
+
+[cols="1,3"]
+|===
+|Method |`GET`
+|Path |`/api/admin/db-queries`
+|===
+
+=== Create DB Export Query
+
+[cols="1,3"]
+|===
+|Method |`POST`
+|Path |`/api/admin/db-queries`
+|Returns |`201 Created`
+|===
+
+NOTE: Only `SELECT` statements are accepted. Non-SELECT queries are rejected with `400 Bad Request`.
+
+==== Request Body
+
+[source,json]
+----
+{
+  "name": "active-sessions",
+  "sqlQuery": "SELECT sid, serial#, status FROM v$session WHERE type = 'USER'",
+  "displayOrder": 1
+}
+----
+
+=== Update DB Export Query
+
+[cols="1,3"]
+|===
+|Method |`PUT`
+|Path |`/api/admin/db-queries/{id}`
+|===
+
+=== Delete DB Export Query
+
+[cols="1,3"]
+|===
+|Method |`DELETE`
+|Path |`/api/admin/db-queries/{id}`
+|Returns |`204 No Content`
 |===
 
 == Kafka Admin API
@@ -170,25 +519,7 @@ curl -X POST "http://localhost:8080/api/admin/kafka/topics/resize?topicName=mq-r
 }
 ----
 
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Topic resized successfully
-
-|400
-|Invalid parameters (blank topic name, partitions < 1)
-
-|500
-|Kafka admin operation failed
-|===
-
 === Get Topic Info
-
-Retrieves partition information for a Kafka topic.
 
 [cols="1,3"]
 |===
@@ -225,27 +556,9 @@ curl "http://localhost:8080/api/admin/kafka/topics?topicName=mq-requests"
 }
 ----
 
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Topic info retrieved
-
-|400
-|Invalid parameters (blank topic name)
-
-|500
-|Kafka admin operation failed
-|===
-
 == IBM MQ Admin API
 
 === Change Queue Max Depth
-
-Changes the maximum depth (backlog capacity) of an IBM MQ queue.
 
 [cols="1,3"]
 |===
@@ -288,42 +601,12 @@ curl -X POST "http://localhost:8080/api/admin/mq/queues/depth?queueName=DEV.QUEU
 }
 ----
 
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Queue max depth changed successfully
-
-|400
-|Invalid parameters (blank queue name, maxDepth < 1)
-
-|500
-|MQ admin operation failed
-|===
-
 === Get Queue Info
-
-Retrieves current depth and max depth information for an IBM MQ queue.
 
 [cols="1,3"]
 |===
 |Method |`GET`
 |Path |`/api/admin/mq/queues`
-|===
-
-==== Request Parameters
-
-[cols="2,1,1,3"]
-|===
-|Parameter |Type |Required |Description
-
-|`queueName`
-|string
-|Yes
-|Name of the MQ queue (must not be blank)
 |===
 
 ==== Request Example
@@ -343,22 +626,6 @@ curl "http://localhost:8080/api/admin/mq/queues?queueName=DEV.QUEUE.2"
   "maxDepth": 5000
 }
 ----
-
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Queue info retrieved
-
-|400
-|Invalid parameters (blank queue name)
-
-|500
-|MQ admin operation failed
-|===
 
 == Logging Admin API
 
@@ -413,40 +680,12 @@ curl -X POST "http://localhost:8080/api/admin/logging/level?loggerName=com.examp
 }
 ----
 
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Log level changed successfully
-
-|400
-|Invalid log level value
-|===
-
 === Get Log Level
-
-Retrieves the current configured and effective log level for a specified logger.
 
 [cols="1,3"]
 |===
 |Method |`GET`
 |Path |`/api/admin/logging/level`
-|===
-
-==== Request Parameters
-
-[cols="2,1,1,1,3"]
-|===
-|Parameter |Type |Required |Default |Description
-
-|`loggerName`
-|string
-|No
-|`com.example`
-|Fully qualified logger name
 |===
 
 ==== Request Example
@@ -471,19 +710,6 @@ curl "http://localhost:8080/api/admin/logging/level?loggerName=org.springframewo
 
 NOTE: The `configuredLevel` may be `null` if the logger inherits its level from a parent logger. The `effectiveLevel` always reflects the actual level in use.
 
-==== Response Codes
-
-[cols="1,3"]
-|===
-|Code |Description
-
-|200
-|Log level retrieved
-
-|404
-|Logger not found (returns ProblemDetail)
-|===
-
 == Health & Monitoring APIs
 
 === Health Check
@@ -501,23 +727,9 @@ NOTE: The `configuredLevel` may be `null` if the logger inherits its level from 
 {
   "status": "UP",
   "components": {
-    "diskSpace": {
-      "status": "UP",
-      "details": {
-        "total": 499963174912,
-        "free": 250123456789,
-        "threshold": 10485760
-      }
-    },
-    "jms": {
-      "status": "UP",
-      "details": {
-        "provider": "IBM MQ JMS Provider"
-      }
-    },
-    "ping": {
-      "status": "UP"
-    }
+    "diskSpace": { "status": "UP" },
+    "jms": { "status": "UP" },
+    "ping": { "status": "UP" }
   }
 }
 ----
@@ -545,33 +757,6 @@ When running in Kubernetes, liveness and readiness probes are available:
 |Path |`/actuator/prometheus`
 |===
 
-==== Response (excerpt)
-
-[source,text]
-----
-# HELP jvm_memory_used_bytes The amount of used memory
-# TYPE jvm_memory_used_bytes gauge
-jvm_memory_used_bytes{area="heap",id="ZHeap"} 1.048576E7
-
-# HELP messages_sent_total Total messages sent
-# TYPE messages_sent_total counter
-messages_sent_total{queue="DEV.QUEUE.2"} 1523
-
-# HELP message_processing_seconds Message processing duration
-# TYPE message_processing_seconds histogram
-message_processing_seconds_bucket{le="0.001"} 150
-message_processing_seconds_bucket{le="0.01"} 1400
-message_processing_seconds_bucket{le="0.1"} 1520
-----
-
-=== Application Info
-
-[cols="1,3"]
-|===
-|Method |`GET`
-|Path |`/actuator/info`
-|===
-
 == Error Responses
 
 === Problem Details (RFC 7807)
@@ -593,10 +778,10 @@ All error responses follow the RFC 7807 Problem Details format via Spring Boot's
 ----
 {
   "type": "about:blank",
-  "title": "Logger Not Found",
+  "title": "Not Found",
   "status": 404,
-  "detail": "Logger not found: com.nonexistent",
-  "instance": "/api/admin/logging/level"
+  "detail": "Test run not found: 999",
+  "instance": "/api/perf/test-runs/999"
 }
 ----
 
@@ -607,10 +792,10 @@ All error responses follow the RFC 7807 Problem Details format via Spring Boot's
 |Status |Description
 
 |400
-|Invalid request parameters (validation failures, out-of-range values, blank required fields)
+|Invalid request parameters (validation failures, out-of-range values, non-SELECT SQL)
 
 |404
-|Resource not found (e.g., unknown logger name)
+|Resource not found (test run, test scenario, etc.)
 
 |500
 |Internal server error (MQ connection failure, Kafka admin failure)

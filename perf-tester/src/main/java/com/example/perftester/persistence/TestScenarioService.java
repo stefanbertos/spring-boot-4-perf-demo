@@ -280,29 +280,4 @@ public class TestScenarioService {
         }
     }
 
-    public record TestScenarioSummary(Long id, String name, int count, String updatedAt) {
-    }
-
-    public record TestScenarioDetail(Long id, String name, int count, List<ScenarioEntryDto> entries,
-                                     boolean scheduledEnabled, String scheduledTime,
-                                     int warmupCount, String testType, Long infraProfileId,
-                                     ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds,
-                                     String createdAt, String updatedAt) {
-    }
-
-    public record ScenarioEntryDto(Long id, Long testCaseId, String testCaseName,
-                                   int percentage, int displayOrder) {
-    }
-
-    public record ScenarioEntryRequest(Long testCaseId, int percentage, int displayOrder) {
-    }
-
-    public record TestScenarioRequest(String name, int count, List<ScenarioEntryRequest> entries,
-                                      boolean scheduledEnabled, String scheduledTime,
-                                      int warmupCount, String testType, Long infraProfileId,
-                                      ThinkTimeConfig thinkTime, List<ThresholdDef> thresholds) {
-    }
-
-    public record ScenarioMessage(String content, Map<String, String> jmsProperties, String transactionId) {
-    }
 }

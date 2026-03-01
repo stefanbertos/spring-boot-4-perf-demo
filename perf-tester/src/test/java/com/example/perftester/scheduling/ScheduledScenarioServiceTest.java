@@ -3,12 +3,13 @@ package com.example.perftester.scheduling;
 import com.example.perftester.messaging.MessageSender;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.PerformanceTracker;
-import com.example.perftester.perf.TestProgressEvent;
 import com.example.perftester.perf.ThresholdDef;
 import com.example.perftester.perf.ThresholdEvaluator;
 import com.example.perftester.perf.ThresholdResult;
+import com.example.perftester.persistence.ScenarioMessage;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.TestRunService;
+import com.example.perftester.persistence.TestScenarioDetail;
 import com.example.perftester.persistence.TestScenarioService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,12 +63,8 @@ class ScheduledScenarioServiceTest {
     @InjectMocks
     private ScheduledScenarioService scheduledScenarioService;
 
-    private TestProgressEvent snapshotWithStatus(String status) {
-        return new TestProgressEvent(null, status, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
-    private TestScenarioService.TestScenarioDetail scenarioAt(String scheduledTime) {
-        return new TestScenarioService.TestScenarioDetail(
+    private TestScenarioDetail scenarioAt(String scheduledTime) {
+        return new TestScenarioDetail(
                 1L, "test-scenario", 2, List.of(), true, scheduledTime,
                 0, null, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
     }
@@ -82,9 +79,15 @@ class ScheduledScenarioServiceTest {
         return new PerfTestResult(0, 0, 0, 0, 0, 0, 0);
     }
 
+    /** Stubs the tracker so that the active-check passes and tryStart() succeeds. */
+    private void trackerIdle() {
+        when(performanceTracker.isActive()).thenReturn(false);
+        when(performanceTracker.tryStart(anyInt(), anyString())).thenReturn(true);
+    }
+
     @Test
     void shouldSkipWhenTestIsRunning() {
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("RUNNING"));
+        when(performanceTracker.isActive()).thenReturn(true);
 
         scheduledScenarioService.runScheduledScenarios();
 
@@ -93,7 +96,7 @@ class ScheduledScenarioServiceTest {
 
     @Test
     void shouldSkipWhenTestIsExporting() {
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("EXPORTING"));
+        when(performanceTracker.isActive()).thenReturn(true);
 
         scheduledScenarioService.runScheduledScenarios();
 
@@ -102,7 +105,7 @@ class ScheduledScenarioServiceTest {
 
     @Test
     void shouldDoNothingWhenNoScenariosScheduled() {
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        when(performanceTracker.isActive()).thenReturn(false);
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of());
 
         scheduledScenarioService.runScheduledScenarios();
@@ -112,7 +115,7 @@ class ScheduledScenarioServiceTest {
 
     @Test
     void shouldDoNothingWhenNoScenariosMatchCurrentTime() {
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        when(performanceTracker.isActive()).thenReturn(false);
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt("99:99")));
 
         scheduledScenarioService.runScheduledScenarios();
@@ -123,7 +126,7 @@ class ScheduledScenarioServiceTest {
     @Test
     void shouldTriggerExecutionForMatchingScenario() throws Exception {
         var currentTime = LocalTime.now().format(HH_MM);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(10L));
@@ -136,7 +139,7 @@ class ScheduledScenarioServiceTest {
         scheduledScenarioService.runScheduledScenarios();
 
         await().atMost(ofSeconds(5)).untilAsserted(() -> {
-            verify(performanceTracker).startTest(eq(2), anyString());
+            verify(performanceTracker).tryStart(eq(2), anyString());
             verify(testRunService).completeRun(eq(10L), eq("COMPLETED"), any(), eq(null));
         });
     }
@@ -144,7 +147,7 @@ class ScheduledScenarioServiceTest {
     @Test
     void shouldRecordTimeoutStatusWhenAwaitCompletionReturnsFalse() throws Exception {
         var currentTime = LocalTime.now().format(HH_MM);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(20L));
@@ -163,7 +166,7 @@ class ScheduledScenarioServiceTest {
     @Test
     void shouldHandleExceptionDuringExecution() {
         var currentTime = LocalTime.now().format(HH_MM);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(30L));
@@ -181,7 +184,7 @@ class ScheduledScenarioServiceTest {
     @Test
     void shouldHandleInterruptedExceptionDuringExecution() throws Exception {
         var currentTime = LocalTime.now().format(HH_MM);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(40L));
@@ -199,9 +202,25 @@ class ScheduledScenarioServiceTest {
     }
 
     @Test
+    void shouldRecordFailedStatusWhenTrackerRejectsStart() {
+        var currentTime = LocalTime.now().format(HH_MM);
+        when(performanceTracker.isActive()).thenReturn(false);
+        when(performanceTracker.tryStart(anyInt(), anyString())).thenReturn(false);
+        when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
+        when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
+        when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(80L));
+        when(performanceTracker.getResult()).thenReturn(emptyResult());
+
+        scheduledScenarioService.runScheduledScenarios();
+
+        await().atMost(ofSeconds(5)).untilAsserted(() ->
+                verify(testRunService).completeRun(eq(80L), eq("FAILED"), any(), eq(null)));
+    }
+
+    @Test
     void shouldExecuteWarmupBeforeMainTest() throws Exception {
         var currentTime = LocalTime.now().format(HH_MM);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(50L));
@@ -222,13 +241,13 @@ class ScheduledScenarioServiceTest {
     @Test
     void shouldUseMessagePoolWhenNonEmpty() throws Exception {
         var currentTime = LocalTime.now().format(HH_MM);
-        var poolMsg = new TestScenarioService.ScenarioMessage("payload", Map.of(), null);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        var poolMsg = new ScenarioMessage("payload", Map.of(), null);
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(60L));
         when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of(poolMsg, poolMsg));
-        when(messageSender.sendMessage(anyString(), any(), any()))
+        when(messageSender.sendMessage(anyString()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(performanceTracker.awaitCompletion(anyLong(), any(TimeUnit.class))).thenReturn(true);
         when(testScenarioService.getScenarioThresholds(1L)).thenReturn(List.of());
@@ -237,7 +256,7 @@ class ScheduledScenarioServiceTest {
         scheduledScenarioService.runScheduledScenarios();
 
         await().atMost(ofSeconds(5)).untilAsserted(() ->
-                verify(messageSender, atLeastOnce()).sendMessage(anyString(), any(), any()));
+                verify(messageSender, atLeastOnce()).sendMessage(anyString()));
     }
 
     @Test
@@ -245,7 +264,7 @@ class ScheduledScenarioServiceTest {
         var currentTime = LocalTime.now().format(HH_MM);
         var threshold = new ThresholdDef("TPS", "GTE", 5.0);
         var thresholdResult = new ThresholdResult("TPS", "GTE", 5.0, 10.0, true);
-        when(performanceTracker.getProgressSnapshot()).thenReturn(snapshotWithStatus("IDLE"));
+        trackerIdle();
         when(testScenarioService.listScheduledEnabled()).thenReturn(List.of(scenarioAt(currentTime)));
         when(testScenarioService.getById(1L)).thenReturn(scenarioAt(currentTime));
         when(testRunService.createRun(anyString(), anyString(), anyInt(), any())).thenReturn(mockTestRun(70L));

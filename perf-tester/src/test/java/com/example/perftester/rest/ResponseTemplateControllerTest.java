@@ -1,6 +1,10 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.ResponseFieldDto;
+import com.example.perftester.persistence.ResponseTemplateDetail;
+import com.example.perftester.persistence.ResponseTemplateRequest;
 import com.example.perftester.persistence.ResponseTemplateService;
+import com.example.perftester.persistence.ResponseTemplateSummary;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,7 +29,7 @@ class ResponseTemplateControllerTest {
 
     @Test
     void listAllShouldReturnOk() {
-        var summary = new ResponseTemplateService.ResponseTemplateSummary(1L, "Standard Response", 3, "2024-01-01T00:00:00Z");
+        var summary = new ResponseTemplateSummary(1L, "Standard Response", 3, "2024-01-01T00:00:00Z");
         when(responseTemplateService.listAll()).thenReturn(List.of(summary));
 
         var response = controller.listAll();
@@ -36,8 +40,8 @@ class ResponseTemplateControllerTest {
 
     @Test
     void getByIdShouldReturnDetail() {
-        var field = new ResponseTemplateService.ResponseFieldDto("Status", 8, "PROCESSED", "STATIC", " ");
-        var detail = new ResponseTemplateService.ResponseTemplateDetail(
+        var field = new ResponseFieldDto("Status", 8, "PROCESSED", "STATIC", " ");
+        var detail = new ResponseTemplateDetail(
                 1L, "Standard Response", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(responseTemplateService.getById(1L)).thenReturn(detail);
 
@@ -49,9 +53,9 @@ class ResponseTemplateControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var field = new ResponseTemplateService.ResponseFieldDto("CorrelationId", 32, null, "IGNORE", null);
-        var request = new ResponseTemplateService.ResponseTemplateRequest("New Response", List.of(field));
-        var detail = new ResponseTemplateService.ResponseTemplateDetail(
+        var field = new ResponseFieldDto("CorrelationId", 32, null, "IGNORE", null);
+        var request = new ResponseTemplateRequest("New Response", List.of(field));
+        var detail = new ResponseTemplateDetail(
                 2L, "New Response", List.of(field), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(responseTemplateService.create(request)).thenReturn(detail);
 
@@ -63,9 +67,9 @@ class ResponseTemplateControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var field = new ResponseTemplateService.ResponseFieldDto("MsgType", 10, "RESPONSE", "STATIC", " ");
-        var request = new ResponseTemplateService.ResponseTemplateRequest("Updated Response", List.of(field));
-        var detail = new ResponseTemplateService.ResponseTemplateDetail(
+        var field = new ResponseFieldDto("MsgType", 10, "RESPONSE", "STATIC", " ");
+        var request = new ResponseTemplateRequest("Updated Response", List.of(field));
+        var detail = new ResponseTemplateDetail(
                 1L, "Updated Response", List.of(field), "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z");
         when(responseTemplateService.update(1L, request)).thenReturn(detail);
 

@@ -140,26 +140,4 @@ public class InfraProfileService {
                 p.getCreatedAt().toString(), p.getUpdatedAt().toString());
     }
 
-    public record InfraProfileSummary(long id, String name, String updatedAt) {
-    }
-
-    public record InfraProfileDetail(
-            long id, String name,
-            Map<String, String> logLevels,
-            Map<String, Integer> kafkaTopics,
-            Map<String, Integer> kubernetesReplicas,
-            Map<String, Integer> ibmMqQueues,
-            String createdAt, String updatedAt) {
-    }
-
-    public record InfraProfileRequest(
-            String name,
-            Map<String, String> logLevels,
-            Map<String, Integer> kafkaTopics,
-            Map<String, Integer> kubernetesReplicas,
-            Map<String, Integer> ibmMqQueues) {
-    }
-
-    public record ApplyResult(List<String> applied, List<String> errors) {
-    }
 }

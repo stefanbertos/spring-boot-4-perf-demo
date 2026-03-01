@@ -43,22 +43,43 @@ The system follows a microservices architecture pattern with the following key c
 
 == Application Modules
 
-=== perf-tester (Port 8080)
+=== config-server (Port 8888)
 
-The main entry point for the application, providing REST APIs for sending test messages.
+A Spring Cloud Config Server that provides centralized configuration to all services.
 
 *Responsibilities:*
 
-* Expose REST endpoints for message submission
+* Serve YAML configuration files from a filesystem backend (`infrastructure/config-repo/`)
+* Support profile-specific overrides (`<service>-kubernetes.yml`)
+* All Spring Boot services fetch configuration on startup via `spring.config.import`
+
+*Key Technologies:*
+
+* Spring Cloud Config Server
+* Filesystem backend (embedded in a Helm ConfigMap for Kubernetes)
+
+=== perf-tester (Port 8080)
+
+The main entry point for the application, providing REST APIs for performance testing and administration.
+
+*Responsibilities:*
+
+* Expose REST endpoints for message submission and real-time progress streaming (SSE)
+* Manage reusable test scenarios (count, headers, thresholds, warmup, think time, scheduling)
+* Track historical test runs with latency percentiles and threshold evaluation
 * Send messages to IBM MQ (DEV.QUEUE.2)
 * Listen for processed responses on IBM MQ (DEV.QUEUE.1)
+* Export test artifacts (Grafana dashboards, Prometheus metrics, Kubernetes info, DB queries)
 * Export metrics via Prometheus endpoint
+* Serve a React-based frontend (perf-ui) as static resources
 
 *Key Technologies:*
 
 * Spring Boot 4.0 with WebMVC
 * Spring JMS for MQ connectivity
 * Micrometer for observability
+* Oracle database (via JPA / Flyway) for test scenario and run persistence
+* React + TypeScript frontend (built via Gradle, served as static resources)
 
 === ibm-mq-consumer (Port 8081)
 
@@ -140,6 +161,10 @@ A Spring Cloud Gateway that provides unified access to all services.
 |`/api/**`
 |Perf-Tester
 |Application API
+
+|`/**` (catch-all)
+|Perf-UI (static)
+|React frontend served by perf-tester
 |===
 
 == Message Flow
@@ -281,4 +306,54 @@ All services are instrumented with Micrometer for comprehensive observability:
 public void processMessage(String message) {
     // Method is automatically traced and metered
 }
+----
+
+== GitOps Deployment (ArgoCD)
+
+Kubernetes deployment follows the **App of Apps** pattern with ArgoCD. A root Application watches `infrastructure/argocd/apps/` and deploys child Application CRs, each pointing to a Helm chart.
+
+=== Sync Wave Order
+
+[cols="1,3,3"]
+|===
+|Wave |Services |Rationale
+
+|0
+|ibm-mq, oracle, redis, kafka
+|Infrastructure — databases and message brokers
+
+|1
+|prometheus, loki, promtail, grafana, sonarqube, trivy-operator, oracle-exporter
+|Monitoring and security scanning
+
+|2
+|config-server
+|Configuration — all Spring Boot apps depend on it
+
+|3
+|ibm-mq-consumer, kafka-consumer, perf-tester
+|Application services
+
+|4
+|perf-ui, kafdrop, redis-commander, kafka-exporter
+|UI and tools
+
+|5
+|api-gateway
+|Gateway — needs all backends
+
+|6
+|ingress
+|Entry point — needs gateway
+|===
+
+=== Bootstrap Commands
+
+[source,bash]
+----
+# Full setup: installs ArgoCD and deploys all apps
+infrastructure\deployArgo.bat
+
+# Full teardown
+infrastructure\cleanupKubernetes.bat
 ----

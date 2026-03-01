@@ -359,9 +359,9 @@ spring:
 |varies
 |HTTP server port
 
-|`JAVA_OPTS`
-|-XX:+UseZGC
-|JVM options
+|`JAVA_TOOL_OPTIONS`
+|`-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0`
+|JVM options (read automatically by the JVM)
 |===
 
 === IBM MQ Environment Variables
@@ -484,6 +484,17 @@ logging:
   pattern:
     console: '{"timestamp":"%d{ISO8601}","level":"%level","service":"${spring.application.name}","trace":"%X{traceId}","span":"%X{spanId}","message":"%msg"}%n'
 ----
+
+== Scheduled Test Execution
+
+Test scenarios with `scheduledEnabled=true` and a `scheduledTime` (HH:mm format) are automatically triggered by `ScheduledScenarioService` every minute.
+
+* The scheduler fires on the top of every minute (`cron = "0 * * * * *"`)
+* If a test is already `RUNNING` or `EXPORTING`, the scheduled run is skipped
+* Each matched scenario launches in a dedicated virtual thread with a 5-minute timeout
+* Results are stored in the `test_run` table; no export ZIP is generated for scheduled runs
+
+To create a scheduled scenario, set `scheduledEnabled: true` and `scheduledTime: "HH:mm"` via the Test Scenarios API.
 
 == Queue Configuration
 

@@ -524,6 +524,38 @@ public class User {
 }
 ```
 
+### No Nested Records or Classes Inside Service/Controller Classes (Required)
+
+Never define records or inner classes inside service or controller classes. Every record and DTO must be a **top-level file** in the appropriate package. Nested types force callers to use qualified references (`ServiceClass.RecordType`) and blur layer boundaries:
+
+```java
+// Bad - record nested inside a service
+@Service
+public class OrderService {
+    public record OrderSummary(Long id, String status) {} // Never do this
+}
+
+// Bad - record nested inside a controller
+@RestController
+public class OrderController {
+    public record CreateOrderRequest(String item) {} // Never do this
+}
+
+// Good - each type in its own file
+// persistence/OrderSummary.java
+public record OrderSummary(Long id, String status) {}
+
+// rest/CreateOrderRequest.java
+public record CreateOrderRequest(String item) {}
+```
+
+**Placement rules:**
+- Service-layer DTOs (request/response records used by services) → same package as the service (e.g., `persistence/`)
+- Controller-layer DTOs (request/response records used only by one controller) → same package as the controller (e.g., `rest/`)
+- `@ModelAttribute` binding classes that cannot be records (need setters + no-arg constructor) → top-level class in `rest/` package
+
+The only exception is records declared inside **sealed interfaces** (used as variants of the sealed type), which may remain as inner types of the sealed interface.
+
 ### Configuration Class Organization (Required)
 
 Break configuration into focused `@Configuration` classes grouped by concern:

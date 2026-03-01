@@ -1,3 +1,11 @@
+export interface PagedResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export interface TestRunResponse {
   id: number;
   testRunId: string;
@@ -22,6 +30,17 @@ export interface TestRunResponse {
   startedAt: string;
   completedAt: string | null;
   zipFilePath: string | null;
+  tags: string[] | null;
+}
+
+export interface TrendPoint {
+  id: number;
+  testId: string;
+  startedAt: string;
+  tps: number | null;
+  p99LatencyMs: number | null;
+  status: string;
+  testType: string | null;
 }
 
 export interface TestRunDetailResponse {
@@ -49,6 +68,7 @@ export interface TestRunDetailResponse {
   startedAt: string;
   completedAt: string | null;
   zipFilePath: string | null;
+  tags: string[] | null;
 }
 
 export interface TestRunSnapshotResponse {

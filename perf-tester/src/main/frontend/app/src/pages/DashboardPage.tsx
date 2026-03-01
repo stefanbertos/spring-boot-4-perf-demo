@@ -31,7 +31,8 @@ function StatCard({ icon, label, value }: { icon: ReactNode; label: string; valu
 }
 
 export default function DashboardPage() {
-  const { data: runs, loading, error } = useApi(() => getTestRuns());
+  const { data: pagedData, loading, error } = useApi(() => getTestRuns());
+  const runs = pagedData?.content ?? null;
 
   if (loading) return <Loading message="Loading dashboard..." />;
   if (error) return <Alert severity="error">{error.message}</Alert>;

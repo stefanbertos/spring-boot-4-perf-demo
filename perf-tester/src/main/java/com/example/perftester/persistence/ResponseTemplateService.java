@@ -73,16 +73,4 @@ public class ResponseTemplateService {
                 .toList();
     }
 
-    public record ResponseFieldDto(String name, int size, String value, String type, String paddingChar) {
-    }
-
-    public record ResponseTemplateSummary(Long id, String name, int fieldCount, String updatedAt) {
-    }
-
-    public record ResponseTemplateDetail(Long id, String name, List<ResponseFieldDto> fields,
-                                         String createdAt, String updatedAt) {
-    }
-
-    public record ResponseTemplateRequest(String name, List<ResponseFieldDto> fields) {
-    }
 }

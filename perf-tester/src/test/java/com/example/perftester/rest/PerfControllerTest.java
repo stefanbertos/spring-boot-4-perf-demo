@@ -20,9 +20,11 @@ import com.example.perftester.perf.ThinkTimeCalculator;
 import com.example.perftester.perf.ThresholdDef;
 import com.example.perftester.perf.ThresholdEvaluator;
 import com.example.perftester.perf.ThresholdResult;
+import com.example.perftester.persistence.ScenarioMessage;
 import com.example.perftester.persistence.TestRun;
 import com.example.perftester.persistence.InfraProfileService;
 import com.example.perftester.persistence.TestRunService;
+import com.example.perftester.persistence.TestScenarioDetail;
 import com.example.perftester.persistence.TestScenarioService;
 import com.example.perftester.prometheus.PrometheusExportService;
 import com.example.perftester.prometheus.PrometheusExportService.PrometheusExportResult;
@@ -129,7 +131,7 @@ class PerfControllerTest {
                 thinkTimeCalculator, thresholdEvaluator, infraSnapshotService);
 
         when(messageSender.sendMessage(anyString())).thenReturn(CompletableFuture.completedFuture(null));
-        when(messageSender.sendMessage(anyString(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(performanceTracker.tryStart(anyInt(), anyString())).thenReturn(true);
         doReturn(true).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
         var perfResult = new PerfTestResult(10, 0, 1.0, 10.0, 50.0, 10.0, 100.0);
         when(performanceTracker.getResult()).thenReturn(perfResult);
@@ -144,7 +146,7 @@ class PerfControllerTest {
     @Test
     void sendMessagesShouldReturnAcceptedWithTestRunId() {
         ResponseEntity<TestStartResponse> response = controller.sendMessages(
-                "test message", 10, 1, 0, new PerfController.ExportOptions(), new PerfController.RunOptions());
+                "test message", 10, 1, 0, new ExportOptions(), new RunOptions());
 
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -153,7 +155,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldStartTestAsynchronously() {
-        controller.sendMessages("test message", 10, 1, 0, new PerfController.ExportOptions(), new PerfController.RunOptions());
+        controller.sendMessages("test message", 10, 1, 0, new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -163,17 +165,17 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldCallStartTestWithGeneratedRunId() {
-        controller.sendMessages("test message", 5, 1, 0, new PerfController.ExportOptions(), new PerfController.RunOptions());
+        controller.sendMessages("test message", 5, 1, 0, new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(() -> verify(performanceTracker).startTest(anyInt(), anyString()));
+                .untilAsserted(() -> verify(performanceTracker).tryStart(anyInt(), anyString()));
     }
 
     @Test
     void sendMessagesShouldSetStatusCompletedOnSuccess() {
-        controller.sendMessages("test message", 3, 1, 0, new PerfController.ExportOptions(), new PerfController.RunOptions());
+        controller.sendMessages("test message", 3, 1, 0, new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -185,7 +187,7 @@ class PerfControllerTest {
     void sendMessagesShouldSetStatusTimeoutWhenNotAllReceived() throws Exception {
         doReturn(false).when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
 
-        controller.sendMessages("test message", 3, 1, 0, new PerfController.ExportOptions(), new PerfController.RunOptions());
+        controller.sendMessages("test message", 3, 1, 0, new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -207,7 +209,7 @@ class PerfControllerTest {
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
         controller.sendMessages("test message", 3, 1, 0, exportOptions(true, false, false, false),
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -235,7 +237,7 @@ class PerfControllerTest {
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
         controller.sendMessages("test message", 1, 1, 0, exportOptions(true, true, false, false),
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -250,8 +252,8 @@ class PerfControllerTest {
     void sendMessagesShouldEnableDebugLoggingWhenDebugIsTrue() {
         when(loggingAdminService.getLoggerConfiguration("com.example")).thenReturn(null);
 
-        controller.sendMessages("test message", 1, 1, 0, new PerfController.ExportOptions(),
-                new PerfController.RunOptions(null, true, null));
+        controller.sendMessages("test message", 1, 1, 0, new ExportOptions(),
+                new RunOptions(null, true, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -261,7 +263,7 @@ class PerfControllerTest {
 
     @Test
     void exportOptionsSettersCoverSpringMvcBinding() {
-        var opts = new PerfController.ExportOptions();
+        var opts = new ExportOptions();
         opts.setExportGrafana(true);
         opts.setExportPrometheus(true);
         opts.setExportKubernetes(true);
@@ -276,7 +278,7 @@ class PerfControllerTest {
 
     @Test
     void runOptionsSettersCoverSpringMvcBinding() {
-        var opts = new PerfController.RunOptions();
+        var opts = new RunOptions();
         opts.setTestId("tid");
         opts.setDebug(true);
         opts.setScenarioId(5L);
@@ -294,21 +296,21 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldUseScenarioPoolWhenScenarioIdProvided() {
-        var scenarioMsg = new TestScenarioService.ScenarioMessage("scenario-payload", Map.of(), null);
+        var scenarioMsg = new ScenarioMessage("scenario-payload", Map.of(), null);
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(
                 List.of(scenarioMsg, scenarioMsg, scenarioMsg));
         when(testScenarioService.getById(1L)).thenReturn(
-                new TestScenarioService.TestScenarioDetail(1L, "test", 3, List.of(),
+                new TestScenarioDetail(1L, "test", 3, List.of(),
                         false, null, 0, null, null, null, List.of(), "now", "now"));
 
         controller.sendMessages(null, 1000, 1, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+                new ExportOptions(), new RunOptions(null, false, 1L));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
-                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString(), any(), any()));
+                .untilAsserted(() -> verify(messageSender, times(3)).sendMessage(anyString()));
     }
 
     @Test
@@ -325,7 +327,7 @@ class PerfControllerTest {
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
         controller.sendMessages("test message", 1, 1, 0, exportOptions(false, true, false, false),
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -335,7 +337,7 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldExecuteWarmupPhaseWhenWarmupCountIsPositive() throws Exception {
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var detail = new TestScenarioDetail(
                 1L, "test", 3, List.of(), false, null, 5, null, null, null, List.of(), "now", "now");
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.getById(1L)).thenReturn(detail);
@@ -343,7 +345,7 @@ class PerfControllerTest {
         doReturn(true).when(performanceTracker).awaitWarmupCompletion(anyLong(), any(TimeUnit.class));
 
         controller.sendMessages(null, 3, 60, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+                new ExportOptions(), new RunOptions(null, false, 1L));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -355,7 +357,7 @@ class PerfControllerTest {
     void sendMessagesShouldEvaluateThresholdsForScenario() {
         var thresholds = List.of(new ThresholdDef("TPS", "GTE", 5.0));
         var thresholdResults = List.of(new ThresholdResult("TPS", "GTE", 5.0, 10.0, true));
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var detail = new TestScenarioDetail(
                 1L, "test", 3, List.of(), false, null, 0, null, null, null, List.of(), "now", "now");
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.getById(1L)).thenReturn(detail);
@@ -365,7 +367,7 @@ class PerfControllerTest {
                 .thenReturn(thresholdResults);
 
         controller.sendMessages(null, 3, 60, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+                new ExportOptions(), new RunOptions(null, false, 1L));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -384,7 +386,7 @@ class PerfControllerTest {
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
         controller.sendMessages("test message", 1, 1, 0, exportOptions(false, false, false, true),
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -394,14 +396,14 @@ class PerfControllerTest {
 
     @Test
     void sendMessagesShouldApplyInfraProfileWhenScenarioHasInfraProfileId() {
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var detail = new TestScenarioDetail(
                 1L, "test", 3, List.of(), false, null, 0, null, 42L, null, List.of(), "now", "now");
         when(testScenarioService.getScenarioCount(1L)).thenReturn(3);
         when(testScenarioService.getById(1L)).thenReturn(detail);
         when(testScenarioService.buildMessagePool(1L)).thenReturn(List.of());
 
         controller.sendMessages(null, 3, 60, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions(null, false, 1L));
+                new ExportOptions(), new RunOptions(null, false, 1L));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -420,10 +422,10 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        var exportOpts = new PerfController.ExportOptions();
+        var exportOpts = new ExportOptions();
         exportOpts.setExportDatabase(true);
         controller.sendMessages("test message", 1, 1, 0, exportOpts,
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -447,10 +449,10 @@ class PerfControllerTest {
         when(testResultPackager.packageResults(any(), anyList(), any(), anyList(), any(), anyLong(), anyLong()))
                 .thenReturn(new PackageResult("test.zip", tempZip.toString()));
 
-        var exportOpts = new PerfController.ExportOptions();
+        var exportOpts = new ExportOptions();
         exportOpts.setExportKubernetes(true);
         controller.sendMessages("test message", 1, 1, 0, exportOpts,
-                new PerfController.RunOptions("test-id", false, null));
+                new RunOptions("test-id", false, null));
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -464,7 +466,7 @@ class PerfControllerTest {
                 .when(performanceTracker).awaitCompletion(anyLong(), any(TimeUnit.class));
 
         controller.sendMessages("test", 3, 1, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions());
+                new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -478,7 +480,7 @@ class PerfControllerTest {
                 .thenThrow(new RuntimeException("Unexpected send failure"));
 
         controller.sendMessages("test", 3, 1, 0,
-                new PerfController.ExportOptions(), new PerfController.RunOptions());
+                new ExportOptions(), new RunOptions());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
@@ -486,9 +488,9 @@ class PerfControllerTest {
                 .untilAsserted(() -> verify(performanceTracker).setStatus("FAILED"));
     }
 
-    private static PerfController.ExportOptions exportOptions(
+    private static ExportOptions exportOptions(
             boolean grafana, boolean prometheus, boolean kubernetes, boolean logs) {
-        var opts = new PerfController.ExportOptions();
+        var opts = new ExportOptions();
         opts.setExportGrafana(grafana);
         opts.setExportPrometheus(prometheus);
         opts.setExportKubernetes(kubernetes);

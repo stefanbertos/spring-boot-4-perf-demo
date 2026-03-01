@@ -1,6 +1,9 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.TestScenarioDetail;
+import com.example.perftester.persistence.TestScenarioRequest;
 import com.example.perftester.persistence.TestScenarioService;
+import com.example.perftester.persistence.TestScenarioSummary;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,7 +28,7 @@ class TestScenarioControllerTest {
 
     @Test
     void listAllShouldReturnOk() {
-        var summary = new TestScenarioService.TestScenarioSummary(1L, "scenario-a", 100, "2024-01-01T00:00:00Z");
+        var summary = new TestScenarioSummary(1L, "scenario-a", 100, "2024-01-01T00:00:00Z");
         when(testScenarioService.listAll()).thenReturn(List.of(summary));
 
         var response = controller.listAll();
@@ -36,7 +39,7 @@ class TestScenarioControllerTest {
 
     @Test
     void getByIdShouldReturnScenario() {
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var detail = new TestScenarioDetail(
                 1L, "scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.getById(1L)).thenReturn(detail);
 
@@ -48,8 +51,8 @@ class TestScenarioControllerTest {
 
     @Test
     void createShouldReturnCreated() {
-        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of());
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var request = new TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of());
+        var detail = new TestScenarioDetail(
                 1L, "scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.create(request)).thenReturn(detail);
 
@@ -61,8 +64,8 @@ class TestScenarioControllerTest {
 
     @Test
     void updateShouldReturnOk() {
-        var request = new TestScenarioService.TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of());
-        var detail = new TestScenarioService.TestScenarioDetail(
+        var request = new TestScenarioRequest("scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of());
+        var detail = new TestScenarioDetail(
                 1L, "scenario-a", 100, List.of(), false, null, 0, null, null, null, List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
         when(testScenarioService.update(1L, request)).thenReturn(detail);
 

@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,6 +27,7 @@ public class PerformanceTracker {
     private final ConcurrentHashMap<String, Long> inFlightMessages = new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<Long> completionTimestamps = new ConcurrentLinkedDeque<>();
 
+    private final AtomicBoolean active = new AtomicBoolean(false);
     private volatile CountDownLatch completionLatch;
     private volatile long testStartTime;
     private volatile String currentTestRunId;
@@ -67,7 +69,19 @@ public class PerformanceTracker {
         }
     }
 
-    public void startTest(int messageCount, String testRunId) {
+    /**
+     * Atomically transitions the tracker from idle to RUNNING and initialises all counters.
+     * Uses compareAndSet so that only one caller wins when concurrent requests race.
+     *
+     * @return {@code true} if this caller successfully claimed the tracker;
+     *         {@code false} if another test is already in progress.
+     */
+    public boolean tryStart(int messageCount, String testRunId) {
+        if (!active.compareAndSet(false, true)) {
+            log.warn("Rejected start for testRunId={} — tracker is already active (status={})",
+                    testRunId, currentStatus);
+            return false;
+        }
         inWarmup = false;
         inFlightMessages.clear();
         completionTimestamps.clear();
@@ -83,10 +97,27 @@ public class PerformanceTracker {
         currentTestRunId = testRunId;
         currentStatus = "RUNNING";
         log.info("Started performance test: testRunId={}, messages={}", testRunId, messageCount);
+        return true;
     }
 
+    /** Updates the display status without affecting the {@code active} concurrency gate. */
     public void setStatus(String status) {
         this.currentStatus = status;
+    }
+
+    /** Returns {@code true} while a test is running or exporting (the {@code active} gate is held). */
+    public boolean isActive() {
+        return active.get();
+    }
+
+    /**
+     * Releases the {@code active} gate and resets the display status to IDLE.
+     * Must be called exactly once by the thread that won {@link #tryStart} — only after all
+     * monitoring and cleanup for that test is finished.
+     */
+    public void markIdle() {
+        currentStatus = "IDLE";
+        active.set(false);
     }
 
     public TestProgressEvent getProgressSnapshot() {

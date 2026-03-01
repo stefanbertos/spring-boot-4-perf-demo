@@ -79,15 +79,7 @@ Application crashes with OutOfMemoryError.
 
 ==== Solutions
 
-. Increase JVM heap size:
-+
-[source,yaml]
-----
-environment:
-  JAVA_OPTS: "-Xmx1g -Xms512m"
-----
-
-. Increase container memory limits:
+. Increase container memory limits (ZGC requires at least 1Gi):
 +
 [source,yaml]
 ----
@@ -95,6 +87,16 @@ resources:
   limits:
     memory: "2Gi"
 ----
+
+. Adjust heap percentage via `JAVA_TOOL_OPTIONS` (default is 75%):
++
+[source,yaml]
+----
+environment:
+  JAVA_TOOL_OPTIONS: "-XX:+UseZGC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=75.0"
+----
++
+NOTE: For containers under 1Gi, lower `MaxRAMPercentage` to 50% to leave room for ZGC's non-heap overhead.
 
 . Check for memory leaks using heap dumps:
 +
@@ -360,8 +362,8 @@ curl http://localhost:8080/actuator/threaddump
 
 [source,bash]
 ----
-# Generate heap dump on OOM
-JAVA_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"
+# Generate heap dump on OOM (add to JAVA_TOOL_OPTIONS)
+JAVA_TOOL_OPTIONS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"
 
 # Manual heap dump
 kubectl exec -it <pod-name> -- jcmd 1 GC.heap_dump /tmp/heap.hprof

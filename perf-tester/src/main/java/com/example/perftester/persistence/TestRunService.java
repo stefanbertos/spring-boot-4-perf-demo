@@ -3,9 +3,12 @@ package com.example.perftester.persistence;
 import com.example.perftester.perf.PerfTestResult;
 import com.example.perftester.perf.ThresholdResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.TreeSet;
 
 @Slf4j
 @Service
@@ -81,6 +85,15 @@ public class TestRunService {
     }
 
     @Transactional(readOnly = true)
+    public Page<TestRun> findAll(int page, int size, String tag) {
+        var pageable = PageRequest.of(page, size);
+        if (tag != null && !tag.isBlank()) {
+            return testRunRepository.findByTagsLike("%" + tag + "%", pageable);
+        }
+        return testRunRepository.findAllByOrderByStartedAtDesc(pageable);
+    }
+
+    @Transactional(readOnly = true)
     public TestRun findById(Long id) {
         return testRunRepository.findById(id)
                 .orElseThrow(() -> new TestRunNotFoundException(id));
@@ -90,6 +103,46 @@ public class TestRunService {
     public List<TestRunSnapshot> findSnapshots(Long id) {
         testRunRepository.findById(id).orElseThrow(() -> new TestRunNotFoundException(id));
         return snapshotRepository.findByTestRunIdOrderBySampledAtAsc(id);
+    }
+
+    @Transactional
+    public void setTags(Long id, List<String> tags) {
+        var run = testRunRepository.findById(id)
+                .orElseThrow(() -> new TestRunNotFoundException(id));
+        try {
+            run.setTags(MAPPER.writeValueAsString(tags));
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to serialize tags for run {}: {}", id, e.getMessage());
+            run.setTags("[]");
+        }
+        testRunRepository.save(run);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllUniqueTags() {
+        var allJson = testRunRepository.findAllTagsJson();
+        var result = new TreeSet<String>();
+        for (var json : allJson) {
+            try {
+                List<String> parsed = MAPPER.readValue(json, new TypeReference<>() {});
+                result.addAll(parsed);
+            } catch (IOException e) {
+                log.debug("Failed to parse tags JSON: {}", json);
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    @Transactional
+    public void bulkDelete(List<Long> ids) {
+        for (var id : ids) {
+            delete(id);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<TestRun> getTrendData() {
+        return testRunRepository.findCompletedOrderByStartedAtAsc();
     }
 
     @Transactional

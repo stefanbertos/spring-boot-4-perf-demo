@@ -11,7 +11,6 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,37 +39,14 @@ public class MessageSender {
     @Async(AsyncConfig.MQ_SENDER_EXECUTOR)
     public CompletableFuture<Void> sendMessage(String payload) {
         var messageId = UUID.randomUUID().toString();
-        var message = PerformanceTracker.createMessage(messageId, payload);
-
-        performanceTracker.recordSend(messageId);
-        jmsTemplate.convertAndSend(outboundQueue, message, m -> {
+        jmsTemplate.convertAndSend(outboundQueue, payload, m -> {
             m.setJMSReplyTo(replyToQueue);
             m.setJMSCorrelationID(messageId);
             return m;
         });
-
+        performanceTracker.recordSend(messageId);
         log.debug("Sent message [{}] to {} with replyTo {}: {}",
-                message, outboundQueue, replyToQueue, payload);
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async(AsyncConfig.MQ_SENDER_EXECUTOR)
-    public CompletableFuture<Void> sendMessage(String content, Map<String, String> jmsProperties,
-                                               String transactionId) {
-        var messageId = transactionId != null ? transactionId : UUID.randomUUID().toString();
-
-        performanceTracker.recordSend(messageId);
-        jmsTemplate.convertAndSend(outboundQueue, content, m -> {
-            m.setJMSReplyTo(replyToQueue);
-            m.setJMSCorrelationID(messageId);
-            for (var entry : jmsProperties.entrySet()) {
-                m.setStringProperty(entry.getKey(), entry.getValue());
-            }
-            return m;
-        });
-
-        log.debug("Sent message [{}] transactionId=[{}] to {} with replyTo {} and {} jms propert(ies): {}",
-                messageId, transactionId, outboundQueue, replyToQueue, jmsProperties.size(), content);
+                messageId, outboundQueue, replyToQueue, payload);
         return CompletableFuture.completedFuture(null);
     }
 
