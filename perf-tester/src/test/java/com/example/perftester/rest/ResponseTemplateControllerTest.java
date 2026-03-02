@@ -86,4 +86,16 @@ class ResponseTemplateControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(responseTemplateService).delete(1L);
     }
+
+    @Test
+    void cloneShouldReturnCreated() {
+        var detail = new ResponseTemplateDetail(
+                2L, "Standard Response (copy)", List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+        when(responseTemplateService.clone(1L)).thenReturn(detail);
+
+        var response = controller.clone(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(detail);
+    }
 }

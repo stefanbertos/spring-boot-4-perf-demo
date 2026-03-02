@@ -96,4 +96,17 @@ class InfraProfileControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().applied()).hasSize(1);
     }
+
+    @Test
+    void cloneShouldReturnCreated() {
+        var detail = new InfraProfileDetail(
+                2L, "profile-a (copy)", Map.of(), Map.of(), Map.of(), Map.of(),
+                "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+        when(infraProfileService.clone(1L)).thenReturn(detail);
+
+        var response = controller.clone(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(detail);
+    }
 }

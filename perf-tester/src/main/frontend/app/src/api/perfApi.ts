@@ -235,6 +235,10 @@ export function applyInfraProfile(id: number): Promise<ApplyResult> {
   return post(`/api/infra-profiles/${id}/apply`);
 }
 
+export function cloneInfraProfile(id: number): Promise<InfraProfileDetail> {
+  return post(`/api/infra-profiles/${id}/clone`);
+}
+
 // ── Test Cases ────────────────────────────────────────────────────
 
 export function listTestCases(): Promise<TestCaseSummary[]> {
@@ -268,6 +272,10 @@ export function deleteTestCase(id: number): Promise<void> {
   return del(`/api/test-cases/${id}`);
 }
 
+export function cloneTestCase(id: number): Promise<TestCaseDetail> {
+  return post(`/api/test-cases/${id}/clone`);
+}
+
 export function uploadTestCase(name: string, file: File): Promise<TestCaseDetail> {
   const formData = new FormData();
   formData.append('name', name);
@@ -297,6 +305,10 @@ export function deleteHeaderTemplate(id: number): Promise<void> {
   return del(`/api/header-templates/${id}`);
 }
 
+export function cloneHeaderTemplate(id: number): Promise<HeaderTemplateDetail> {
+  return post(`/api/header-templates/${id}/clone`);
+}
+
 // ── Response Templates ──────────────────────────────────────────────
 
 export function listResponseTemplates(): Promise<ResponseTemplateSummary[]> {
@@ -319,6 +331,10 @@ export function deleteResponseTemplate(id: number): Promise<void> {
   return del(`/api/response-templates/${id}`);
 }
 
+export function cloneResponseTemplate(id: number): Promise<ResponseTemplateDetail> {
+  return post(`/api/response-templates/${id}/clone`);
+}
+
 // ── Test Scenarios ─────────────────────────────────────────────────
 
 export function listTestScenarios(): Promise<TestScenarioSummary[]> {
@@ -339,6 +355,10 @@ export function updateTestScenario(id: number, data: TestScenarioRequest): Promi
 
 export function deleteTestScenario(id: number): Promise<void> {
   return del(`/api/test-scenarios/${id}`);
+}
+
+export function cloneTestScenario(id: number): Promise<TestScenarioDetail> {
+  return post(`/api/test-scenarios/${id}/clone`);
 }
 
 // ── Health Check Admin ─────────────────────────────────────────────

@@ -158,4 +158,18 @@ class TestCaseServiceTest {
         assertThat(result.headerTemplateId()).isEqualTo(10L);
         assertThat(result.headerTemplateName()).isEqualTo("header-A");
     }
+
+    @Test
+    void cloneShouldCreateCopyWithNameSuffix() {
+        var source = caseWithId(1L);
+        var saved = caseWithId(2L);
+        saved.setName("case-1 (copy)");
+        when(testCaseRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(testCaseRepository.save(any())).thenReturn(saved);
+
+        var result = testCaseService.clone(1L);
+
+        verify(testCaseRepository).save(any(TestCase.class));
+        assertThat(result.name()).isEqualTo("case-1 (copy)");
+    }
 }

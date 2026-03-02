@@ -72,6 +72,13 @@ public class TestCaseController {
         testCaseService.delete(id);
     }
 
+    @Operation(summary = "Clone a test case")
+    @PostMapping("/{id}/clone")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TestCaseResponse clone(@PathVariable long id) {
+        return toResponse(testCaseService.clone(id));
+    }
+
     @Operation(summary = "Upload a test case from a file", description = "Creates a test case by reading the message content from an uploaded file")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)

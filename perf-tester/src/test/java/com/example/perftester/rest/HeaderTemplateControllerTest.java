@@ -86,4 +86,16 @@ class HeaderTemplateControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(headerTemplateService).delete(1L);
     }
+
+    @Test
+    void cloneShouldReturnCreated() {
+        var detail = new HeaderTemplateDetail(
+                2L, "Correlation (copy)", List.of(), "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+        when(headerTemplateService.clone(1L)).thenReturn(detail);
+
+        var response = controller.clone(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(detail);
+    }
 }

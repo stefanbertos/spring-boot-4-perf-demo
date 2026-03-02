@@ -72,4 +72,10 @@ public class InfraProfileController {
     public ResponseEntity<ApplyResult> apply(@PathVariable Long id) {
         return ResponseEntity.ok(infraProfileService.applyProfile(id));
     }
+
+    @Operation(summary = "Clone an infrastructure profile")
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<InfraProfileDetail> clone(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(infraProfileService.clone(id));
+    }
 }

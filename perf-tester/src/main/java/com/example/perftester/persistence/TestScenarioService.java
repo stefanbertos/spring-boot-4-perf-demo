@@ -62,6 +62,31 @@ public class TestScenarioService {
         testScenarioRepository.deleteById(id);
     }
 
+    @Transactional
+    public TestScenarioDetail clone(Long id) {
+        var source = testScenarioRepository.findById(id)
+                .orElseThrow(() -> new TestScenarioNotFoundException(id));
+        var cloned = new TestScenario();
+        cloned.setName(source.getName() + " (copy)");
+        cloned.setCount(source.getCount());
+        cloned.setScheduledEnabled(source.isScheduledEnabled());
+        cloned.setScheduledTime(source.getScheduledTime());
+        cloned.setWarmupCount(source.getWarmupCount());
+        cloned.setTestType(source.getTestType());
+        cloned.setInfraProfileId(source.getInfraProfileId());
+        cloned.setThinkTimeJson(source.getThinkTimeJson());
+        cloned.setThresholdsJson(source.getThresholdsJson());
+        for (var entry : source.getEntries()) {
+            var clonedEntry = new ScenarioTestCase();
+            clonedEntry.setScenario(cloned);
+            clonedEntry.setTestCase(entry.getTestCase());
+            clonedEntry.setPercentage(entry.getPercentage());
+            clonedEntry.setDisplayOrder(entry.getDisplayOrder());
+            cloned.getEntries().add(clonedEntry);
+        }
+        return toDetail(testScenarioRepository.save(cloned));
+    }
+
     @Transactional(readOnly = true)
     public List<TestScenarioDetail> listScheduledEnabled() {
         return testScenarioRepository.findByScheduledEnabledTrue().stream()

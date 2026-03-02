@@ -82,4 +82,17 @@ class TestScenarioControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(testScenarioService).delete(1L);
     }
+
+    @Test
+    void cloneShouldReturnCreated() {
+        var detail = new TestScenarioDetail(
+                2L, "scenario-a (copy)", 100, List.of(), false, null, 0, null, null, null, List.of(),
+                "2024-01-01T00:00:00Z", "2024-01-01T00:00:00Z");
+        when(testScenarioService.clone(1L)).thenReturn(detail);
+
+        var response = controller.clone(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(detail);
+    }
 }

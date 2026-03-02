@@ -59,4 +59,10 @@ public class ResponseTemplateController {
         responseTemplateService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Clone a response template")
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<ResponseTemplateDetail> clone(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseTemplateService.clone(id));
+    }
 }

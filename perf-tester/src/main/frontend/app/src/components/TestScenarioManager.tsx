@@ -1,4 +1,5 @@
 import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
@@ -23,6 +24,10 @@ import {
 import type { DataTableColumn } from 'perf-ui-components';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  cloneHeaderTemplate,
+  cloneResponseTemplate,
+  cloneTestCase,
+  cloneTestScenario,
   createHeaderTemplate,
   createResponseTemplate,
   createTestCase,
@@ -233,6 +238,12 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
     onChanged();
   };
 
+  const handleClone = async (id: number) => {
+    await cloneTestCase(id);
+    await refresh();
+    onChanged();
+  };
+
   const canSave = form.name.trim() !== '' && form.message.trim() !== '';
 
   const columns: DataTableColumn<TestCaseSummary>[] = [
@@ -249,6 +260,11 @@ function TestCasesTab({ onChanged }: TestCasesTabProps) {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Clone">
+            <IconButton size="small" onClick={() => void handleClone(row.id)}>
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
@@ -474,6 +490,12 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
     onChanged();
   };
 
+  const handleClone = async (id: number) => {
+    await cloneHeaderTemplate(id);
+    await refresh();
+    onChanged();
+  };
+
   const columns: DataTableColumn<HeaderTemplateSummary>[] = [
     { id: 'name', label: 'Name', minWidth: 160, render: (row) => row.name },
     { id: 'fieldCount', label: 'Fields', render: (row) => String(row.fieldCount) },
@@ -487,6 +509,11 @@ function HeadersTab({ onChanged }: HeadersTabProps) {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Clone">
+            <IconButton size="small" onClick={() => void handleClone(row.id)}>
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
@@ -841,6 +868,12 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
     onChanged();
   };
 
+  const handleClone = async (id: number) => {
+    await cloneResponseTemplate(id);
+    await refresh();
+    onChanged();
+  };
+
   const columns: DataTableColumn<ResponseTemplateSummary>[] = [
     { id: 'name', label: 'Name', minWidth: 160, render: (row) => row.name },
     { id: 'fieldCount', label: 'Fields', render: (row) => String(row.fieldCount) },
@@ -854,6 +887,11 @@ function ResponseTemplatesTab({ onChanged }: ResponseTemplatesTabProps) {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Clone">
+            <IconButton size="small" onClick={() => void handleClone(row.id)}>
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
@@ -1213,6 +1251,12 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
     onChanged();
   };
 
+  const handleClone = async (id: number) => {
+    await cloneTestScenario(id);
+    await refresh();
+    onChanged();
+  };
+
   const columns: DataTableColumn<TestScenarioSummary>[] = [
     { id: 'name', label: 'Name', minWidth: 140, render: (row) => row.name },
     { id: 'count', label: 'Messages', render: (row) => row.count.toLocaleString() },
@@ -1226,6 +1270,11 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Clone">
+            <IconButton size="small" onClick={() => void handleClone(row.id)}>
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">

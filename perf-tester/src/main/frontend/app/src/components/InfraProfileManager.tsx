@@ -1,4 +1,5 @@
 import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
@@ -19,6 +20,7 @@ import {
 import type { DataTableColumn, SelectChangeEvent } from 'perf-ui-components';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  cloneInfraProfile,
   createInfraProfile,
   deleteInfraProfile,
   getInfraProfile,
@@ -293,6 +295,11 @@ export default function InfraProfileManager() {
     await refresh();
   };
 
+  const handleClone = async (id: number) => {
+    await cloneInfraProfile(id);
+    await refresh();
+  };
+
   const columns: DataTableColumn<InfraProfileSummary>[] = [
     { id: 'name', label: 'Name', minWidth: 140, render: (row) => row.name },
     {
@@ -309,6 +316,11 @@ export default function InfraProfileManager() {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Clone">
+            <IconButton size="small" onClick={() => void handleClone(row.id)}>
+              <ContentCopyIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">

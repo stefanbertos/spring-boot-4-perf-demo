@@ -182,4 +182,18 @@ class TestScenarioServiceTest {
 
         assertThat(pool).isEmpty();
     }
+
+    @Test
+    void cloneShouldCreateCopyWithNameSuffix() {
+        var source = scenarioWithId(1L);
+        var saved = scenarioWithId(2L);
+        saved.setName("scenario-1 (copy)");
+        when(testScenarioRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(testScenarioRepository.save(any())).thenReturn(saved);
+
+        var result = testScenarioService.clone(1L);
+
+        verify(testScenarioRepository).save(any(TestScenario.class));
+        assertThat(result.name()).isEqualTo("scenario-1 (copy)");
+    }
 }

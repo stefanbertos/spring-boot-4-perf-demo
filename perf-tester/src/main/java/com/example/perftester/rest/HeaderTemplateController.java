@@ -59,4 +59,10 @@ public class HeaderTemplateController {
         headerTemplateService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Clone a header template")
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<HeaderTemplateDetail> clone(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(headerTemplateService.clone(id));
+    }
 }

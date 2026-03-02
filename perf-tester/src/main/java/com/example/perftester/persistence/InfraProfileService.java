@@ -61,6 +61,18 @@ public class InfraProfileService {
         repository.delete(profile);
     }
 
+    @Transactional
+    public InfraProfileDetail clone(Long id) {
+        var source = findOrThrow(id);
+        var cloned = new InfraProfile();
+        cloned.setName(source.getName() + " (copy)");
+        cloned.setLogLevels(new HashMap<>(source.getLogLevels()));
+        cloned.setKafkaTopics(new HashMap<>(source.getKafkaTopics()));
+        cloned.setKubernetesReplicas(new HashMap<>(source.getKubernetesReplicas()));
+        cloned.setIbmMqQueues(new HashMap<>(source.getIbmMqQueues()));
+        return toDetail(repository.save(cloned));
+    }
+
     public ApplyResult applyProfile(Long id) {
         var profile = findOrThrow(id);
         var applied = new ArrayList<String>();

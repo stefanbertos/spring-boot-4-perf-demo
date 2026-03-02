@@ -118,4 +118,18 @@ class HeaderTemplateServiceTest {
         headerTemplateService.delete(1L);
         verify(repository).deleteById(1L);
     }
+
+    @Test
+    void cloneShouldCreateCopyWithNameSuffix() {
+        var source = templateWithId(1L);
+        var saved = templateWithId(2L);
+        saved.setName("template-1 (copy)");
+        when(repository.findById(1L)).thenReturn(Optional.of(source));
+        when(repository.save(any())).thenReturn(saved);
+
+        var result = headerTemplateService.clone(1L);
+
+        verify(repository).save(any(HeaderTemplate.class));
+        assertThat(result.name()).isEqualTo("template-1 (copy)");
+    }
 }

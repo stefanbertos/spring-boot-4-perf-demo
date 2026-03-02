@@ -59,4 +59,10 @@ public class TestScenarioController {
         testScenarioService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Clone a test scenario")
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<TestScenarioDetail> clone(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(testScenarioService.clone(id));
+    }
 }

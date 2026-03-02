@@ -2,6 +2,11 @@ export { ApiError } from './client';
 export {
   applyInfraProfile,
   bulkDeleteTestRuns,
+  cloneHeaderTemplate,
+  cloneInfraProfile,
+  cloneResponseTemplate,
+  cloneTestCase,
+  cloneTestScenario,
   changeQueueMaxDepth,
   createHeaderTemplate,
   createInfraProfile,

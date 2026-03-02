@@ -209,4 +209,18 @@ class InfraProfileServiceTest {
         assertThat(result.applied()).hasSize(4);
         assertThat(result.errors()).isEmpty();
     }
+
+    @Test
+    void cloneShouldCreateCopyWithNameSuffix() {
+        var source = profileWithId(1L);
+        var saved = profileWithId(2L);
+        saved.setName("profile-1 (copy)");
+        when(repository.findById(1L)).thenReturn(Optional.of(source));
+        when(repository.save(any())).thenReturn(saved);
+
+        var result = infraProfileService.clone(1L);
+
+        verify(repository).save(any(InfraProfile.class));
+        assertThat(result.name()).isEqualTo("profile-1 (copy)");
+    }
 }

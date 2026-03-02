@@ -62,6 +62,18 @@ public class TestCaseService {
         testCaseRepository.deleteById(id);
     }
 
+    @Transactional
+    public TestCaseDetail clone(long id) {
+        var source = testCaseRepository.findById(id)
+                .orElseThrow(() -> new TestCaseNotFoundException(id));
+        var cloned = new TestCase();
+        cloned.setName(source.getName() + " (copy)");
+        cloned.setMessage(source.getMessage());
+        cloned.setHeaderTemplate(source.getHeaderTemplate());
+        cloned.setResponseTemplate(source.getResponseTemplate());
+        return toDetail(testCaseRepository.save(cloned));
+    }
+
     private void applyTemplates(TestCase testCase, Long headerTemplateId, Long responseTemplateId) {
         testCase.setHeaderTemplate(headerTemplateId != null
                 ? headerTemplateRepository.findById(headerTemplateId).orElse(null)

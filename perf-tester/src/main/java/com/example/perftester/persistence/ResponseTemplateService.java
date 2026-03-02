@@ -51,6 +51,15 @@ public class ResponseTemplateService {
         repository.deleteById(id);
     }
 
+    @Transactional
+    public ResponseTemplateDetail clone(Long id) {
+        var source = findOrThrow(id);
+        var cloned = new ResponseTemplate();
+        cloned.setName(source.getName() + " (copy)");
+        cloned.setFields(source.getFields() != null ? new ArrayList<>(source.getFields()) : new ArrayList<>());
+        return toDetail(repository.save(cloned));
+    }
+
     private ResponseTemplate findOrThrow(Long id) {
         return repository.findById(id).orElseThrow(() -> new ResponseTemplateNotFoundException(id));
     }
