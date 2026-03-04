@@ -39,12 +39,12 @@ public class MessageSender {
     @Async(AsyncConfig.MQ_SENDER_EXECUTOR)
     public CompletableFuture<Void> sendMessage(String payload) {
         var messageId = UUID.randomUUID().toString();
+        performanceTracker.recordSend(messageId);
         jmsTemplate.convertAndSend(outboundQueue, payload, m -> {
             m.setJMSReplyTo(replyToQueue);
             m.setJMSCorrelationID(messageId);
             return m;
         });
-        performanceTracker.recordSend(messageId);
         log.debug("Sent message [{}] to {} with replyTo {}: {}",
                 messageId, outboundQueue, replyToQueue, payload);
         return CompletableFuture.completedFuture(null);
