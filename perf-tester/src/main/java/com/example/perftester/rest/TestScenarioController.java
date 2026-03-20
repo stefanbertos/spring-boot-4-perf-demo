@@ -1,5 +1,6 @@
 package com.example.perftester.rest;
 
+import com.example.perftester.persistence.ScenarioExport;
 import com.example.perftester.persistence.TestScenarioDetail;
 import com.example.perftester.persistence.TestScenarioRequest;
 import com.example.perftester.persistence.TestScenarioService;
@@ -64,5 +65,17 @@ public class TestScenarioController {
     @PostMapping("/{id}/clone")
     public ResponseEntity<TestScenarioDetail> clone(@PathVariable Long id) {
         return ResponseEntity.status(HttpStatus.CREATED).body(testScenarioService.clone(id));
+    }
+
+    @Operation(summary = "Export a test scenario as a self-contained JSON bundle")
+    @GetMapping("/{id}/export")
+    public ResponseEntity<ScenarioExport> export(@PathVariable Long id) {
+        return ResponseEntity.ok(testScenarioService.export(id));
+    }
+
+    @Operation(summary = "Import a test scenario from an export bundle")
+    @PostMapping("/import")
+    public ResponseEntity<TestScenarioDetail> importScenario(@RequestBody ScenarioExport scenarioExport) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(testScenarioService.importScenario(scenarioExport));
     }
 }

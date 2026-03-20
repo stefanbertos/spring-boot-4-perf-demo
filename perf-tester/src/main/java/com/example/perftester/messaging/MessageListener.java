@@ -20,11 +20,11 @@ public class MessageListener {
     @JmsListener(destination = "${app.mq.queue.inbound}", concurrency = "10-50")
     public void receiveMessage(Message jmsMessage) throws JMSException {
         var correlationId = jmsMessage.getJMSCorrelationID();
+        var body = jmsMessage instanceof TextMessage textMsg ? textMsg.getText() : null;
         if (correlationId != null) {
-            performanceTracker.recordReceive(correlationId);
+            performanceTracker.recordReceive(correlationId, body);
             log.debug("Received response message correlationId=[{}]", correlationId);
         } else {
-            var body = ((TextMessage) jmsMessage).getText();
             log.warn("Received message without correlation ID: {}", body);
         }
     }

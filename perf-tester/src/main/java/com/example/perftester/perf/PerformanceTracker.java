@@ -6,8 +6,11 @@ import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import org.springframework.lang.Nullable;
+
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
@@ -26,6 +29,11 @@ public class PerformanceTracker {
     private final Timer e2eLatencyTimer;
     private final ConcurrentHashMap<String, Long> inFlightMessages = new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<Long> completionTimestamps = new ConcurrentLinkedDeque<>();
+
+    private final ConcurrentHashMap<String, MessageExpectation> pendingExpectations = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedDeque<ValidationResult> validationFailures = new ConcurrentLinkedDeque<>();
+    private final AtomicLong validationPassCount = new AtomicLong(0);
+    private final AtomicLong validationFailCount = new AtomicLong(0);
 
     private final AtomicBoolean active = new AtomicBoolean(false);
     private volatile CountDownLatch completionLatch;
@@ -89,6 +97,10 @@ public class PerformanceTracker {
         totalLatencyNanos.set(0);
         minLatencyNanos.set(Long.MAX_VALUE);
         maxLatencyNanos.set(Long.MIN_VALUE);
+        pendingExpectations.clear();
+        validationFailures.clear();
+        validationPassCount.set(0);
+        validationFailCount.set(0);
         latencyBuffer = new long[Math.min(messageCount, MAX_BUFFER)];
         bufferSlot.set(0);
         completionLatch = new CountDownLatch(messageCount);
@@ -143,7 +155,12 @@ public class PerformanceTracker {
         inFlightMessages.put(messageId, System.nanoTime());
     }
 
-    public long recordReceive(String messageId) {
+    public void recordSend(String messageId, MessageExpectation expectation) {
+        inFlightMessages.put(messageId, System.nanoTime());
+        pendingExpectations.put(messageId, expectation);
+    }
+
+    public long recordReceive(String messageId, @Nullable String responseBody) {
         var sendTime = inFlightMessages.remove(messageId);
         if (sendTime != null) {
             long latencyNanos = System.nanoTime() - sendTime;
@@ -154,25 +171,21 @@ public class PerformanceTracker {
             }
 
             long currentTimeMs = System.currentTimeMillis();
-
-            // Record completion timestamp for TPS calculation
             completionTimestamps.addLast(currentTimeMs);
-
-            // Record to Micrometer timer (automatically pushed to Prometheus)
             e2eLatencyTimer.record(Duration.ofNanos(latencyNanos));
 
-            // Record latency in buffer for percentile calculation
             var buf = latencyBuffer;
             int slot = bufferSlot.getAndIncrement();
             if (buf != null && slot < buf.length) {
                 buf[slot] = latencyNanos;
             }
 
-            // Update statistics
             completedCount.incrementAndGet();
             totalLatencyNanos.addAndGet(latencyNanos);
             updateMin(latencyNanos);
             updateMax(latencyNanos);
+
+            processValidation(messageId, responseBody);
 
             var latch = completionLatch;
             if (latch != null) {
@@ -182,6 +195,21 @@ public class PerformanceTracker {
         } else {
             log.warn("Received response for unknown message ID: {}", messageId);
             return -1;
+        }
+    }
+
+    private void processValidation(String messageId, @Nullable String responseBody) {
+        var expectation = pendingExpectations.remove(messageId);
+        if (expectation == null || !expectation.hasValidation()) {
+            return;
+        }
+        var failures = expectation.validate(responseBody);
+        if (failures.isEmpty()) {
+            validationPassCount.incrementAndGet();
+        } else {
+            validationFailCount.incrementAndGet();
+            validationFailures.addLast(new ValidationResult(expectation.testCaseName(), false, failures));
+            log.debug("Response validation FAILED testCase='{}': {}", expectation.testCaseName(), failures);
         }
     }
 
@@ -258,7 +286,9 @@ public class PerformanceTracker {
                 avgLatencyMs,
                 minLatencyMs,
                 maxLatencyMs
-        ).withPercentiles(p25, p50, p75, p90, p95, p99);
+        ).withPercentiles(p25, p50, p75, p90, p95, p99)
+                .withValidation(validationPassCount.get(), validationFailCount.get(),
+                        List.copyOf(validationFailures));
     }
 
     /**

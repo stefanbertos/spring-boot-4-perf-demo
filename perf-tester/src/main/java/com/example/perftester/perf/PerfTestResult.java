@@ -22,45 +22,62 @@ public record PerfTestResult(
         List<String> dashboardExportFiles,
         String prometheusExportFile,
         String kubernetesExportFile,
-        Map<String, Path> dbQueryResults
+        Map<String, Path> dbQueryResults,
+        long validationPassCount,
+        long validationFailCount,
+        List<ValidationResult> validationFailures
 ) {
     public PerfTestResult(long completedMessages, long pendingMessages, double testDurationSeconds,
                           double tps, double avgLatencyMs, double minLatencyMs, double maxLatencyMs) {
         this(completedMessages, pendingMessages, testDurationSeconds, tps, avgLatencyMs,
-                minLatencyMs, maxLatencyMs, 0, 0, 0, 0, 0, 0, List.of(), List.of(), null, null, null);
+                minLatencyMs, maxLatencyMs, 0, 0, 0, 0, 0, 0, List.of(), List.of(), null, null, null,
+                0L, 0L, List.of());
     }
 
     public PerfTestResult withPercentiles(double p25, double p50, double p75, double p90, double p95, double p99) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs, p25, p50, p75, p90, p95, p99,
-                dashboardUrls, dashboardExportFiles, prometheusExportFile, kubernetesExportFile, dbQueryResults);
+                dashboardUrls, dashboardExportFiles, prometheusExportFile, kubernetesExportFile, dbQueryResults,
+                validationPassCount, validationFailCount, validationFailures);
+    }
+
+    public PerfTestResult withValidation(long passCount, long failCount, List<ValidationResult> failures) {
+        return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
+                tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
+                p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,
+                dashboardUrls, dashboardExportFiles, prometheusExportFile, kubernetesExportFile, dbQueryResults,
+                passCount, failCount, failures);
     }
 
     public PerfTestResult withDashboardExports(List<String> urls, List<String> files) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
                 p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,
-                urls, files, prometheusExportFile, kubernetesExportFile, dbQueryResults);
+                urls, files, prometheusExportFile, kubernetesExportFile, dbQueryResults,
+                validationPassCount, validationFailCount, validationFailures);
     }
 
     public PerfTestResult withPrometheusExport(String exportFile) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
                 p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,
-                dashboardUrls, dashboardExportFiles, exportFile, kubernetesExportFile, dbQueryResults);
+                dashboardUrls, dashboardExportFiles, exportFile, kubernetesExportFile, dbQueryResults,
+                validationPassCount, validationFailCount, validationFailures);
     }
 
     public PerfTestResult withKubernetesExport(String exportFile) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
                 p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,
-                dashboardUrls, dashboardExportFiles, prometheusExportFile, exportFile, dbQueryResults);
+                dashboardUrls, dashboardExportFiles, prometheusExportFile, exportFile, dbQueryResults,
+                validationPassCount, validationFailCount, validationFailures);
     }
 
     public PerfTestResult withDbQueryResults(Map<String, Path> results) {
         return new PerfTestResult(completedMessages, pendingMessages, testDurationSeconds,
                 tps, avgLatencyMs, minLatencyMs, maxLatencyMs,
                 p25LatencyMs, p50LatencyMs, p75LatencyMs, p90LatencyMs, p95LatencyMs, p99LatencyMs,
-                dashboardUrls, dashboardExportFiles, prometheusExportFile, kubernetesExportFile, results);
+                dashboardUrls, dashboardExportFiles, prometheusExportFile, kubernetesExportFile, results,
+                validationPassCount, validationFailCount, validationFailures);
     }
 }

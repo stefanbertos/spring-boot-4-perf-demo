@@ -7,6 +7,8 @@ export {
   cloneResponseTemplate,
   cloneTestCase,
   cloneTestScenario,
+  exportScenario,
+  importScenario,
   changeQueueMaxDepth,
   createHeaderTemplate,
   createInfraProfile,

@@ -2,6 +2,8 @@ import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
@@ -22,7 +24,7 @@ import {
   Tooltip,
 } from 'perf-ui-components';
 import type { DataTableColumn } from 'perf-ui-components';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   cloneHeaderTemplate,
   cloneResponseTemplate,
@@ -36,10 +38,12 @@ import {
   deleteResponseTemplate,
   deleteTestCase,
   deleteTestScenario,
+  exportScenario,
   getHeaderTemplate,
   getResponseTemplate,
   getTestCase,
   getTestScenario,
+  importScenario,
   listHeaderTemplates,
   listInfraProfiles,
   listResponseTemplates,
@@ -54,6 +58,7 @@ import type {
   HeaderTemplateSummary,
   InfraProfileSummary,
   ResponseTemplateSummary,
+  ScenarioExport,
   TestCaseSummary,
   TestScenarioSummary,
   ThresholdDef,
@@ -1120,6 +1125,7 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
   const [form, setForm] = useState<ScenarioForm>(EMPTY_SCENARIO);
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -1257,6 +1263,36 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
     onChanged();
   };
 
+  const handleExport = async (id: number, name: string) => {
+    try {
+      const data = await exportScenario(id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${name.replace(/\s+/g, '_')}.scenario.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to export scenario');
+    }
+  };
+
+  const handleImport = async (e: { target: HTMLInputElement }) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as ScenarioExport;
+      await importScenario(data);
+      e.target.value = '';
+      await refresh();
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to import scenario');
+    }
+  };
+
   const columns: DataTableColumn<TestScenarioSummary>[] = [
     { id: 'name', label: 'Name', minWidth: 140, render: (row) => row.name },
     { id: 'count', label: 'Messages', render: (row) => row.count.toLocaleString() },
@@ -1270,6 +1306,11 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => void openEdit(row)}>
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Export">
+            <IconButton size="small" onClick={() => void handleExport(row.id, row.name)}>
+              <FileDownloadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Clone">
@@ -1289,8 +1330,18 @@ function ScenariosTab({ onChanged }: ScenariosTabProps) {
 
   return (
     <>
-      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-        <Button size="small" onClick={openCreate}>New</Button>
+      <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mb: 2 }}>
+        <Button size="small" startIcon={<FileUploadIcon />} onClick={() => importFileRef.current?.click()}>
+          Import
+        </Button>
+        <Button size="small" startIcon={<AddIcon />} onClick={openCreate}>New</Button>
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={(e) => void handleImport(e)}
+        />
       </Stack>
 
       {error && (

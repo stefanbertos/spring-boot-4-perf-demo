@@ -1,7 +1,9 @@
 package com.example.perftester.messaging;
 
 import com.example.perftester.config.AsyncConfig;
+import com.example.perftester.perf.MessageExpectation;
 import com.example.perftester.perf.PerformanceTracker;
+import com.example.perftester.persistence.ScenarioMessage;
 import com.ibm.mq.jakarta.jms.MQQueue;
 
 import jakarta.jms.JMSException;
@@ -47,6 +49,24 @@ public class MessageSender {
         });
         log.debug("Sent message [{}] to {} with replyTo {}: {}",
                 messageId, outboundQueue, replyToQueue, payload);
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Async(AsyncConfig.MQ_SENDER_EXECUTOR)
+    public CompletableFuture<Void> sendMessage(ScenarioMessage scenarioMessage) {
+        var messageId = UUID.randomUUID().toString();
+        var expectation = new MessageExpectation(
+                scenarioMessage.testCaseName(),
+                scenarioMessage.responseFields(),
+                scenarioMessage.jmsProperties());
+        performanceTracker.recordSend(messageId, expectation);
+        jmsTemplate.convertAndSend(outboundQueue, scenarioMessage.content(), m -> {
+            m.setJMSReplyTo(replyToQueue);
+            m.setJMSCorrelationID(messageId);
+            return m;
+        });
+        log.debug("Sent scenario message [{}] testCase='{}' to {}", messageId,
+                scenarioMessage.testCaseName(), outboundQueue);
         return CompletableFuture.completedFuture(null);
     }
 

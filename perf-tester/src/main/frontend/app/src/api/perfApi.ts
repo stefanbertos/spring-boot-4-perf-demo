@@ -22,6 +22,7 @@ import type {
   ResponseTemplateDetail,
   ResponseTemplateRequest,
   ResponseTemplateSummary,
+  ScenarioExport,
   TestCaseDetail,
   TestCaseSummary,
   TestProgressEvent,
@@ -359,6 +360,14 @@ export function deleteTestScenario(id: number): Promise<void> {
 
 export function cloneTestScenario(id: number): Promise<TestScenarioDetail> {
   return post(`/api/test-scenarios/${id}/clone`);
+}
+
+export function exportScenario(id: number): Promise<ScenarioExport> {
+  return get(`/api/test-scenarios/${id}/export`);
+}
+
+export function importScenario(data: ScenarioExport): Promise<TestScenarioDetail> {
+  return post('/api/test-scenarios/import', data);
 }
 
 // ── Health Check Admin ─────────────────────────────────────────────

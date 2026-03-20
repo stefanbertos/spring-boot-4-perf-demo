@@ -277,8 +277,7 @@ public class PerfController {
         var futures = new CompletableFuture<?>[count];
         for (int i = 0; i < count; i++) {
             if (!pool.isEmpty()) {
-                var msg = pool.get(i);
-                futures[i] = messageSender.sendMessage(msg.content());
+                futures[i] = messageSender.sendMessage(pool.get(i));
             } else {
                 futures[i] = messageSender.sendMessage(message + "-" + i);
             }

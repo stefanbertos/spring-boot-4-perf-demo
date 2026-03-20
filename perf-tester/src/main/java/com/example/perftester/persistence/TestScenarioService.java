@@ -26,6 +26,8 @@ public class TestScenarioService {
 
     private final TestScenarioRepository testScenarioRepository;
     private final TestCaseRepository testCaseRepository;
+    private final HeaderTemplateRepository headerTemplateRepository;
+    private final ResponseTemplateRepository responseTemplateRepository;
 
     @Transactional(readOnly = true)
     public List<TestScenarioSummary> listAll() {
@@ -205,12 +207,15 @@ public class TestScenarioService {
     }
 
     private ScenarioMessage buildScenarioMessage(TestCase tc) {
+        var testCaseName = tc.getName();
+        var responseFields = tc.getResponseTemplate() != null
+                ? tc.getResponseTemplate().getFields() : null;
         var fields = tc.getHeaderTemplate() != null
                 ? tc.getHeaderTemplate().getFields()
                 : List.<HeaderTemplate.TemplateField>of();
         var content = tc.getMessage() != null ? tc.getMessage() : "";
         if (fields.isEmpty()) {
-            return new ScenarioMessage(content, Map.of(), null);
+            return new ScenarioMessage(content, Map.of(), null, testCaseName, responseFields);
         }
         var header = new StringBuilder();
         var jmsProperties = new LinkedHashMap<String, String>();
@@ -238,7 +243,8 @@ public class TestScenarioService {
                 header.append(padOrTrunctate(String.valueOf(content.length()), field.size(), field.paddingChar()));
             }
         }
-        return new ScenarioMessage(header + content, Map.copyOf(jmsProperties), transactionId);
+        return new ScenarioMessage(header + content, Map.copyOf(jmsProperties), transactionId,
+                testCaseName, responseFields);
     }
 
     private String padOrTrunctate(final String value, final int lenght, final String padChar) {
@@ -265,6 +271,125 @@ public class TestScenarioService {
             return String.valueOf(messageLength);
         }
         return field.value() != null ? field.value() : "";
+    }
+
+    @Transactional(readOnly = true)
+    public ScenarioExport export(Long id) {
+        var scenario = testScenarioRepository.findById(id)
+                .orElseThrow(() -> new TestScenarioNotFoundException(id));
+        var entries = scenario.getEntries() == null ? List.<ScenarioTestCase>of() : scenario.getEntries();
+        var exportEntries = entries.stream().map(this::toExportEntry).toList();
+        return new ScenarioExport("1.0", scenario.getName(), scenario.getCount(),
+                scenario.isScheduledEnabled(), scenario.getScheduledTime(),
+                scenario.getWarmupCount(), scenario.getTestType(),
+                parseThinkTime(scenario.getThinkTimeJson()),
+                parseThresholds(scenario.getThresholdsJson()),
+                exportEntries);
+    }
+
+    @Transactional
+    public TestScenarioDetail importScenario(ScenarioExport scenarioExport) {
+        var scenario = new TestScenario();
+        scenario.setName(scenarioExport.name());
+        scenario.setCount(scenarioExport.count());
+        scenario.setScheduledEnabled(scenarioExport.scheduledEnabled());
+        scenario.setScheduledTime(scenarioExport.scheduledTime());
+        scenario.setWarmupCount(scenarioExport.warmupCount());
+        scenario.setTestType(scenarioExport.testType());
+        scenario.setThinkTimeJson(serializeJson(scenarioExport.thinkTime()));
+        scenario.setThresholdsJson(serializeJson(scenarioExport.thresholds()));
+        if (scenarioExport.entries() != null) {
+            for (var exportEntry : scenarioExport.entries()) {
+                var ht = resolveHeaderTemplate(exportEntry.headerTemplate());
+                var rt = resolveResponseTemplate(exportEntry.responseTemplate());
+                var tc = resolveTestCase(exportEntry, ht, rt);
+                var entry = new ScenarioTestCase();
+                entry.setScenario(scenario);
+                entry.setTestCase(tc);
+                entry.setPercentage(exportEntry.percentage());
+                entry.setDisplayOrder(exportEntry.displayOrder());
+                scenario.getEntries().add(entry);
+            }
+        }
+        return toDetail(testScenarioRepository.save(scenario));
+    }
+
+    private ScenarioExportEntry toExportEntry(ScenarioTestCase e) {
+        var tc = e.getTestCase();
+        ScenarioExportHeaderTemplate ht = null;
+        if (tc.getHeaderTemplate() != null) {
+            var h = tc.getHeaderTemplate();
+            var fields = h.getFields() == null ? List.<TemplateFieldDto>of()
+                    : h.getFields().stream()
+                            .map(f -> new TemplateFieldDto(f.name(), f.size(), f.value(),
+                                    f.type(), f.paddingChar(), f.uuidPrefix(), f.uuidSeparator(),
+                                    f.correlationKey()))
+                            .toList();
+            ht = new ScenarioExportHeaderTemplate(h.getName(), fields);
+        }
+        ScenarioExportResponseTemplate rt = null;
+        if (tc.getResponseTemplate() != null) {
+            var r = tc.getResponseTemplate();
+            var fields = r.getFields() == null ? List.<ResponseFieldDto>of()
+                    : r.getFields().stream()
+                            .map(f -> new ResponseFieldDto(f.name(), f.size(), f.value(),
+                                    f.type(), f.paddingChar()))
+                            .toList();
+            rt = new ScenarioExportResponseTemplate(r.getName(), fields);
+        }
+        return new ScenarioExportEntry(tc.getName(), tc.getMessage(),
+                e.getPercentage(), e.getDisplayOrder(), ht, rt);
+    }
+
+    private HeaderTemplate resolveHeaderTemplate(ScenarioExportHeaderTemplate exportHt) {
+        if (exportHt == null) {
+            return null;
+        }
+        return headerTemplateRepository.findByName(exportHt.name())
+                .orElseGet(() -> {
+                    var ht = new HeaderTemplate();
+                    ht.setName(exportHt.name());
+                    var fields = exportHt.fields() == null ? new ArrayList<HeaderTemplate.TemplateField>()
+                            : new ArrayList<>(exportHt.fields().stream()
+                                    .map(f -> new HeaderTemplate.TemplateField(f.name(), f.size(),
+                                            f.value(), f.type(), f.paddingChar(),
+                                            f.uuidPrefix(), f.uuidSeparator(), f.correlationKey()))
+                                    .toList());
+                    ht.setFields(fields);
+                    return headerTemplateRepository.save(ht);
+                });
+    }
+
+    private ResponseTemplate resolveResponseTemplate(ScenarioExportResponseTemplate exportRt) {
+        if (exportRt == null) {
+            return null;
+        }
+        return responseTemplateRepository.findByName(exportRt.name())
+                .orElseGet(() -> {
+                    var rt = new ResponseTemplate();
+                    rt.setName(exportRt.name());
+                    var fields = exportRt.fields() == null ? new ArrayList<ResponseTemplate.ResponseField>()
+                            : new ArrayList<>(exportRt.fields().stream()
+                                    .map(f -> new ResponseTemplate.ResponseField(f.name(), f.size(),
+                                            f.value(), f.type(), f.paddingChar()))
+                                    .toList());
+                    rt.setFields(fields);
+                    return responseTemplateRepository.save(rt);
+                });
+    }
+
+    private TestCase resolveTestCase(ScenarioExportEntry entry,
+                                     HeaderTemplate headerTemplate,
+                                     ResponseTemplate responseTemplate) {
+        return testCaseRepository.findByName(entry.testCaseName())
+                .orElseGet(() -> {
+                    var tc = new TestCase();
+                    tc.setName(entry.testCaseName());
+                    tc.setMessage(entry.message());
+                    tc.setHeaderTemplate(headerTemplate);
+                    tc.setResponseTemplate(responseTemplate);
+                    return testCaseRepository.save(tc);
+                });
     }
 
     private TestScenarioDetail toDetail(TestScenario scenario) {

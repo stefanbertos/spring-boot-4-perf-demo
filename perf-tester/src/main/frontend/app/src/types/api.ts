@@ -376,6 +376,38 @@ export interface DashboardLink {
   url: string;
 }
 
+export interface ScenarioExportHeaderTemplate {
+  name: string;
+  fields: HeaderTemplateField[];
+}
+
+export interface ScenarioExportResponseTemplate {
+  name: string;
+  fields: ResponseTemplateField[];
+}
+
+export interface ScenarioExportEntry {
+  testCaseName: string;
+  message: string;
+  percentage: number;
+  displayOrder: number;
+  headerTemplate: ScenarioExportHeaderTemplate | null;
+  responseTemplate: ScenarioExportResponseTemplate | null;
+}
+
+export interface ScenarioExport {
+  version: string;
+  name: string;
+  count: number;
+  scheduledEnabled: boolean;
+  scheduledTime: string | null;
+  warmupCount: number;
+  testType: string | null;
+  thinkTime: ThinkTimeConfig | null;
+  thresholds: ThresholdDef[];
+  entries: ScenarioExportEntry[];
+}
+
 export interface RunTestPreferences {
   exportGrafana: boolean;
   exportPrometheus: boolean;
